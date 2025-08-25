@@ -18,6 +18,22 @@ const DeleteRelationshipButton = ({ onClick }) => (
   </button>
 );
 
+const DeleteTagButton = ({ onClick }) => (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick();
+    }}
+    className="p-1 rounded-full text-slate-500 hover:bg-red-500/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+    title="Delete tag"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  </button>
+);
+
+
 interface TagListItemProps {
   tag: any;
   isSelected: boolean;
@@ -25,9 +41,10 @@ interface TagListItemProps {
   relationships: any[];
   allTags: any[];
   onDeleteRelationship: (relId: any) => void;
+  onDeleteTag: (tagId: string) => void;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect, relationships, allTags, onDeleteRelationship }) => {
+const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect, relationships, allTags, onDeleteRelationship, onDeleteTag }) => {
   const colors = CATEGORY_COLORS[tag.category];
   const tagMap = useMemo(() => new Map(allTags.map(t => [t.id, t])), [allTags]);
 
@@ -60,19 +77,22 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect,
       data-tag-id={tag.id}
       onClick={(e) => {
         // Only trigger tag selection if the click was not on a delete button
-        if ((e.target as Element).closest('button[title="Delete relationship"]')) {
+        if ((e.target as Element).closest('button[title="Delete relationship"]') || (e.target as Element).closest('button[title="Delete tag"]')) {
           return;
         }
         onTagSelect(tag);
       }}
-      className={`p-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-pink-500/30 ring-1 ring-pink-500' : 'hover:bg-slate-700/50'}`}
+      className={`group p-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-pink-500/30 ring-1 ring-pink-500' : 'hover:bg-slate-700/50'}`}
     >
       <div className="flex justify-between items-start">
         <div className="flex flex-col">
           <span className="font-mono text-sm text-white">{tag.text}</span>
           <span className={`text-xs font-semibold ${colors.text}`}>{tag.category}</span>
         </div>
-        <span className="text-xs text-slate-400 flex-shrink-0 ml-2">P. {tag.page}</span>
+        <div className="flex items-center space-x-1">
+          <span className="text-xs text-slate-400 flex-shrink-0">P. {tag.page}</span>
+          <DeleteTagButton onClick={() => onDeleteTag(tag.id)} />
+        </div>
       </div>
       
       {hasRelationships && (
@@ -116,7 +136,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect,
   );
 };
 
-export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, currentPage, selectedTagIds }) => {
+export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, currentPage, selectedTagIds, onDeleteTags }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
@@ -126,6 +146,10 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
   const handleDeleteRelationship = (relId) => {
     // Confirmation removed to support sandboxed environments
     setRelationships(prev => prev.filter(r => r.id !== relId));
+  };
+
+  const handleDeleteTag = (tagId) => {
+    onDeleteTags([tagId]);
   };
 
   useEffect(() => {
@@ -296,6 +320,7 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
                       relationships={relationships}
                       allTags={tags}
                       onDeleteRelationship={handleDeleteRelationship}
+                      onDeleteTag={handleDeleteTag}
                     />
                 ))}
             </ul>

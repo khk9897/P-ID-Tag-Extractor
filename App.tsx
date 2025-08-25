@@ -124,12 +124,44 @@ const App = () => {
       page,
       bbox: combinedBbox,
       category,
+      sourceItems: itemsToConvert, // Store original items
     };
 
     setTags(prev => [...prev, newTag]);
     const idsToConvert = new Set(itemsToConvert.map(item => item.id));
     setRawTextItems(prev => prev.filter(item => !idsToConvert.has(item.id)));
   }, []);
+
+  const handleDeleteTags = useCallback((tagIdsToDelete) => {
+    const idsToDelete = new Set(tagIdsToDelete);
+
+    // Find the tags being deleted
+    const tagsToRevert = tags.filter(tag => idsToDelete.has(tag.id));
+    
+    const itemsToRestore = [];
+    
+    for (const tag of tagsToRevert) {
+      if (tag.sourceItems && tag.sourceItems.length > 0) {
+        // It was a manually created tag, restore the original source items
+        itemsToRestore.push(...tag.sourceItems);
+      } else {
+        // It was an originally detected tag. Revert to a single raw item.
+        itemsToRestore.push({
+          id: tag.id, // Reuse the tag's unique ID for the new raw item
+          text: tag.text,
+          page: tag.page,
+          bbox: tag.bbox,
+        });
+      }
+    }
+
+    // Remove the tags
+    setTags(prev => prev.filter(tag => !idsToDelete.has(tag.id)));
+    // Add the restored/reverted items back to the pool of raw text items
+    setRawTextItems(prev => [...prev, ...itemsToRestore]);
+    // Clean up any relationships involving the deleted tags
+    setRelationships(prev => prev.filter(rel => !idsToDelete.has(rel.from) && !idsToDelete.has(rel.to)));
+  }, [tags]);
 
   const mainContent = () => {
     if (isLoading) {
@@ -155,6 +187,7 @@ const App = () => {
           setRelationships={setRelationships}
           rawTextItems={rawTextItems}
           onCreateTag={handleCreateTag}
+          onDeleteTags={handleDeleteTags}
         />
       );
     }

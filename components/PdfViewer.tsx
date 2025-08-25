@@ -16,7 +16,8 @@ export const PdfViewer = ({
   rawTextItems,
   onCreateTag,
   selectedRawTextItemIds,
-  setSelectedRawTextItemIds
+  setSelectedRawTextItemIds,
+  onDeleteTags,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -73,7 +74,13 @@ export const PdfViewer = ({
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key.toLowerCase() === 'c') {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedTagIds.length > 0) {
+          e.preventDefault(); // Prevent browser back navigation on Backspace
+          onDeleteTags(selectedTagIds);
+          setSelectedTagIds([]);
+        }
+      } else if (e.key.toLowerCase() === 'c') {
         setMode('connect');
         setRelationshipStartTag(null);
         setSelectedTagIds([]);
@@ -122,7 +129,7 @@ export const PdfViewer = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, setSelectedRawTextItemIds]);
+  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, setSelectedRawTextItemIds, onDeleteTags]);
   
   useEffect(() => {
     if (selectedTagIds.length === 1 && scrollContainerRef.current && viewport) {
@@ -354,7 +361,7 @@ export const PdfViewer = ({
                   </svg>
                 )}
               </button>
-            <span className="text-xs text-slate-400">(Hotkeys: C - Connect, M - Make Instrument, I - Install, Esc - Select)</span>
+            <span className="text-xs text-slate-400">(Hotkeys: C - Connect, M - Make Instrument, I - Install, Del - Delete, Esc - Select)</span>
         </div>
       </div>
       

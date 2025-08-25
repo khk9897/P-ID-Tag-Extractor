@@ -3,49 +3,6 @@ import { RelationshipType, Category } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
 import { v4 as uuidv4 } from 'https://esm.sh/uuid@11.1.0';
 
-const ManualTagPopover = ({ popoverData, onConfirm, onCancel, viewport }) => {
-    const [selectedCategory, setSelectedCategory] = useState(Category.Equipment);
-    if (!popoverData || !viewport) return null;
-
-    const { rawTextItem, x, y } = popoverData;
-    const categories = [Category.Equipment, Category.Line, Category.Instrument];
-
-    const popoverStyle = {
-      transform: `translate(${x}px, ${y}px)`,
-      position: 'absolute',
-      top: 0,
-      left: 0,
-    };
-    
-    return (
-        <div style={popoverStyle} className="manual-tag-popover absolute z-30 bg-slate-800 border border-slate-600 rounded-lg shadow-xl p-3 w-64 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-2">
-                <h4 className="font-bold text-sm">Create Tag</h4>
-                <button onClick={onCancel} className="p-1 rounded-full text-slate-400 hover:bg-slate-700">
-                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                </button>
-            </div>
-            <p className="font-mono text-white bg-slate-900 p-2 rounded text-center text-md mb-3 break-words">{rawTextItem.text}</p>
-            <div className="space-y-2">
-                <label htmlFor="category-select" className="text-xs font-semibold text-slate-300">Category</label>
-                <select 
-                    id="category-select"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value as any)}
-                    className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm focus:ring-sky-500 focus:border-sky-500"
-                >
-                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-            </div>
-            <div className="mt-4 flex justify-end space-x-2">
-                 <button onClick={onCancel} className="px-3 py-1.5 text-sm font-semibold text-slate-300 bg-transparent rounded-md hover:bg-slate-700 transition-colors">Cancel</button>
-                 <button onClick={() => onConfirm(rawTextItem, selectedCategory)} className="px-3 py-1.5 text-sm font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 transition-colors">Create</button>
-            </div>
-        </div>
-    );
-};
-
-
 export const PdfViewer = ({
   pdfDoc,
   tags,
@@ -58,6 +15,8 @@ export const PdfViewer = ({
   setSelectedTagIds,
   rawTextItems,
   onCreateTag,
+  selectedRawTextItemIds,
+  setSelectedRawTextItemIds
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -72,7 +31,6 @@ export const PdfViewer = ({
   const [selectionRect, setSelectionRect] = useState(null);
   const [relatedTagIds, setRelatedTagIds] = useState(new Set());
   const [showRelationships, setShowRelationships] = useState(true);
-  const [manualTagPopover, setManualTagPopover] = useState(null);
 
   const renderPage = useCallback(async (pageNumber) => {
     if (!pdfDoc) return;
@@ -123,7 +81,18 @@ export const PdfViewer = ({
         setMode('select');
         setRelationshipStartTag(null);
         setSelectedTagIds([]);
-        setManualTagPopover(null);
+        setSelectedRawTextItemIds([]);
+      } else if (e.key.toLowerCase() === 'm') {
+        const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
+        if (selectedRawItems.length === 2) {
+          // Sort to ensure consistent naming, e.g., "PIC-101" instead of "101-PIC"
+          // Assume vertical alignment means top part comes first.
+          selectedRawItems.sort((a, b) => b.bbox.y1 - a.bbox.y1);
+          onCreateTag(selectedRawItems, Category.Instrument);
+          setSelectedRawTextItemIds([]);
+        } else {
+            alert("The 'M' hotkey creates an Instrument tag from exactly TWO selected text items. For other cases, use the action panel at the bottom.");
+        }
       } else if (e.key.toLowerCase() === 'i' && mode === 'select' && selectedTagIds.length > 1) {
         const selected = tags.filter(t => selectedTagIds.includes(t.id));
         const baseTags = selected.filter(t => t.category === Category.Equipment || t.category === Category.Line);
@@ -153,7 +122,7 @@ export const PdfViewer = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds]);
+  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, setSelectedRawTextItemIds]);
   
   useEffect(() => {
     if (selectedTagIds.length === 1 && scrollContainerRef.current && viewport) {
@@ -189,8 +158,9 @@ export const PdfViewer = ({
 
   const handleTagClick = (e, tagId) => {
     e.stopPropagation();
+    setSelectedRawTextItemIds([]); // Clear other selection type
+
     const isMultiSelect = e.ctrlKey || e.metaKey;
-    setManualTagPopover(null);
 
     if (mode === 'select') {
       if (isMultiSelect) {
@@ -219,23 +189,42 @@ export const PdfViewer = ({
     }
   };
 
+  const handleRawTextItemMouseDown = (e, rawTextItemId) => {
+    e.stopPropagation();
+    setSelectedTagIds([]); // Clear other selection type
+
+    const isMultiSelect = e.ctrlKey || e.metaKey;
+
+    if (isMultiSelect) {
+        setSelectedRawTextItemIds(prev =>
+            prev.includes(rawTextItemId) ? prev.filter(id => id !== rawTextItemId) : [...prev, rawTextItemId]
+        );
+    } else {
+        setSelectedRawTextItemIds([rawTextItemId]);
+    }
+  };
+
   const currentTags = tags.filter(t => t.page === currentPage);
   const currentRawTextItems = rawTextItems.filter(t => t.page === currentPage);
 
-  const handleMouseDown = (e) => {
-    // Close popover if click is outside of it
-    if (manualTagPopover && !(e.target as Element).closest('.manual-tag-popover')) {
-      setManualTagPopover(null);
-    }
-      
-    if (mode !== 'select' || !viewerRef.current || (e.target as Element).closest('[data-tag-id]') || (e.target as Element).closest('[data-raw-text-id]')) {
+  const handleViewerMouseDown = (e) => {
+    if (
+      (e.target as Element).closest('[data-tag-id]') ||
+      (e.target as Element).closest('[data-raw-text-id]')
+    ) {
       return;
     }
+  
+    if (mode !== 'select' || !viewerRef.current) {
+      return;
+    }
+      
     const rect = viewerRef.current.getBoundingClientRect();
     startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     setIsDragging(true);
     if (!e.ctrlKey && !e.metaKey) {
-        setSelectedTagIds([]);
+      setSelectedTagIds([]);
+      setSelectedRawTextItemIds([]);
     }
     setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
   };
@@ -260,7 +249,8 @@ export const PdfViewer = ({
     }
     setIsDragging(false);
     
-    const newSelectedIds = new Set(selectedTagIds);
+    // Prioritize selecting existing tags over raw text items
+    const intersectingTags = new Set();
     for (const tag of currentTags) {
       const { x1, y1, x2, y2 } = tag.bbox;
       const tagRect = {
@@ -275,10 +265,38 @@ export const PdfViewer = ({
         selectionRect.y < tagRect.y + tagRect.height &&
         selectionRect.y + selectionRect.height > tagRect.y
       ) {
-        newSelectedIds.add(tag.id);
+        intersectingTags.add(tag.id);
       }
     }
-    setSelectedTagIds(Array.from(newSelectedIds));
+    
+    if(intersectingTags.size > 0){
+        setSelectedTagIds(prev => Array.from(new Set([...prev, ...Array.from(intersectingTags)])));
+        setSelectedRawTextItemIds([]); // Ensure only one type is selected
+    } else {
+        const intersectingRawItems = new Set();
+         for (const item of currentRawTextItems) {
+            const { x1, y1, x2, y2 } = item.bbox;
+            const itemRect = {
+              x: x1 * scale,
+              y: viewport.height - (y2 * scale),
+              width: (x2 - x1) * scale,
+              height: (y2 - y1) * scale
+            };
+            if (
+                selectionRect.x < itemRect.x + itemRect.width &&
+                selectionRect.x + selectionRect.width > itemRect.x &&
+                selectionRect.y < itemRect.y + itemRect.height &&
+                selectionRect.y + selectionRect.height > itemRect.y
+            ) {
+                intersectingRawItems.add(item.id);
+            }
+         }
+         if (intersectingRawItems.size > 0) {
+            setSelectedRawTextItemIds(prev => Array.from(new Set([...prev, ...Array.from(intersectingRawItems)])));
+            setSelectedTagIds([]); // Ensure only one type is selected
+         }
+    }
+
     setSelectionRect(null);
   };
   
@@ -300,17 +318,6 @@ export const PdfViewer = ({
       case 'connect': return 'cursor-crosshair ring-2 ring-blue-500';
       default: return 'cursor-default';
     }
-  };
-
-  const handleRawTextClick = (e, rawTextItem) => {
-    e.stopPropagation();
-    if (!viewport) return;
-    const { x2, y1 } = rawTextItem.bbox;
-    
-    const popoverX = x2 * scale + 10;
-    const popoverY = viewport.height - (y1 * scale);
-    
-    setManualTagPopover({ rawTextItem, x: popoverX, y: popoverY });
   };
 
   return (
@@ -347,30 +354,21 @@ export const PdfViewer = ({
                   </svg>
                 )}
               </button>
-            <span className="text-xs text-slate-400">(Hotkeys: C - Connect, I - Install, Esc - Select)</span>
+            <span className="text-xs text-slate-400">(Hotkeys: C - Connect, M - Make Instrument, I - Install, Esc - Select)</span>
         </div>
       </div>
       
       <div ref={scrollContainerRef} className="h-full w-full overflow-auto">
-        <div className="p-4 pt-20 flex justify-center min-h-full">
+        <div className="p-4 pt-20 grid place-items-center min-h-full">
             <div 
                 ref={viewerRef} 
                 className={`relative shadow-2xl ${getModeStyles()}`}
-                onMouseDown={handleMouseDown}
+                onMouseDown={handleViewerMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp} // Stop dragging if mouse leaves viewer
             >
                 <canvas ref={canvasRef} />
-                <ManualTagPopover 
-                    popoverData={manualTagPopover}
-                    onConfirm={(item, cat) => {
-                        onCreateTag(item, cat);
-                        setManualTagPopover(null);
-                    }}
-                    onCancel={() => setManualTagPopover(null)}
-                    viewport={viewport}
-                />
                 {viewport && (
                 <svg className="absolute top-0 left-0" width={viewport.width} height={viewport.height}>
                     <defs>
@@ -384,12 +382,14 @@ export const PdfViewer = ({
                          const rectY = viewport.height - (y2 * scale);
                          const rectWidth = (x2 - x1) * scale;
                          const rectHeight = (y2 - y1) * scale;
+                         const isSelected = selectedRawTextItemIds.includes(item.id);
                          return (
-                            <g key={item.id} data-raw-text-id={item.id} onClick={(e) => handleRawTextClick(e, item)} className="cursor-pointer group">
+                            <g key={item.id} data-raw-text-id={item.id} onMouseDown={(e) => handleRawTextItemMouseDown(e, item.id)} className="cursor-pointer group">
                                 <rect 
                                     x={rectX} y={rectY} width={rectWidth} height={rectHeight} 
-                                    className="fill-transparent stroke-slate-600/80 group-hover:stroke-sky-400 group-hover:fill-sky-400/20 transition-all" 
-                                    strokeWidth="1" strokeDasharray="3 3" 
+                                    className={isSelected ? "fill-sky-400/30 stroke-sky-400" : "fill-transparent stroke-slate-600/80 group-hover:stroke-sky-400 group-hover:fill-sky-400/20 transition-all"} 
+                                    strokeWidth="1.5"
+                                    strokeDasharray={isSelected ? "none" : "3 3"} 
                                 />
                             </g>
                          )

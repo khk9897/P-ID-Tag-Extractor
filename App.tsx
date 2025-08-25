@@ -97,16 +97,38 @@ const App = () => {
     setProgress({ current: 0, total: 0 });
   };
   
-  const handleCreateTag = useCallback((rawTextItem, category) => {
+  const handleCreateTag = useCallback((itemsToConvert, category) => {
+    if (!itemsToConvert || itemsToConvert.length === 0) return;
+
+    // All items must be on the same page
+    const page = itemsToConvert[0].page;
+    if (itemsToConvert.some(item => item.page !== page)) {
+      console.error("Cannot combine items from different pages.");
+      return;
+    }
+
+    const combinedText = itemsToConvert.map(item => item.text).join('-');
+    
+    const combinedBbox = itemsToConvert.reduce((acc, item) => {
+      return {
+        x1: Math.min(acc.x1, item.bbox.x1),
+        y1: Math.min(acc.y1, item.bbox.y1),
+        x2: Math.max(acc.x2, item.bbox.x2),
+        y2: Math.max(acc.y2, item.bbox.y2),
+      };
+    }, { x1: Infinity, y1: Infinity, x2: -Infinity, y2: -Infinity });
+
     const newTag = {
       id: uuidv4(),
-      text: rawTextItem.text,
-      page: rawTextItem.page,
-      bbox: rawTextItem.bbox,
+      text: combinedText,
+      page,
+      bbox: combinedBbox,
       category,
     };
+
     setTags(prev => [...prev, newTag]);
-    setRawTextItems(prev => prev.filter(item => item.id !== rawTextItem.id));
+    const idsToConvert = new Set(itemsToConvert.map(item => item.id));
+    setRawTextItems(prev => prev.filter(item => !idsToConvert.has(item.id)));
   }, []);
 
   const mainContent = () => {

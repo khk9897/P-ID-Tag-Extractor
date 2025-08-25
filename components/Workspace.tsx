@@ -14,10 +14,12 @@ export const Workspace = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
+  const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
 
   const goToTag = (tag) => {
     setCurrentPage(tag.page);
     setSelectedTagIds([tag.id]);
+    setSelectedRawTextItemIds([]); // Clear other selection
   };
 
   const handleDeselectTag = (tagId) => {
@@ -26,6 +28,7 @@ export const Workspace = ({
   
   const handleClearSelection = () => {
     setSelectedTagIds([]);
+    setSelectedRawTextItemIds([]);
   };
   
   return (
@@ -51,6 +54,8 @@ export const Workspace = ({
           setSelectedTagIds={setSelectedTagIds}
           rawTextItems={rawTextItems}
           onCreateTag={onCreateTag}
+          selectedRawTextItemIds={selectedRawTextItemIds}
+          setSelectedRawTextItemIds={setSelectedRawTextItemIds}
         />
       </div>
       <SelectionPanel
@@ -60,6 +65,9 @@ export const Workspace = ({
         relationships={relationships}
         onDeselect={handleDeselectTag}
         onClear={handleClearSelection}
+        rawTextItems={rawTextItems}
+        selectedRawTextItemIds={selectedRawTextItemIds}
+        onCreateTag={onCreateTag}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import React from 'https://esm.sh/react@19.1.1';
+import React, { useState, useEffect } from 'https://esm.sh/react@19.1.1';
 import { Category, RelationshipType } from '../types.ts';
 
 export const SelectionPanel = ({
@@ -11,14 +11,69 @@ export const SelectionPanel = ({
   rawTextItems,
   selectedRawTextItemIds,
   onCreateTag,
+  manualCreationData,
+  onManualTagCreate,
+  onClearManualCreation,
 }) => {
+  const [manualTagText, setManualTagText] = useState('');
+
+  useEffect(() => {
+    if (manualCreationData) {
+      setManualTagText('');
+    }
+  }, [manualCreationData]);
+
   const hasSelectedTags = selectedTagIds.length > 0;
   const hasSelectedRawItems = selectedRawTextItemIds.length > 0;
 
-  if (!hasSelectedTags && !hasSelectedRawItems) {
+  if (!manualCreationData && !hasSelectedTags && !hasSelectedRawItems) {
     return null;
   }
   
+  if (manualCreationData) {
+    const handleCreate = (category) => {
+      if (manualTagText.trim()) {
+        onManualTagCreate({ text: manualTagText.trim(), category });
+      } else {
+        alert("Please enter text for the tag.");
+      }
+    };
+
+    return (
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-full max-w-lg z-20 px-4 animate-fade-in-up">
+        <div className="bg-slate-800/80 backdrop-blur-lg border border-slate-700 rounded-xl shadow-2xl p-3">
+          <div className="flex justify-between items-center mb-2 px-1">
+            <h3 className="font-bold text-md text-white">Create Manual Tag</h3>
+            <button
+              onClick={onClearManualCreation}
+              className="text-sm font-semibold text-sky-400 hover:text-sky-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+          <div className="mb-3">
+            <input
+              type="text"
+              placeholder="Enter tag text..."
+              value={manualTagText}
+              onChange={(e) => setManualTagText(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-600 rounded-md px-3 py-2 text-sm focus:ring-sky-500 focus:border-sky-500"
+              autoFocus
+            />
+          </div>
+          <div className="flex items-center justify-between border-t border-slate-700 pt-2">
+            <span className="text-sm font-semibold text-slate-300">Select category:</span>
+            <div className="flex items-center space-x-2">
+              <button onClick={() => handleCreate(Category.Equipment)} className="px-3 py-1.5 text-sm font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 transition-colors">Equipment</button>
+              <button onClick={() => handleCreate(Category.Line)} className="px-3 py-1.5 text-sm font-semibold text-white bg-emerald-600 rounded-md hover:bg-emerald-700 transition-colors">Line</button>
+              <button onClick={() => handleCreate(Category.Instrument)} className="px-3 py-1.5 text-sm font-semibold text-white bg-amber-500 rounded-md hover:bg-amber-600 transition-colors">Instrument</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // UI for creating tags from selected raw text items
   if (hasSelectedRawItems) {
     const selectedRawItems = selectedRawTextItemIds

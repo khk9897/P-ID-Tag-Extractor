@@ -132,6 +132,24 @@ const App = () => {
     setRawTextItems(prev => prev.filter(item => !idsToConvert.has(item.id)));
   }, []);
 
+  const handleCreateManualTag = useCallback(({ text, bbox, page, category }) => {
+    if (!text || !bbox || !page || !category) {
+        console.error("Missing data for manual tag creation.");
+        return;
+    }
+
+    const newTag = {
+      id: uuidv4(),
+      text,
+      page,
+      bbox,
+      category,
+      sourceItems: [], // No source items for manually drawn tags
+    };
+
+    setTags(prev => [...prev, newTag]);
+  }, []);
+
   const handleDeleteTags = useCallback((tagIdsToDelete) => {
     const idsToDelete = new Set(tagIdsToDelete);
 
@@ -193,6 +211,7 @@ const App = () => {
           setRelationships={setRelationships}
           rawTextItems={rawTextItems}
           onCreateTag={handleCreateTag}
+          onCreateManualTag={handleCreateManualTag}
           onDeleteTags={handleDeleteTags}
           onUpdateTagText={handleUpdateTagText}
         />

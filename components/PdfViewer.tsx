@@ -18,6 +18,7 @@ export const PdfViewer = ({
   selectedRawTextItemIds,
   setSelectedRawTextItemIds,
   onDeleteTags,
+  onManualAreaSelect,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -26,7 +27,7 @@ export const PdfViewer = ({
   
   const [scale, setScale] = useState(1.5);
   const [viewport, setViewport] = useState(null);
-  const [mode, setMode] = useState('select');
+  const [mode, setMode] = useState('select'); // 'select', 'connect', 'manualCreate'
   const [relationshipStartTag, setRelationshipStartTag] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectionRect, setSelectionRect] = useState(null);
@@ -84,6 +85,11 @@ export const PdfViewer = ({
         setMode('connect');
         setRelationshipStartTag(null);
         setSelectedTagIds([]);
+      } else if (e.key.toLowerCase() === 'k') {
+        setMode('manualCreate');
+        setRelationshipStartTag(null);
+        setSelectedTagIds([]);
+        setSelectedRawTextItemIds([]);
       } else if (e.key === 'Escape') {
         setMode('select');
         setRelationshipStartTag(null);
@@ -222,6 +228,14 @@ export const PdfViewer = ({
       return;
     }
   
+    if (mode === 'manualCreate' && viewerRef.current) {
+        const rect = viewerRef.current.getBoundingClientRect();
+        startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        setIsDragging(true);
+        setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
+        return; // Prevent select mode logic from running
+    }
+
     if (mode !== 'select' || !viewerRef.current) {
       return;
     }
@@ -254,6 +268,25 @@ export const PdfViewer = ({
       setIsDragging(false);
       return;
     }
+    
+    if (mode === 'manualCreate') {
+        setIsDragging(false);
+        // Check for minimal size to avoid accidental clicks
+        if (selectionRect.width > 5 && selectionRect.height > 5) {
+            const { x, y, width, height } = selectionRect;
+            const bbox = {
+                x1: x / scale,
+                y1: (viewport.height - (y + height)) / scale,
+                x2: (x + width) / scale,
+                y2: (viewport.height - y) / scale,
+            };
+            onManualAreaSelect(bbox, currentPage);
+        }
+        setSelectionRect(null);
+        setMode('select');
+        return;
+    }
+
     setIsDragging(false);
     
     // Prioritize selecting existing tags over raw text items
@@ -323,6 +356,7 @@ export const PdfViewer = ({
   const getModeStyles = () => {
     switch(mode){
       case 'connect': return 'cursor-crosshair ring-2 ring-blue-500';
+      case 'manualCreate': return 'cursor-crosshair ring-2 ring-green-500';
       default: return 'cursor-default';
     }
   };
@@ -343,7 +377,7 @@ export const PdfViewer = ({
         <div className="h-6 w-px bg-slate-600"></div>
         <div className="flex items-center space-x-2">
             <span className="text-sm text-slate-300">Mode:</span>
-            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${mode === 'select' ? 'bg-slate-600' : 'bg-blue-500'}`}>{mode}</span>
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${mode === 'select' ? 'bg-slate-600' : mode === 'connect' ? 'bg-blue-500' : 'bg-green-500'}`}>{mode}</span>
              <button
                 onClick={() => setShowRelationships(prev => !prev)}
                 title={showRelationships ? "Hide relationship lines" : "Show relationship lines"}
@@ -361,7 +395,7 @@ export const PdfViewer = ({
                   </svg>
                 )}
               </button>
-            <span className="text-xs text-slate-400">(Hotkeys: C - Connect, M - Make Instrument, I - Install, Del - Delete, Esc - Select)</span>
+            <span className="text-xs text-slate-400">(Hotkeys: C - Connect, K - Manual, M - Make Instrument, I - Install, Del - Delete, Esc - Select)</span>
         </div>
       </div>
       
@@ -441,7 +475,7 @@ export const PdfViewer = ({
                     );
                     })}
 
-                    {selectionRect && <rect x={selectionRect.x} y={selectionRect.y} width={selectionRect.width} height={selectionRect.height} className="fill-sky-400/20 stroke-sky-400 stroke-2" />}
+                    {selectionRect && <rect x={selectionRect.x} y={selectionRect.y} width={selectionRect.width} height={selectionRect.height} className={`stroke-2 ${mode === 'manualCreate' ? 'fill-green-400/20 stroke-green-400' : 'fill-sky-400/20 stroke-sky-400'}`} />}
                 </svg>
                 )}
             </div>

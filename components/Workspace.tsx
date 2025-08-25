@@ -11,12 +11,14 @@ export const Workspace = ({
   setRelationships,
   rawTextItems,
   onCreateTag,
+  onCreateManualTag,
   onDeleteTags,
   onUpdateTagText,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
+  const [manualCreationData, setManualCreationData] = useState(null); // {bbox, page}
 
   const goToTag = (tag) => {
     setCurrentPage(tag.page);
@@ -33,6 +35,25 @@ export const Workspace = ({
     setSelectedRawTextItemIds([]);
   };
   
+  const handleManualAreaSelect = (bbox, page) => {
+    setManualCreationData({ bbox, page });
+  };
+
+  const handleManualTagCreate = ({ text, category }) => {
+    if (manualCreationData) {
+      onCreateManualTag({
+        ...manualCreationData,
+        text,
+        category,
+      });
+      setManualCreationData(null);
+    }
+  };
+
+  const handleClearManualCreation = () => {
+    setManualCreationData(null);
+  };
+
   return (
     <div className="flex h-full bg-slate-900 relative">
       <SidePanel 
@@ -61,6 +82,7 @@ export const Workspace = ({
           selectedRawTextItemIds={selectedRawTextItemIds}
           setSelectedRawTextItemIds={setSelectedRawTextItemIds}
           onDeleteTags={onDeleteTags}
+          onManualAreaSelect={handleManualAreaSelect}
         />
       </div>
       <SelectionPanel
@@ -73,6 +95,9 @@ export const Workspace = ({
         rawTextItems={rawTextItems}
         selectedRawTextItemIds={selectedRawTextItemIds}
         onCreateTag={onCreateTag}
+        manualCreationData={manualCreationData}
+        onManualTagCreate={handleManualTagCreate}
+        onClearManualCreation={handleClearManualCreation}
       />
     </div>
   );

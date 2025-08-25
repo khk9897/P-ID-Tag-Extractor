@@ -42,12 +42,41 @@ interface TagListItemProps {
   allTags: any[];
   onDeleteRelationship: (relId: any) => void;
   onDeleteTag: (tagId: string) => void;
+  onUpdateTagText: (tagId: string, newText: string) => void;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect, relationships, allTags, onDeleteRelationship, onDeleteTag }) => {
+const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect, relationships, allTags, onDeleteRelationship, onDeleteTag, onUpdateTagText }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(tag.text);
+  const inputRef = useRef<HTMLInputElement>(null);
+  
   const colors = CATEGORY_COLORS[tag.category];
   const tagMap = useMemo(() => new Map(allTags.map(t => [t.id, t])), [allTags]);
+  
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
 
+  const handleSave = () => {
+    const trimmedText = editText.trim();
+    if (trimmedText && trimmedText !== tag.text) {
+      onUpdateTagText(tag.id, trimmedText);
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setEditText(tag.text); // Reset text
+      setIsEditing(false);
+    }
+  };
+  
   const handleRelatedTagClick = (e, relatedTagId) => {
     e.stopPropagation();
     const relatedTag = tagMap.get(relatedTagId);
@@ -75,22 +104,41 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect,
   return (
     <li
       data-tag-id={tag.id}
-      onClick={(e) => {
-        // Only trigger tag selection if the click was not on a delete button
-        if ((e.target as Element).closest('button[title="Delete relationship"]') || (e.target as Element).closest('button[title="Delete tag"]')) {
-          return;
+      onClick={() => {
+        if (!isEditing) {
+          onTagSelect(tag);
         }
-        onTagSelect(tag);
       }}
       className={`group p-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-pink-500/30 ring-1 ring-pink-500' : 'hover:bg-slate-700/50'}`}
     >
       <div className="flex justify-between items-start">
-        <div className="flex flex-col">
-          <span className="font-mono text-sm text-white">{tag.text}</span>
+        <div className="flex-grow mr-2">
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onBlur={handleSave}
+              onKeyDown={handleKeyDown}
+              onClick={(e) => e.stopPropagation()}
+              className="font-mono text-sm text-white bg-slate-600 border border-sky-500 rounded px-1 w-full"
+            />
+          ) : (
+            <span 
+              className="font-mono text-sm text-white block cursor-text"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+            >
+              {tag.text}
+            </span>
+          )}
           <span className={`text-xs font-semibold ${colors.text}`}>{tag.category}</span>
         </div>
-        <div className="flex items-center space-x-1">
-          <span className="text-xs text-slate-400 flex-shrink-0">P. {tag.page}</span>
+        <div className="flex items-center space-x-1 flex-shrink-0">
+          <span className="text-xs text-slate-400">P. {tag.page}</span>
           <DeleteTagButton onClick={() => onDeleteTag(tag.id)} />
         </div>
       </div>
@@ -136,7 +184,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect,
   );
 };
 
-export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, currentPage, selectedTagIds, onDeleteTags }) => {
+export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, currentPage, selectedTagIds, onDeleteTags, onUpdateTagText }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
@@ -144,7 +192,6 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
   const listRef = useRef(null);
   
   const handleDeleteRelationship = (relId) => {
-    // Confirmation removed to support sandboxed environments
     setRelationships(prev => prev.filter(r => r.id !== relId));
   };
 
@@ -321,6 +368,7 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
                       allTags={tags}
                       onDeleteRelationship={handleDeleteRelationship}
                       onDeleteTag={handleDeleteTag}
+                      onUpdateTagText={onUpdateTagText}
                     />
                 ))}
             </ul>

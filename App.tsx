@@ -163,6 +163,12 @@ const App = () => {
     setRelationships(prev => prev.filter(rel => !idsToDelete.has(rel.from) && !idsToDelete.has(rel.to)));
   }, [tags]);
 
+  const handleUpdateTagText = useCallback((tagId, newText) => {
+    setTags(prevTags => prevTags.map(tag => 
+      tag.id === tagId ? { ...tag, text: newText } : tag
+    ));
+  }, []);
+
   const mainContent = () => {
     if (isLoading) {
       return (
@@ -188,6 +194,7 @@ const App = () => {
           rawTextItems={rawTextItems}
           onCreateTag={handleCreateTag}
           onDeleteTags={handleDeleteTags}
+          onUpdateTagText={handleUpdateTagText}
         />
       );
     }

@@ -12,6 +12,7 @@ export const Workspace = ({
   rawTextItems,
   onCreateTag,
   onDeleteTags,
+  onUpdateTagText,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
@@ -42,6 +43,7 @@ export const Workspace = ({
         relationships={relationships}
         setRelationships={setRelationships}
         onDeleteTags={onDeleteTags}
+        onUpdateTagText={onUpdateTagText}
       />
       <div className="flex-grow h-full overflow-auto bg-slate-800/30">
         <PdfViewer

@@ -32,6 +32,7 @@ export const extractTags = async (pdfDoc, pageNum, patterns) => {
     const page = await pdfDoc.getPage(pageNum);
     const textContent = await page.getTextContent();
     const foundTags = [];
+    const rawTextItems = [];
     const textItems = textContent.items.filter((item) => 'str' in item && item.str.trim() !== '');
     const consumedIndices = new Set();
 
@@ -94,6 +95,7 @@ export const extractTags = async (pdfDoc, pageNum, patterns) => {
         if (consumedIndices.has(i)) continue;
 
         const item = textItems[i];
+        let itemHasBeenTagged = false;
         
         for (const pattern of categoryPatterns) {
             if (!pattern.regex) continue; // Skip if regex is empty
@@ -102,6 +104,7 @@ export const extractTags = async (pdfDoc, pageNum, patterns) => {
                 const matches = item.str.match(globalRegex);
 
                 if (matches) {
+                    itemHasBeenTagged = true;
                     for (const matchText of matches) {
                          // Avoid adding duplicates if a combined tag from Pass 1 also matches here
                         const alreadyExists = foundTags.some(tag => tag.text === matchText && tag.page === pageNum);
@@ -120,7 +123,16 @@ export const extractTags = async (pdfDoc, pageNum, patterns) => {
                  console.error(`Invalid regex for category ${pattern.category}: ${pattern.regex}`, error);
             }
         }
+
+        if (!itemHasBeenTagged) {
+             rawTextItems.push({
+                id: uuidv4(),
+                text: item.str,
+                page: pageNum,
+                bbox: calculateBbox(item),
+             });
+        }
     }
 
-    return foundTags;
+    return { tags: foundTags, rawTextItems };
 };

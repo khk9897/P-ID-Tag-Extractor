@@ -9,6 +9,8 @@ export const Workspace = ({
   setTags,
   relationships,
   setRelationships,
+  rawTextItems,
+  onCreateTag,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
@@ -47,6 +49,8 @@ export const Workspace = ({
           setCurrentPage={setCurrentPage}
           selectedTagIds={selectedTagIds}
           setSelectedTagIds={setSelectedTagIds}
+          rawTextItems={rawTextItems}
+          onCreateTag={onCreateTag}
         />
       </div>
       <SelectionPanel

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'https://esm.sh/react@19.1.1';
+import { v4 as uuidv4 } from 'https://esm.sh/uuid@11.1.0';
 import { PdfUpload } from './components/PdfUpload.tsx';
 import { Workspace } from './components/Workspace.tsx';
 import { Header } from './components/Header.tsx';
@@ -16,6 +17,7 @@ const App = () => {
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfDoc, setPdfDoc] = useState(null);
   const [tags, setTags] = useState([]);
+  const [rawTextItems, setRawTextItems] = useState([]);
   const [relationships, setRelationships] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
@@ -56,6 +58,7 @@ const App = () => {
     setPdfFile(file);
     setIsLoading(true);
     setTags([]);
+    setRawTextItems([]);
     setRelationships([]);
     setProgress({ current: 0, total: 0 });
 
@@ -67,12 +70,15 @@ const App = () => {
       setProgress({ current: 0, total: doc.numPages });
       
       let allTags = [];
+      let allRawTextItems = [];
       for (let i = 1; i <= doc.numPages; i++) {
-        const pageTags = await extractTags(doc, i, patterns);
+        const { tags: pageTags, rawTextItems: pageRawTextItems } = await extractTags(doc, i, patterns);
         allTags = [...allTags, ...pageTags];
+        allRawTextItems = [...allRawTextItems, ...pageRawTextItems];
         setProgress(p => ({ ...p, current: i }));
       }
       setTags(allTags);
+      setRawTextItems(allRawTextItems);
     } catch (error) {
       console.error("Error processing PDF:", error);
       console.error("Failed to process PDF file. It might be corrupted or in an unsupported format.");
@@ -85,10 +91,23 @@ const App = () => {
     setPdfFile(null);
     setPdfDoc(null);
     setTags([]);
+    setRawTextItems([]);
     setRelationships([]);
     setIsLoading(false);
     setProgress({ current: 0, total: 0 });
   };
+  
+  const handleCreateTag = useCallback((rawTextItem, category) => {
+    const newTag = {
+      id: uuidv4(),
+      text: rawTextItem.text,
+      page: rawTextItem.page,
+      bbox: rawTextItem.bbox,
+      category,
+    };
+    setTags(prev => [...prev, newTag]);
+    setRawTextItems(prev => prev.filter(item => item.id !== rawTextItem.id));
+  }, []);
 
   const mainContent = () => {
     if (isLoading) {
@@ -112,6 +131,8 @@ const App = () => {
           setTags={setTags}
           relationships={relationships}
           setRelationships={setRelationships}
+          rawTextItems={rawTextItems}
+          onCreateTag={handleCreateTag}
         />
       );
     }

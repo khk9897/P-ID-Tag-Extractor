@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'https://esm.sh/react@19.1.1';
 import { Category } from '../types.ts';
 import { DEFAULT_PATTERNS } from '../constants.ts';
 
-export const SettingsModal = ({ patterns, setPatterns, onClose }) => {
+export const SettingsModal = ({ patterns, onSave, onClose }) => {
   const [localPatterns, setLocalPatterns] = useState(patterns);
 
   useEffect(() => {
@@ -16,8 +16,7 @@ export const SettingsModal = ({ patterns, setPatterns, onClose }) => {
   }, [onClose]);
 
   const handleSave = () => {
-    setPatterns(localPatterns);
-    onClose();
+    onSave(localPatterns);
   };
   
   const handleReset = () => {
@@ -51,7 +50,7 @@ export const SettingsModal = ({ patterns, setPatterns, onClose }) => {
         <div className="p-6 space-y-4">
             <p className="text-sm text-slate-400">
                 Define the Regex patterns used to find tags. Use the pipe character <code>|</code> to separate multiple patterns for a single category.
-                Changes will require a new PDF upload to take effect.
+                Changes made after uploading a PDF will trigger a re-scan of the document.
             </p>
             {categories.map(category => (
                 <div key={category}>
@@ -84,7 +83,7 @@ export const SettingsModal = ({ patterns, setPatterns, onClose }) => {
                     onClick={handleSave}
                     className="px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-800"
                 >
-                    Save Changes
+                    Save and Re-scan
                 </button>
             </div>
         </div>

@@ -54,6 +54,32 @@ const App = () => {
     }
   }, [patterns]);
 
+  const processPdf = useCallback(async (doc, patternsToUse) => {
+    setIsLoading(true);
+    setTags([]);
+    setRawTextItems([]);
+    setRelationships([]);
+    setProgress({ current: 0, total: doc.numPages });
+
+    try {
+      let allTags = [];
+      let allRawTextItems = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        const { tags: pageTags, rawTextItems: pageRawTextItems } = await extractTags(doc, i, patternsToUse);
+        allTags = [...allTags, ...pageTags];
+        allRawTextItems = [...allRawTextItems, ...pageRawTextItems];
+        setProgress(p => ({ ...p, current: i }));
+      }
+      setTags(allTags);
+      setRawTextItems(allRawTextItems);
+    } catch (error) {
+      console.error("Error processing PDF:", error);
+      console.error("Failed to process PDF file. It might be corrupted or in an unsupported format.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const handleFileSelect = useCallback(async (file) => {
     setPdfFile(file);
     setIsLoading(true);
@@ -67,25 +93,21 @@ const App = () => {
       const loadingTask = (window as any).pdfjsLib.getDocument({ data: arrayBuffer });
       const doc = await loadingTask.promise;
       setPdfDoc(doc);
-      setProgress({ current: 0, total: doc.numPages });
-      
-      let allTags = [];
-      let allRawTextItems = [];
-      for (let i = 1; i <= doc.numPages; i++) {
-        const { tags: pageTags, rawTextItems: pageRawTextItems } = await extractTags(doc, i, patterns);
-        allTags = [...allTags, ...pageTags];
-        allRawTextItems = [...allRawTextItems, ...pageRawTextItems];
-        setProgress(p => ({ ...p, current: i }));
-      }
-      setTags(allTags);
-      setRawTextItems(allRawTextItems);
+      await processPdf(doc, patterns);
     } catch (error) {
-      console.error("Error processing PDF:", error);
-      console.error("Failed to process PDF file. It might be corrupted or in an unsupported format.");
-    } finally {
+      console.error("Error loading PDF:", error);
+      console.error("Failed to load PDF file. It might be corrupted or in an unsupported format.");
       setIsLoading(false);
     }
-  }, [patterns]);
+  }, [patterns, processPdf]);
+
+  const handleSaveSettings = async (newPatterns) => {
+    setPatterns(newPatterns);
+    setIsSettingsOpen(false);
+    if (pdfDoc) {
+      await processPdf(pdfDoc, newPatterns);
+    }
+  };
 
   const handleReset = () => {
     setPdfFile(null);
@@ -230,7 +252,7 @@ const App = () => {
       {isSettingsOpen && (
         <SettingsModal 
           patterns={patterns}
-          setPatterns={setPatterns}
+          onSave={handleSaveSettings}
           onClose={() => setIsSettingsOpen(false)}
         />
       )}

@@ -2,6 +2,7 @@ export const Category = {
   Equipment: 'Equipment',
   Line: 'Line',
   Instrument: 'Instrument',
+  DrawingNumber: 'DrawingNumber',
   Uncategorized: 'Uncategorized',
 };
 

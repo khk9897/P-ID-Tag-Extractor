@@ -124,14 +124,68 @@ export const extractTags = async (pdfDoc, pageNum, patterns) => {
             }
         }
 
-        if (!itemHasBeenTagged) {
-             rawTextItems.push({
-                id: uuidv4(),
-                text: item.str,
-                page: pageNum,
-                bbox: calculateBbox(item),
-             });
+        if (itemHasBeenTagged) {
+            consumedIndices.add(i);
         }
+    }
+    
+    // Pass 3: Find drawing number (one per page, closest to bottom-right corner)
+    const drawingNumberRegexString = patterns[Category.DrawingNumber];
+    if (drawingNumberRegexString) {
+        try {
+            const drawingNumberRegex = new RegExp(drawingNumberRegexString, 'i');
+            const { width: pageWidth, height: pageHeight } = page.getViewport({ scale: 1.0 });
+
+            let bestCandidate = null;
+            let minDistanceSq = Infinity;
+
+            for (let i = 0; i < textItems.length; i++) {
+                if (consumedIndices.has(i)) continue;
+                
+                const item = textItems[i];
+                const match = item.str.match(drawingNumberRegex);
+                
+                if (match) {
+                    const bbox = calculateBbox(item);
+                    // Calculate squared distance from bottom-right corner of the bbox 
+                    // to the bottom-right corner of the page (pageWidth, 0).
+                    const dx = pageWidth - bbox.x2;
+                    const dy = bbox.y1 - 0;
+                    const distanceSq = dx * dx + dy * dy;
+
+                    if (distanceSq < minDistanceSq) {
+                        minDistanceSq = distanceSq;
+                        bestCandidate = { item, index: i, bbox, text: match[0] };
+                    }
+                }
+            }
+
+            if (bestCandidate) {
+                foundTags.push({
+                    id: uuidv4(),
+                    text: bestCandidate.text,
+                    page: pageNum,
+                    bbox: bestCandidate.bbox,
+                    category: Category.DrawingNumber,
+                });
+                consumedIndices.add(bestCandidate.index);
+            }
+        } catch (error) {
+            console.error(`Invalid regex for Drawing Number: ${drawingNumberRegexString}`, error);
+        }
+    }
+
+
+    // Final Pass: Collect all un-tagged items as raw text
+    for (let i = 0; i < textItems.length; i++) {
+        if (consumedIndices.has(i)) continue;
+        const item = textItems[i];
+        rawTextItems.push({
+            id: uuidv4(),
+            text: item.str,
+            page: pageNum,
+            bbox: calculateBbox(item),
+         });
     }
 
     return { tags: foundTags, rawTextItems };

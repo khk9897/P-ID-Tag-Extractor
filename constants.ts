@@ -4,6 +4,7 @@ export const DEFAULT_PATTERNS = {
   [Category.Equipment]: 'P-\\d{3,}|TK-\\d{3,}|E-\\d{3,}',
   [Category.Line]: '\\d+"-.+?-\\d+',
   [Category.Instrument]: '[PTFL][IT][ -]?\\d{3,}',
+  [Category.DrawingNumber]: '[A-Z\\d-]{5,}-[A-Z\\d-]{5,}-\\d{3,}',
 };
 
 export const CATEGORY_COLORS = {
@@ -21,6 +22,11 @@ export const CATEGORY_COLORS = {
     border: 'border-amber-400',
     bg: 'bg-amber-500/20',
     text: 'text-amber-400',
+  },
+  [Category.DrawingNumber]: {
+    border: 'border-indigo-400',
+    bg: 'bg-indigo-500/20',
+    text: 'text-indigo-400',
   },
   [Category.Uncategorized]: {
     border: 'border-slate-500',

@@ -40,7 +40,7 @@ export const SelectionPanel = ({
     };
 
     return (
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-full max-w-lg z-20 px-4 animate-fade-in-up">
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-full max-w-2xl z-20 px-4 animate-fade-in-up">
         <div className="bg-slate-800/80 backdrop-blur-lg border border-slate-700 rounded-xl shadow-2xl p-3">
           <div className="flex justify-between items-center mb-2 px-1">
             <h3 className="font-bold text-md text-white">Create Manual Tag</h3>
@@ -67,6 +67,7 @@ export const SelectionPanel = ({
               <button onClick={() => handleCreate(Category.Equipment)} className="px-3 py-1.5 text-sm font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 transition-colors">Equipment</button>
               <button onClick={() => handleCreate(Category.Line)} className="px-3 py-1.5 text-sm font-semibold text-white bg-emerald-600 rounded-md hover:bg-emerald-700 transition-colors">Line</button>
               <button onClick={() => handleCreate(Category.Instrument)} className="px-3 py-1.5 text-sm font-semibold text-white bg-amber-500 rounded-md hover:bg-amber-600 transition-colors">Instrument</button>
+              <button onClick={() => handleCreate(Category.DrawingNumber)} className="px-3 py-1.5 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors">Drawing No.</button>
             </div>
           </div>
         </div>
@@ -113,6 +114,7 @@ export const SelectionPanel = ({
                   <button onClick={() => handleCreate(Category.Equipment)} className="px-3 py-1.5 text-sm font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 transition-colors">Equipment</button>
                   <button onClick={() => handleCreate(Category.Line)} className="px-3 py-1.5 text-sm font-semibold text-white bg-emerald-600 rounded-md hover:bg-emerald-700 transition-colors">Line</button>
                   <button onClick={() => handleCreate(Category.Instrument)} className="px-3 py-1.5 text-sm font-semibold text-white bg-amber-500 rounded-md hover:bg-amber-600 transition-colors">Instrument</button>
+                  <button onClick={() => handleCreate(Category.DrawingNumber)} className="px-3 py-1.5 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors">Drawing No.</button>
               </div>
           </div>
         </div>
@@ -126,7 +128,8 @@ export const SelectionPanel = ({
       [Category.Equipment]: 0,
       [Category.Line]: 1,
       [Category.Instrument]: 2,
-      [Category.Uncategorized]: 3,
+      [Category.DrawingNumber]: 3,
+      [Category.Uncategorized]: 4,
     };
 
     const selectedTags = selectedTagIds

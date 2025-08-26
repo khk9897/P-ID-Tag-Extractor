@@ -297,7 +297,7 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
     );
   };
 
-  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument];
+  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber];
   
   return (
     <aside className="w-80 h-full bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0">

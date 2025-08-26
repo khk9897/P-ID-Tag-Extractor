@@ -75,10 +75,14 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
     [Category.Instrument]: {
         description: "계측기기 태그를 찾습니다. 보통 기능(P, T, F, L)과 일련번호로 구성됩니다.",
         example: "PI-101, FIT-203, LT-100"
+    },
+    [Category.DrawingNumber]: {
+        description: "도면 번호, 시트 번호 등 도면 식별 태그를 찾습니다. 페이지 당 하나, 우측 하단에서 검색됩니다.",
+        example: "PID-1234-001"
     }
   };
 
-  const categories = [Category.Equipment, Category.Line, Category.Instrument];
+  const categories = [Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber];
 
   return (
     <div 

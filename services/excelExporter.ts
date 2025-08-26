@@ -4,6 +4,7 @@ export const exportToExcel = (tags, relationships) => {
   const equipment = tags.filter(t => t.category === Category.Equipment);
   const lines = tags.filter(t => t.category === Category.Line);
   const instruments = tags.filter(t => t.category === Category.Instrument);
+  const drawingNumbers = tags.filter(t => t.category === Category.DrawingNumber);
 
   const getTagText = (id) => tags.find(t => t.id === id)?.text || '';
 
@@ -65,6 +66,12 @@ export const exportToExcel = (tags, relationships) => {
       'Installed On': installedOn,
     };
   });
+  
+  // 4. Drawing List Data
+  const drawingData = drawingNumbers.map(tag => ({
+    'Drawing Number': tag.text,
+    'Page': tag.page,
+  }));
 
 
   const wb = (window as any).XLSX.utils.book_new();
@@ -77,6 +84,11 @@ export const exportToExcel = (tags, relationships) => {
 
   const wsInstruments = (window as any).XLSX.utils.json_to_sheet(instrumentData);
   (window as any).XLSX.utils.book_append_sheet(wb, wsInstruments, 'Instrument List');
+  
+  if (drawingData.length > 0) {
+    const wsDrawings = (window as any).XLSX.utils.json_to_sheet(drawingData);
+    (window as any).XLSX.utils.book_append_sheet(wb, wsDrawings, 'Drawing List');
+  }
 
   (window as any).XLSX.writeFile(wb, 'P&ID_Tag_Export.xlsx');
 };

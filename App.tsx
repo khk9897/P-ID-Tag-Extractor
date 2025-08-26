@@ -26,19 +26,26 @@ const App = () => {
   const [patterns, setPatterns] = useState(() => {
     try {
       const savedPatterns = localStorage.getItem('pid-tagger-patterns');
-      const parsed = savedPatterns ? JSON.parse(savedPatterns) : DEFAULT_PATTERNS;
-      // Migration and validation for new pattern structure
-      if (
-        typeof parsed === 'object' &&
-        parsed !== null &&
-        !Array.isArray(parsed) &&
-        Category.Equipment in parsed &&
-        Category.Line in parsed &&
-        Category.Instrument in parsed
-      ) {
-        return parsed;
+      let parsed = savedPatterns ? JSON.parse(savedPatterns) : DEFAULT_PATTERNS;
+      
+      // Migration and validation logic
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          // Ensure all default categories exist, adding any that are missing
+          let updated = false;
+          for (const key in DEFAULT_PATTERNS) {
+              if (!parsed.hasOwnProperty(key)) {
+                  parsed[key] = DEFAULT_PATTERNS[key];
+                  updated = true;
+              }
+          }
+          if (updated) {
+               console.log("Updated patterns with new categories from defaults.");
+          }
+          return parsed;
       }
-      return DEFAULT_PATTERNS; // Return default if stored data is old format or invalid
+      
+      // If format is completely wrong, return defaults
+      return DEFAULT_PATTERNS; 
     } catch (error) {
       console.error("Failed to load patterns from localStorage", error);
       return DEFAULT_PATTERNS;

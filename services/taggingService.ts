@@ -73,6 +73,11 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
                         y: (num.bbox.y1 + num.bbox.y2) / 2,
                     };
 
+                    // Function part must be strictly above the number part.
+                    if (funcCenter.y <= numCenter.y) {
+                        continue;
+                    }
+
                     const dx = Math.abs(funcCenter.x - numCenter.x);
                     const dy = Math.abs(funcCenter.y - numCenter.y);
                     
@@ -86,11 +91,7 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
                 }
 
                 if (bestPartner) {
-                    // Determine order based on position (left-to-right or top-to-bottom)
-                    const isVertical = Math.abs(funcCenter.y - bestPartner.bbox.y1) < Math.abs(funcCenter.x - bestPartner.bbox.x1);
-                    const combinedText = isVertical 
-                        ? (funcCenter.y > bestPartner.y) ? `${func.item.str} ${bestPartner.item.str}` : `${bestPartner.item.str} ${func.item.str}`
-                        : (funcCenter.x < bestPartner.x) ? `${func.item.str} ${bestPartner.item.str}` : `${bestPartner.item.str} ${func.item.str}`;
+                    const combinedText = `${func.item.str}-${bestPartner.item.str}`;
 
                     const combinedBbox = {
                         x1: Math.min(func.bbox.x1, bestPartner.bbox.x1),

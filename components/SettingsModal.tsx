@@ -4,27 +4,27 @@ import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES } from '../constants.ts';
 
 const RegexHelp = () => {
   const cheatSheet = [
-    { char: '^', desc: '문자열의 시작과 일치' },
-    { char: '$', desc: '문자열의 끝과 일치' },
-    { char: '.', desc: '개행 문자를 제외한 모든 단일 문자와 일치' },
-    { char: '\\d', desc: '숫자 (0-9)' },
-    { char: '\\w', desc: '알파벳, 숫자, 밑줄 (_)' },
-    { char: '\\s', desc: '공백 문자' },
-    { char: '[ABC]', desc: '괄호 안의 문자 중 하나 (A, B, 또는 C)' },
-    { char: '[A-Z]', desc: 'A부터 Z까지의 범위 내 문자 중 하나' },
-    { char: '*', desc: '앞 표현식이 0번 이상 반복' },
-    { char: '+', desc: '앞 표현식이 1번 이상 반복' },
-    { char: '?', desc: '앞 표현식이 0번 또는 1번 발생' },
-    { char: '{n}', desc: '앞 표현식이 정확히 n번 반복 (예: \\d{3})' },
-    { char: '{n,}', desc: '앞 표현식이 n번 이상 반복' },
-    { char: '{n,m}', desc: '앞 표현식이 n번에서 m번 사이 반복' },
-    { char: '|', desc: 'OR 연산자 (예: A|B)' },
-    { char: '(...)', desc: '그룹 지정 및 캡처' },
+    { char: '^', desc: 'Matches the start of the string' },
+    { char: '$', desc: 'Matches the end of the string' },
+    { char: '.', desc: 'Matches any single character except newline' },
+    { char: '\\d', desc: 'A digit (0-9)' },
+    { char: '\\w', desc: 'A word character (a-z, A-Z, 0-9, _)' },
+    { char: '\\s', desc: 'A whitespace character' },
+    { char: '[ABC]', desc: 'Any one of the characters in the brackets' },
+    { char: '[A-Z]', desc: 'Any character in the range A to Z' },
+    { char: '*', desc: '0 or more repetitions of the preceding token' },
+    { char: '+', desc: '1 or more repetitions of the preceding token' },
+    { char: '?', desc: '0 or 1 repetition of the preceding token' },
+    { char: '{n}', desc: 'Exactly n repetitions (e.g., \\d{3})' },
+    { char: '{n,}', desc: 'n or more repetitions' },
+    { char: '{n,m}', desc: 'Between n and m repetitions' },
+    { char: '|', desc: 'Acts like a boolean OR (e.g., A|B)' },
+    { char: '(...)', desc: 'Groups multiple tokens together' },
   ];
 
   return (
     <div className="mt-1 text-xs text-slate-400 bg-slate-900/50 p-4 rounded-md border border-slate-700 animate-fade-in-up" style={{ animationDuration: '0.3s' }}>
-      <h4 className="font-semibold text-slate-300 mb-3 text-sm">정규식(Regex) 빠른 참조</h4>
+      <h4 className="font-semibold text-slate-300 mb-3 text-sm">Regular Expression (Regex) Quick Reference</h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
         {cheatSheet.map(({ char, desc }) => (
           <div key={char} className="flex items-center space-x-3">
@@ -90,19 +90,19 @@ export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
   
   const categoryInfo = {
     [Category.Equipment]: {
-        description: "두 개의 하이픈(-)을 포함하는 장비 태그를 찾습니다.",
+        description: "Finds equipment tags, typically containing two hyphens.",
         example: "P-101-A, V-200-B"
     },
     [Category.Line]: {
-        description: "세 개 이상의 하이픈(-)을 포함하는 배관 라인 태그를 찾습니다.",
+        description: "Finds piping line tags, typically containing three or more hyphens.",
         example: `4"-P-1501-C1, 10"-CW-203-A2`
     },
     [Category.Instrument]: {
-        description: "기능(Function)과 번호(Number) 부분으로 구성된 계측기 태그를 찾습니다. 두 부분 사이에는 공백이 있을 수도 있고 없을 수도 있습니다.",
+        description: "Finds two-part instrument tags (Function and Number) that may or may not be separated by a space.",
         example: "PI 1001, FIT1002A, TIC 1004 B"
     },
     [Category.DrawingNumber]: {
-        description: "도면 번호, 시트 번호 등 도면 식별 태그를 찾습니다. 페이지 당 하나, 우측 하단에서 검색됩니다.",
+        description: "Finds drawing identifiers like drawing number, sheet number, etc. One per page, searched from bottom-right.",
         example: "PID-1234-001"
     }
   };
@@ -133,16 +133,16 @@ export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
             <div className="space-y-2 text-sm text-slate-400 bg-slate-900/50 p-3 rounded-md border border-slate-700">
                 <p>
-                    태그를 찾기 위한 정규식(Regex) 패턴을 정의합니다. 파이프 기호 <code>|</code>를 사용하여 한 카테고리에 여러 패턴을 추가할 수 있습니다.
+                    Define the Regular Expression (Regex) patterns for finding tags. You can add multiple patterns for one category by using the pipe symbol <code>|</code>.
                 </p>
                  <p>
-                    PDF를 업로드 한 후 설정을 변경하면 문서를 다시 스캔합니다.
+                    Changing settings after a PDF is uploaded will re-scan the document.
                 </p>
                 <button 
                   onClick={() => setShowRegexHelp(prev => !prev)}
                   className="text-sm text-sky-400 hover:text-sky-300 font-semibold mt-1 flex items-center space-x-1"
                 >
-                  <span>{showRegexHelp ? '도움말 숨기기' : '정규식(Regex) 도움말 보기'}</span>
+                  <span>{showRegexHelp ? 'Hide Regex Help' : 'Show Regex Help'}</span>
                   <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform ${showRegexHelp ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
@@ -184,7 +184,7 @@ export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
                         <div className="mt-2 text-xs text-slate-400 space-y-1 pl-1">
                           <p>{info.description}</p>
                           <p>
-                            <span className="font-semibold">매칭 예시:</span>{' '}
+                            <span className="font-semibold">Example Match:</span>{' '}
                             <code className="bg-slate-700/50 px-1 py-0.5 rounded">{info.example}</code>
                           </p>
                         </div>
@@ -236,7 +236,7 @@ export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
                             <div className="mt-2 text-xs text-slate-400 space-y-1 pl-1">
                                 <p>{info.description}</p>
                                 <p>
-                                    <span className="font-semibold">매칭 예시:</span>{' '}
+                                    <span className="font-semibold">Example Match:</span>{' '}
                                     <code className="bg-slate-700/50 px-1 py-0.5 rounded">{info.example}</code>
                                 </p>
                             </div>

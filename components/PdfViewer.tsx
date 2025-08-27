@@ -3,6 +3,71 @@ import { RelationshipType, Category } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
 import { v4 as uuidv4 } from 'https://esm.sh/uuid@11.1.0';
 
+const HotkeyHelp = ({ onClose }) => {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        onClose();
+      }
+    };
+    // Use timeout to prevent immediate closing due to the button click that opened it
+    setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 0);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  const controls = [
+    { key: 'Drag', desc: 'Pan View' },
+    { key: 'Ctrl + Drag', desc: 'Area Select Tags/Text' },
+  ];
+  const modes = [
+    { key: 'C', desc: 'Enter Connect Mode' },
+    { key: 'K', desc: 'Enter Manual Create Mode' },
+    { key: 'Esc', desc: 'Exit Mode / Clear Selection' },
+  ];
+  const actions = [
+    { key: 'M', desc: 'Merge two text items to an Instrument' },
+    { key: 'I', desc: 'Create "Install" relationship' },
+    { key: 'Delete', desc: 'Delete selected tag(s)' },
+  ];
+
+  // FIX: Explicitly type props for Key component to include children, as required by React 19 with TypeScript.
+  const Key = ({ children }: { children: React.ReactNode }) => (
+    <kbd className="px-2 py-1 text-xs font-semibold text-sky-300 bg-slate-700 rounded-md border-b-2 border-slate-600">
+      {children}
+    </kbd>
+  );
+
+  return (
+    <div ref={ref} className="absolute top-16 right-4 z-20 w-80 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl p-4 text-white animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
+      <h3 className="text-md font-bold mb-3 border-b border-slate-600 pb-2">Hotkeys & Controls</h3>
+      <div className="space-y-4">
+        <div>
+            <h4 className="font-semibold text-sm text-slate-400 mb-2">Navigation & Selection</h4>
+            <dl className="space-y-2 text-sm text-slate-300">
+                <div className="flex justify-between items-center"><dt>Pan View</dt><dd><Key>Drag</Key></dd></div>
+                <div className="flex justify-between items-center"><dt>Area Select</dt><dd><Key>Ctrl</Key> + <Key>Drag</Key></dd></div>
+            </dl>
+        </div>
+        <div>
+            <h4 className="font-semibold text-sm text-slate-400 mb-2">Modes</h4>
+            <dl className="space-y-2 text-sm text-slate-300">
+                {modes.map(m => <div key={m.key} className="flex justify-between items-center"><dt>{m.desc}</dt><dd><Key>{m.key}</Key></dd></div>)}
+            </dl>
+        </div>
+        <div>
+            <h4 className="font-semibold text-sm text-slate-400 mb-2">Actions</h4>
+            <dl className="space-y-2 text-sm text-slate-300">
+                {actions.map(a => <div key={a.key} className="flex justify-between items-center"><dt>{a.desc}</dt><dd><Key>{a.key}</Key></dd></div>)}
+            </dl>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 export const PdfViewer = ({
   pdfDoc,
   tags,
@@ -29,10 +94,15 @@ export const PdfViewer = ({
   const [viewport, setViewport] = useState(null);
   const [mode, setMode] = useState('select'); // 'select', 'connect', 'manualCreate'
   const [relationshipStartTag, setRelationshipStartTag] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDragging, setIsDragging] = useState(false); // For selection rect
   const [selectionRect, setSelectionRect] = useState(null);
   const [relatedTagIds, setRelatedTagIds] = useState(new Set());
   const [showRelationships, setShowRelationships] = useState(true);
+  const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
+
+  const isMoved = useRef(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStart = useRef({ scrollX: 0, scrollY: 0, clientX: 0, clientY: 0 });
 
   const renderPage = useCallback(async (pageNumber) => {
     if (!pdfDoc) return;
@@ -220,7 +290,7 @@ export const PdfViewer = ({
   const currentTags = tags.filter(t => t.page === currentPage);
   const currentRawTextItems = rawTextItems.filter(t => t.page === currentPage);
 
-  const handleViewerMouseDown = (e) => {
+ const handleViewerMouseDown = (e) => {
     if (
       (e.target as Element).closest('[data-tag-id]') ||
       (e.target as Element).closest('[data-raw-text-id]')
@@ -228,44 +298,76 @@ export const PdfViewer = ({
       return;
     }
   
+    isMoved.current = false;
+  
     if (mode === 'manualCreate' && viewerRef.current) {
+        const rect = viewerRef.current.getBoundingClientRect();
+        startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        setIsDragging(true); // this is for selectionRect
+        setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
+        return; // Prevent other logic from running
+    }
+    
+    const isSelectionModifier = e.ctrlKey || e.metaKey;
+
+    if (isSelectionModifier && mode === 'select' && viewerRef.current) {
+        // Area Selection Logic
         const rect = viewerRef.current.getBoundingClientRect();
         startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
         setIsDragging(true);
         setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
-        return; // Prevent select mode logic from running
+    } else if (!isSelectionModifier && mode === 'select' && scrollContainerRef.current) {
+        // Panning Logic
+        setIsPanning(true);
+        panStart.current = {
+            scrollX: scrollContainerRef.current.scrollLeft,
+            scrollY: scrollContainerRef.current.scrollTop,
+            clientX: e.clientX,
+            clientY: e.clientY,
+        };
+        e.preventDefault();
     }
-
-    if (mode !== 'select' || !viewerRef.current) {
-      return;
-    }
-      
-    const rect = viewerRef.current.getBoundingClientRect();
-    startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    setIsDragging(true);
-    if (!e.ctrlKey && !e.metaKey) {
-      setSelectedTagIds([]);
-      setSelectedRawTextItemIds([]);
-    }
-    setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
   };
 
   const handleMouseMove = (e) => {
-    if (!isDragging || !viewerRef.current) return;
-    const rect = viewerRef.current.getBoundingClientRect();
-    const currentX = e.clientX - rect.left;
-    const currentY = e.clientY - rect.top;
+    if (isPanning || isDragging) {
+      isMoved.current = true;
+    }
 
-    const x = Math.min(startPoint.current.x, currentX);
-    const y = Math.min(startPoint.current.y, currentY);
-    const width = Math.abs(startPoint.current.x - currentX);
-    const height = Math.abs(startPoint.current.y - currentY);
-    setSelectionRect({ x, y, width, height });
+    if (isPanning && scrollContainerRef.current) {
+      const dx = e.clientX - panStart.current.clientX;
+      const dy = e.clientY - panStart.current.clientY;
+      scrollContainerRef.current.scrollLeft = panStart.current.scrollX - dx;
+      scrollContainerRef.current.scrollTop = panStart.current.scrollY - dy;
+      return;
+    }
+
+    if (isDragging && viewerRef.current) {
+      const rect = viewerRef.current.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+  
+      const x = Math.min(startPoint.current.x, currentX);
+      const y = Math.min(startPoint.current.y, currentY);
+      const width = Math.abs(startPoint.current.x - currentX);
+      const height = Math.abs(startPoint.current.y - currentY);
+      setSelectionRect({ x, y, width, height });
+    }
   };
 
   const handleMouseUp = () => {
+    if (isPanning) {
+      setIsPanning(false);
+    }
+    
+    // A simple click on the background without movement clears selection
+    if (!isMoved.current && !isDragging) {
+        setSelectedTagIds([]);
+        setSelectedRawTextItemIds([]);
+    }
+
     if (!isDragging || !selectionRect || !viewport) {
-      setIsDragging(false);
+      if (isDragging) setIsDragging(false);
       return;
     }
     
@@ -357,7 +459,7 @@ export const PdfViewer = ({
     switch(mode){
       case 'connect': return 'cursor-crosshair ring-2 ring-blue-500';
       case 'manualCreate': return 'cursor-crosshair ring-2 ring-green-500';
-      default: return 'cursor-default';
+      default: return ''; // Inherit grab/grabbing cursor from parent
     }
   };
 
@@ -395,11 +497,25 @@ export const PdfViewer = ({
                   </svg>
                 )}
               </button>
-            <span className="text-xs text-slate-400">(Hotkeys: C - Connect, K - Manual, M - Make Instrument, I - Install, Del - Delete, Esc - Select)</span>
+            <span className="text-xs text-slate-400">Hotkeys: [C]onnect, [K]reate, [M]erge, [I]nstall, [Del], [Esc]</span>
+             <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowHotkeyHelp(prev => !prev)
+                }}
+                title="Show hotkeys and controls"
+                className="p-1.5 rounded-full transition-colors bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+              </button>
         </div>
       </div>
       
-      <div ref={scrollContainerRef} className="h-full w-full overflow-auto">
+      {showHotkeyHelp && <HotkeyHelp onClose={() => setShowHotkeyHelp(false)} />}
+
+      <div ref={scrollContainerRef} className={`h-full w-full overflow-auto ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}>
         <div className="p-4 pt-20 grid place-items-center min-h-full">
             <div 
                 ref={viewerRef} 

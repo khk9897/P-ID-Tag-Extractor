@@ -14,6 +14,7 @@ export const Workspace = ({
   onCreateManualTag,
   onDeleteTags,
   onUpdateTagText,
+  showConfirmation,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
@@ -61,6 +62,7 @@ export const Workspace = ({
         setRelationships={setRelationships}
         onDeleteTags={onDeleteTags}
         onUpdateTagText={onUpdateTagText}
+        showConfirmation={showConfirmation}
       />
       <div className="flex-grow h-full overflow-auto bg-slate-800/30">
         <PdfViewer

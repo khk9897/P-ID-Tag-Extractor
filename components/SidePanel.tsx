@@ -201,7 +201,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   );
 };
 
-export const SidePanel = ({ tags, setTags, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText }) => {
+export const SidePanel = ({ tags, setTags, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, showConfirmation }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
@@ -219,13 +219,16 @@ export const SidePanel = ({ tags, setTags, relationships, setRelationships, curr
   };
   
   const handleRemoveWhitespace = () => {
-    if (window.confirm('Are you sure you want to remove all whitespace from every tag? This action cannot be undone.')) {
-      const updatedTags = tags.map(tag => ({
-        ...tag,
-        text: tag.text.replace(/\s/g, '')
-      }));
-      setTags(updatedTags);
-    }
+    showConfirmation(
+      'Are you sure you want to remove all whitespace from every tag? This action cannot be undone.',
+      () => {
+        const updatedTags = tags.map(tag => ({
+          ...tag,
+          text: tag.text.replace(/\s/g, '')
+        }));
+        setTags(updatedTags);
+      }
+    );
   };
   
   const sortedAndFilteredTags = useMemo(() => {

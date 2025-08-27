@@ -65,12 +65,12 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
   
   const categoryInfo = {
     [Category.Equipment]: {
-        description: "펌프(P), 탱크(TK), 열교환기(E) 등 주요 장비 태그를 찾습니다.",
-        example: "P-101, TK-200A, E-1501"
+        description: "두 개의 하이픈(-)을 포함하는 장비 태그를 찾습니다.",
+        example: "P-101-A, V-200-B"
     },
     [Category.Line]: {
-        description: "배관 사이즈, 서비스, 라인 번호 등을 포함하는 배관 라인 태그를 찾습니다.",
-        example: `4"-P-1501, 10"-CW-203`
+        description: "세 개 이상의 하이픈(-)을 포함하는 배관 라인 태그를 찾습니다.",
+        example: `4"-P-1501-C1, 10"-CW-203-A2`
     },
     [Category.Instrument]: {
         description: "계측기기 태그를 찾습니다. 보통 기능(P, T, F, L)과 일련번호로 구성됩니다.",

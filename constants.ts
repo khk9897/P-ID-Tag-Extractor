@@ -1,8 +1,8 @@
 import { Category } from './types.ts';
 
 export const DEFAULT_PATTERNS = {
-  [Category.Equipment]: 'P-\\d{3,}|TK-\\d{3,}|E-\\d{3,}',
-  [Category.Line]: '\\d+"-.+?-\\d+',
+  [Category.Equipment]: '^([^-]*-){2}[^-]*$',
+  [Category.Line]: '^([^-]*-){3,}[^-]*$',
   [Category.Instrument]: '[PTFL][IT][ -]?\\d{3,}',
   [Category.DrawingNumber]: '[A-Z\\d-]{5,}-[A-Z\\d-]{5,}-\\d{3,}',
 };

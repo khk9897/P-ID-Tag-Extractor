@@ -20,12 +20,6 @@ export const Workspace = ({
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
   const [manualCreationData, setManualCreationData] = useState(null); // {bbox, page}
 
-  const goToTag = (tag) => {
-    setCurrentPage(tag.page);
-    setSelectedTagIds([tag.id]);
-    setSelectedRawTextItemIds([]); // Clear other selection
-  };
-
   const handleDeselectTag = (tagId) => {
     setSelectedTagIds(prev => prev.filter(id => id !== tagId));
   };
@@ -58,9 +52,10 @@ export const Workspace = ({
     <div className="flex h-full bg-slate-900 relative">
       <SidePanel 
         tags={tags} 
-        onTagSelect={goToTag}
         currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
         selectedTagIds={selectedTagIds}
+        setSelectedTagIds={setSelectedTagIds}
         relationships={relationships}
         setRelationships={setRelationships}
         onDeleteTags={onDeleteTags}
@@ -81,7 +76,7 @@ export const Workspace = ({
           onCreateTag={onCreateTag}
           selectedRawTextItemIds={selectedRawTextItemIds}
           setSelectedRawTextItemIds={setSelectedRawTextItemIds}
-          onDeleteTags={onDeleteTags}
+      onDeleteTags={onDeleteTags}
           onManualAreaSelect={handleManualAreaSelect}
         />
       </div>

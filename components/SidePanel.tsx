@@ -37,7 +37,8 @@ const DeleteTagButton = ({ onClick }) => (
 interface TagListItemProps {
   tag: any;
   isSelected: boolean;
-  onTagSelect: (tag: any) => void;
+  onItemClick: (event: React.MouseEvent) => void;
+  onGoToTag: (tag: any) => void;
   relationships: any[];
   allTags: any[];
   onDeleteRelationship: (relId: any) => void;
@@ -45,7 +46,7 @@ interface TagListItemProps {
   onUpdateTagText: (tagId: string, newText: string) => void;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect, relationships, allTags, onDeleteRelationship, onDeleteTag, onUpdateTagText }) => {
+const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, onDeleteRelationship, onDeleteTag, onUpdateTagText }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +60,10 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect,
       inputRef.current.select();
     }
   }, [isEditing]);
+  
+  useEffect(() => {
+    setEditText(tag.text);
+  }, [tag.text]);
 
   const handleSave = () => {
     const trimmedText = editText.trim();
@@ -81,7 +86,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect,
     e.stopPropagation();
     const relatedTag = tagMap.get(relatedTagId);
     if (relatedTag) {
-      onTagSelect(relatedTag);
+      onGoToTag(relatedTag);
     }
   };
 
@@ -93,6 +98,13 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect,
       {text}
     </span>
   );
+  
+  const drawingNumberTag = useMemo(() => {
+      const pageDrawingNumbers = allTags.filter(t => t.page === tag.page && t.category === Category.DrawingNumber);
+      // Assuming one drawing number per page as per logic
+      return pageDrawingNumbers.length > 0 ? pageDrawingNumbers[0] : null;
+  }, [allTags, tag.page]);
+
 
   const outgoingConnections = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Connection);
   const incomingConnections = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Connection);
@@ -104,9 +116,9 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect,
   return (
     <li
       data-tag-id={tag.id}
-      onClick={() => {
+      onClick={(e) => {
         if (!isEditing) {
-          onTagSelect(tag);
+          onItemClick(e);
         }
       }}
       className={`group p-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-pink-500/30 ring-1 ring-pink-500' : 'hover:bg-slate-700/50'}`}
@@ -136,6 +148,11 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect,
             </span>
           )}
           <span className={`text-xs font-semibold ${colors.text}`}>{tag.category}</span>
+          {tag.category !== Category.DrawingNumber && drawingNumberTag && (
+              <div className="text-xs text-slate-500 mt-0.5 font-mono">
+                  DWG: {drawingNumberTag.text}
+              </div>
+          )}
         </div>
         <div className="flex items-center space-x-1 flex-shrink-0">
           <span className="text-xs text-slate-400">P. {tag.page}</span>
@@ -184,12 +201,14 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onTagSelect,
   );
 };
 
-export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, currentPage, selectedTagIds, onDeleteTags, onUpdateTagText }) => {
+export const SidePanel = ({ tags, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
   const [filterCategory, setFilterCategory] = useState('All');
+  const [sortOrder, setSortOrder] = useState('default');
   const listRef = useRef(null);
+  const lastClickedIndex = useRef(-1);
   
   const handleDeleteRelationship = (relId) => {
     setRelationships(prev => prev.filter(r => r.id !== relId));
@@ -198,6 +217,28 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
   const handleDeleteTag = (tagId) => {
     onDeleteTags([tagId]);
   };
+  
+  const sortedAndFilteredTags = useMemo(() => {
+    const filtered = tags
+      .filter(tag => tag.category !== Category.DrawingNumber)
+      .filter(tag => !showCurrentPageOnly || tag.page === currentPage)
+      .filter(tag => filterCategory === 'All' || tag.category === filterCategory)
+      .filter(tag => tag.text.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    switch (sortOrder) {
+      case 'length-asc':
+        return [...filtered].sort((a, b) => a.text.length - b.text.length);
+      case 'length-desc':
+        return [...filtered].sort((a, b) => b.text.length - a.text.length);
+      case 'default':
+      default:
+        return [...filtered].sort((a, b) => {
+          if (a.page !== b.page) return a.page - b.page;
+          return a.text.localeCompare(b.text);
+        });
+    }
+  }, [tags, showCurrentPageOnly, currentPage, filterCategory, searchQuery, sortOrder]);
+
 
   useEffect(() => {
     if (activeTab === 'tags' && selectedTagIds.length === 1 && listRef.current) {
@@ -207,12 +248,47 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
-  }, [selectedTagIds, activeTab]);
+  }, [selectedTagIds, activeTab, sortedAndFilteredTags]); // Also run when list changes
 
-  const filteredTags = tags
-    .filter(tag => !showCurrentPageOnly || tag.page === currentPage)
-    .filter(tag => filterCategory === 'All' || tag.category === filterCategory)
-    .filter(tag => tag.text.toLowerCase().includes(searchQuery.toLowerCase()));
+  const handleTagClick = (tag, index, e) => {
+    const isMultiSelect = e.ctrlKey || e.metaKey;
+    const isShiftSelect = e.shiftKey;
+
+    if (isShiftSelect && lastClickedIndex.current !== -1) {
+      const start = Math.min(lastClickedIndex.current, index);
+      const end = Math.max(lastClickedIndex.current, index);
+      const rangeIds = sortedAndFilteredTags.slice(start, end + 1).map(t => t.id);
+      
+      if (isMultiSelect) {
+        setSelectedTagIds(prev => Array.from(new Set([...prev, ...rangeIds])));
+      } else {
+        setSelectedTagIds(rangeIds);
+      }
+    } else if (isMultiSelect) {
+      setSelectedTagIds(prev =>
+        prev.includes(tag.id) ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
+      );
+      lastClickedIndex.current = index;
+    } else {
+      setCurrentPage(tag.page);
+      setSelectedTagIds([tag.id]);
+      lastClickedIndex.current = index;
+    }
+  };
+  
+  const goToTag = (tag) => {
+    setCurrentPage(tag.page);
+    setSelectedTagIds([tag.id]);
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedTagIds.length > 0) {
+      onDeleteTags(selectedTagIds);
+      setSelectedTagIds([]);
+      lastClickedIndex.current = -1;
+    }
+  };
+  
 
   const handleExport = () => {
     exportToExcel(tags, relationships);
@@ -234,13 +310,6 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
             );
         });
     }, [relSearchQuery, relationships, tagMap]);
-
-    const handleTagClick = (tagId) => {
-        const tag = tagMap.get(tagId);
-        if (tag) {
-            onTagSelect(tag);
-        }
-    };
 
     return (
         <div className="flex-grow flex flex-col overflow-hidden">
@@ -264,7 +333,7 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
 
                     const renderTag = (tag) => (
                         <span
-                            onClick={() => handleTagClick(tag.id)}
+                            onClick={() => goToTag(tag)}
                             className="font-mono text-sky-400 hover:underline cursor-pointer"
                         >
                             {tag.text}
@@ -297,7 +366,7 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
     );
   };
 
-  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber];
+  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument];
   
   return (
     <aside className="w-80 h-full bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0">
@@ -306,7 +375,7 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
       </div>
       
       <div className="border-b border-slate-700 flex">
-        <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({tags.length})</button>
+        <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({tags.filter(t => t.category !== Category.DrawingNumber).length})</button>
         <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relationships ({relationships.length})</button>
       </div>
 
@@ -320,19 +389,34 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 text-sm focus:ring-sky-500 focus:border-sky-500"
                 />
-                <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
-                  <input
-                      type="checkbox"
-                      checked={showCurrentPageOnly}
-                      onChange={(e) => setShowCurrentPageOnly(e.target.checked)}
-                      className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
-                  />
-                  <span>Show current page only</span>
-                </label>
+                <div className="flex justify-between items-center">
+                    <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
+                      <input
+                          type="checkbox"
+                          checked={showCurrentPageOnly}
+                          onChange={(e) => setShowCurrentPageOnly(e.target.checked)}
+                          className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
+                      />
+                      <span>Show current page only</span>
+                    </label>
+                    <div className="flex items-center space-x-1">
+                      <label htmlFor="sort-order" className="text-xs text-slate-400">Sort:</label>
+                      <select
+                        id="sort-order"
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value)}
+                        className="bg-slate-700 border-slate-600 rounded-md pl-1 pr-6 py-0.5 text-xs focus:ring-sky-500 focus:border-sky-500"
+                      >
+                        <option value="default">Default</option>
+                        <option value="length-asc">Length (Asc)</option>
+                        <option value="length-desc">Length (Desc)</option>
+                      </select>
+                    </div>
+                </div>
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   {filterCategories.map(cat => {
-                    const baseTags = showCurrentPageOnly ? tags.filter(t => t.page === currentPage) : tags;
-                    const count = cat === 'All' ? baseTags.length : baseTags.filter(t => t.category === cat).length;
+                    const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage);
+                    const count = cat === 'All' ? baseTags.filter(t=> t.category !== Category.DrawingNumber).length : baseTags.filter(t => t.category === cat).length;
                     const isActive = filterCategory === cat;
                     const colors = cat !== 'All' ? CATEGORY_COLORS[cat] : null;
 
@@ -357,13 +441,29 @@ export const SidePanel = ({ tags, relationships, setRelationships, onTagSelect, 
                   })}
                 </div>
             </div>
+            
+            {selectedTagIds.length > 1 && (
+              <div className="p-2 flex-shrink-0">
+                  <button
+                    onClick={handleBulkDelete}
+                    className="w-full flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-1.5 px-2 rounded-md transition-colors text-sm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Delete Selected ({selectedTagIds.length})</span>
+                  </button>
+              </div>
+            )}
+            
             <ul ref={listRef} className="flex-grow overflow-y-auto p-2 space-y-1">
-                {filteredTags.map(tag => (
+                {sortedAndFilteredTags.map((tag, index) => (
                     <TagListItem 
                       key={tag.id} 
                       tag={tag} 
                       isSelected={selectedTagIds.includes(tag.id)}
-                      onTagSelect={onTagSelect}
+                      onItemClick={(e) => handleTagClick(tag, index, e)}
+                      onGoToTag={goToTag}
                       relationships={relationships}
                       allTags={tags}
                       onDeleteRelationship={handleDeleteRelationship}

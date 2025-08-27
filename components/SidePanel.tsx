@@ -220,7 +220,6 @@ export const SidePanel = ({ tags, relationships, setRelationships, currentPage, 
   
   const sortedAndFilteredTags = useMemo(() => {
     const filtered = tags
-      .filter(tag => tag.category !== Category.DrawingNumber)
       .filter(tag => !showCurrentPageOnly || tag.page === currentPage)
       .filter(tag => filterCategory === 'All' || tag.category === filterCategory)
       .filter(tag => tag.text.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -366,7 +365,7 @@ export const SidePanel = ({ tags, relationships, setRelationships, currentPage, 
     );
   };
 
-  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument];
+  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber];
   
   return (
     <aside className="w-80 h-full bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0">
@@ -375,7 +374,7 @@ export const SidePanel = ({ tags, relationships, setRelationships, currentPage, 
       </div>
       
       <div className="border-b border-slate-700 flex">
-        <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({tags.filter(t => t.category !== Category.DrawingNumber).length})</button>
+        <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({tags.length})</button>
         <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relationships ({relationships.length})</button>
       </div>
 
@@ -416,7 +415,7 @@ export const SidePanel = ({ tags, relationships, setRelationships, currentPage, 
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   {filterCategories.map(cat => {
                     const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage);
-                    const count = cat === 'All' ? baseTags.filter(t=> t.category !== Category.DrawingNumber).length : baseTags.filter(t => t.category === cat).length;
+                    const count = cat === 'All' ? baseTags.length : baseTags.filter(t => t.category === cat).length;
                     const isActive = filterCategory === cat;
                     const colors = cat !== 'All' ? CATEGORY_COLORS[cat] : null;
 

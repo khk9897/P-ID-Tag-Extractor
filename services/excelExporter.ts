@@ -6,6 +6,9 @@ export const exportToExcel = (tags, relationships) => {
   const instruments = tags.filter(t => t.category === Category.Instrument);
   const drawingNumbers = tags.filter(t => t.category === Category.DrawingNumber);
 
+  // Create a map for quick lookup of drawing number by page
+  const pageToDrawingNumberMap = new Map(drawingNumbers.map(tag => [tag.page, tag.text]));
+
   const getTagText = (id) => tags.find(t => t.id === id)?.text || '';
 
   // 1. Equipment List Data
@@ -16,9 +19,12 @@ export const exportToExcel = (tags, relationships) => {
       .filter(Boolean)
       .join(', ');
     
+    const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
+
     return {
       'Tag': tag.text,
       'Page': tag.page,
+      'Drawing Number': drawingNumber,
       'Instruments Installed': instrumentsInstalled,
     };
   });
@@ -42,10 +48,13 @@ export const exportToExcel = (tags, relationships) => {
       .map(r => getTagText(r.from))
       .filter(Boolean)
       .join(', ');
+      
+    const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
 
     return {
       'Tag': tag.text,
       'Page': tag.page,
+      'Drawing Number': drawingNumber,
       'From': from,
       'To': to,
       'Instruments Installed': instrumentsInstalled,
@@ -60,20 +69,16 @@ export const exportToExcel = (tags, relationships) => {
       .filter(Boolean)
       .join(', ');
 
+    const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
+
     return {
       'Tag': tag.text,
       'Page': tag.page,
+      'Drawing Number': drawingNumber,
       'Installed On': installedOn,
     };
   });
   
-  // 4. Drawing List Data
-  const drawingData = drawingNumbers.map(tag => ({
-    'Drawing Number': tag.text,
-    'Page': tag.page,
-  }));
-
-
   const wb = (window as any).XLSX.utils.book_new();
   
   const wsEquipment = (window as any).XLSX.utils.json_to_sheet(equipmentData);
@@ -85,10 +90,5 @@ export const exportToExcel = (tags, relationships) => {
   const wsInstruments = (window as any).XLSX.utils.json_to_sheet(instrumentData);
   (window as any).XLSX.utils.book_append_sheet(wb, wsInstruments, 'Instrument List');
   
-  if (drawingData.length > 0) {
-    const wsDrawings = (window as any).XLSX.utils.json_to_sheet(drawingData);
-    (window as any).XLSX.utils.book_append_sheet(wb, wsDrawings, 'Drawing List');
-  }
-
   (window as any).XLSX.writeFile(wb, 'P&ID_Tag_Export.xlsx');
 };

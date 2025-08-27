@@ -307,10 +307,23 @@ const App = () => {
     // Clean up any relationships involving the deleted tags
     setRelationships(prev => prev.filter(rel => !idsToDelete.has(rel.from) && !idsToDelete.has(rel.to)));
   }, [tags]);
+  
+  const handleDeleteRawTextItems = useCallback((itemIdsToDelete) => {
+    const idsToDelete = new Set(itemIdsToDelete);
+    setRawTextItems(prev => prev.filter(item => !idsToDelete.has(item.id)));
+    // Also remove any relationships pointing to these items
+    setRelationships(prev => prev.filter(rel => !idsToDelete.has(rel.to)));
+  }, []);
 
   const handleUpdateTagText = useCallback((tagId, newText) => {
     setTags(prevTags => prevTags.map(tag => 
       tag.id === tagId ? { ...tag, text: newText } : tag
+    ));
+  }, []);
+
+  const handleUpdateRawTextItemText = useCallback((itemId, newText) => {
+    setRawTextItems(prevItems => prevItems.map(item =>
+        item.id === itemId ? { ...item, text: newText } : item
     ));
   }, []);
 
@@ -416,6 +429,8 @@ const App = () => {
           onCreateManualTag={handleCreateManualTag}
           onDeleteTags={handleDeleteTags}
           onUpdateTagText={handleUpdateTagText}
+          onDeleteRawTextItems={handleDeleteRawTextItems}
+          onUpdateRawTextItemText={handleUpdateRawTextItemText}
           showConfirmation={showConfirmation}
           // Pass down viewer state
           currentPage={currentPage}

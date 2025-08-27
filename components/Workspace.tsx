@@ -14,6 +14,8 @@ export const Workspace = ({
   onCreateManualTag,
   onDeleteTags,
   onUpdateTagText,
+  onDeleteRawTextItems,
+  onUpdateRawTextItemText,
   showConfirmation,
   // Viewer state from App
   currentPage,
@@ -72,6 +74,8 @@ export const Workspace = ({
         setRelationships={setRelationships}
         onDeleteTags={onDeleteTags}
         onUpdateTagText={onUpdateTagText}
+        onDeleteRawTextItems={onDeleteRawTextItems}
+        onUpdateRawTextItemText={onUpdateRawTextItemText}
         showConfirmation={showConfirmation}
       />
       <div className="flex-grow h-full overflow-auto bg-slate-800/30">

@@ -33,6 +33,89 @@ const DeleteTagButton = ({ onClick }) => (
   </button>
 );
 
+const EditTagButton = ({ onClick }) => (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick();
+    }}
+    className="p-1 rounded-full text-slate-500 hover:bg-sky-500/20 hover:text-sky-400 transition-colors opacity-0 group-hover:opacity-100"
+    title="Edit tag text"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+      <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+    </svg>
+  </button>
+);
+
+const AnnotationItem: React.FC<{
+  note: any;
+  relId: string;
+  onDeleteRelationship: (relId: string) => void;
+  onDeleteNote: (noteId: string) => void;
+  onUpdateNoteText: (noteId: string, newText: string) => void;
+}> = ({ note, relId, onDeleteRelationship, onDeleteNote, onUpdateNoteText }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(note.text);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+  
+  useEffect(() => {
+    setEditText(note.text);
+  }, [note.text]);
+
+  const handleSave = () => {
+    const trimmedText = editText.trim();
+    if (trimmedText && trimmedText !== note.text) {
+      onUpdateNoteText(note.id, trimmedText);
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setEditText(note.text);
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <div className="group flex items-center justify-between" onClick={(e) => {if(isEditing) e.stopPropagation()}}>
+      <div className="flex items-center space-x-1.5 flex-grow min-w-0" title={note.text}>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-slate-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            className="font-mono text-sm text-white bg-slate-600 border border-sky-500 rounded px-1 w-full"
+          />
+        ) : (
+          <span className="text-slate-300 font-mono truncate max-w-[180px]">{note.text}</span>
+        )}
+      </div>
+      <div className="flex items-center flex-shrink-0">
+          <EditTagButton onClick={() => setIsEditing(true)} />
+          <DeleteTagButton onClick={() => onDeleteNote(note.id)} />
+          <DeleteRelationshipButton onClick={() => onDeleteRelationship(relId)} />
+      </div>
+    </div>
+  );
+};
+
 
 interface TagListItemProps {
   tag: any;
@@ -45,9 +128,11 @@ interface TagListItemProps {
   onDeleteRelationship: (relId: any) => void;
   onDeleteTag: (tagId: string) => void;
   onUpdateTagText: (tagId: string, newText: string) => void;
+  onDeleteNote: (noteId: string) => void;
+  onUpdateNoteText: (noteId: string, newText: string) => void;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, onDeleteRelationship, onDeleteTag, onUpdateTagText }) => {
+const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteNote, onUpdateNoteText }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -141,11 +226,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
             />
           ) : (
             <span 
-              className="font-mono text-sm text-white block cursor-text"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(true);
-              }}
+              className="font-mono text-sm text-white block"
             >
               {tag.text}
             </span>
@@ -159,6 +240,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
         </div>
         <div className="flex items-center space-x-1 flex-shrink-0">
           <span className="text-xs text-slate-400">P. {tag.page}</span>
+          <EditTagButton onClick={() => setIsEditing(true)} />
           <DeleteTagButton onClick={() => onDeleteTag(tag.id)} />
         </div>
       </div>
@@ -202,17 +284,18 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
           {annotationRelationships.length > 0 && (
             <div>
               <span className="text-slate-400 font-semibold">Notes:</span>
-              <div className="pl-3 space-y-0.5 mt-1">
+              <div className="pl-3 space-y-1 mt-1">
                 {annotationRelationships.map(rel => {
                   const note = rawTextItemMap.get(rel.to);
                   return note ? (
-                    <div key={rel.id} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-1.5" title={note.text}>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-slate-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
-                          <span className="text-slate-300 font-mono truncate max-w-[180px]">{note.text}</span>
-                      </div>
-                      <DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} />
-                    </div>
+                    <AnnotationItem
+                        key={rel.id}
+                        note={note}
+                        relId={rel.id}
+                        onDeleteRelationship={onDeleteRelationship}
+                        onDeleteNote={onDeleteNote}
+                        onUpdateNoteText={onUpdateNoteText}
+                    />
                   ) : null;
                 })}
               </div>
@@ -224,7 +307,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   );
 };
 
-export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, showConfirmation }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, onDeleteRawTextItems, onUpdateRawTextItemText, showConfirmation }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
@@ -239,6 +322,10 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
 
   const handleDeleteTag = (tagId) => {
     onDeleteTags([tagId]);
+  };
+  
+  const handleDeleteNote = (noteId) => {
+    onDeleteRawTextItems([noteId]);
   };
   
   const handleRemoveWhitespace = () => {
@@ -519,6 +606,8 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                       onDeleteRelationship={handleDeleteRelationship}
                       onDeleteTag={handleDeleteTag}
                       onUpdateTagText={onUpdateTagText}
+                      onDeleteNote={handleDeleteNote}
+                      onUpdateNoteText={onUpdateRawTextItemText}
                     />
                 ))}
             </ul>

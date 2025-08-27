@@ -388,10 +388,6 @@ export const SidePanel = ({ tags, setTags, relationships, setRelationships, curr
   
   return (
     <aside className="w-80 h-full bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0">
-      <div className="p-4 border-b border-slate-700">
-        <h2 className="text-lg font-bold">Project Data</h2>
-      </div>
-      
       <div className="border-b border-slate-700 flex">
         <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({totalTagCount})</button>
         <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relationships ({relationships.length})</button>

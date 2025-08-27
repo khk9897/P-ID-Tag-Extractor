@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'https://esm.sh/react@19.1.1';
+import React, { useState, useCallback, useEffect, useRef } from 'https://esm.sh/react@19.1.1';
 import { v4 as uuidv4 } from 'https://esm.sh/uuid@11.1.0';
 import { PdfUpload } from './components/PdfUpload.tsx';
 import { Workspace } from './components/Workspace.tsx';
@@ -60,6 +60,13 @@ const App = () => {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [confirmation, setConfirmation] = useState({ isOpen: false, message: '', onConfirm: () => {} });
+
+  // State lifted from viewer/workspace for toolbar
+  const [currentPage, setCurrentPage] = useState(1);
+  const [scale, setScale] = useState(1.5);
+  const [mode, setMode] = useState('select'); // 'select', 'connect', 'manualCreate'
+  const [relationshipStartTag, setRelationshipStartTag] = useState(null);
+  const [showRelationships, setShowRelationships] = useState(true);
 
   
   const [patterns, setPatterns] = useState(() => {
@@ -150,6 +157,7 @@ const App = () => {
     setRawTextItems([]);
     setRelationships([]);
     setProgress({ current: 0, total: doc.numPages });
+    setCurrentPage(1); // Reset to first page on new process
 
     try {
       let allTags = [];
@@ -177,6 +185,7 @@ const App = () => {
     setRawTextItems([]);
     setRelationships([]);
     setProgress({ current: 0, total: 0 });
+    setCurrentPage(1);
 
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -208,6 +217,9 @@ const App = () => {
     setRelationships([]);
     setIsLoading(false);
     setProgress({ current: 0, total: 0 });
+    setCurrentPage(1);
+    setScale(1.5);
+    setMode('select');
   };
   
   const handleCreateTag = useCallback((itemsToConvert, category) => {
@@ -403,6 +415,16 @@ const App = () => {
           onDeleteTags={handleDeleteTags}
           onUpdateTagText={handleUpdateTagText}
           showConfirmation={showConfirmation}
+          // Pass down viewer state
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          scale={scale}
+          setScale={setScale}
+          mode={mode}
+          setMode={setMode}
+          relationshipStartTag={relationshipStartTag}
+          setRelationshipStartTag={setRelationshipStartTag}
+          showRelationships={showRelationships}
         />
       );
     }
@@ -418,6 +440,14 @@ const App = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onImportProject={handleImportProject}
         onExportProject={handleExportProject}
+        pdfDoc={pdfDoc}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        scale={scale}
+        setScale={setScale}
+        mode={mode}
+        showRelationships={showRelationships}
+        setShowRelationships={setShowRelationships}
       />
       <main className="flex-grow overflow-hidden">
         {mainContent()}

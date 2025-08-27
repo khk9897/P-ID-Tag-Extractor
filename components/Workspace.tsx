@@ -15,8 +15,17 @@ export const Workspace = ({
   onDeleteTags,
   onUpdateTagText,
   showConfirmation,
+  // Viewer state from App
+  currentPage,
+  setCurrentPage,
+  scale,
+  setScale,
+  mode,
+  setMode,
+  relationshipStartTag,
+  setRelationshipStartTag,
+  showRelationships,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
   const [manualCreationData, setManualCreationData] = useState(null); // {bbox, page}
@@ -79,8 +88,16 @@ export const Workspace = ({
           onCreateTag={onCreateTag}
           selectedRawTextItemIds={selectedRawTextItemIds}
           setSelectedRawTextItemIds={setSelectedRawTextItemIds}
-      onDeleteTags={onDeleteTags}
+          onDeleteTags={onDeleteTags}
           onManualAreaSelect={handleManualAreaSelect}
+          // Pass down viewer state
+          scale={scale}
+          setScale={setScale}
+          mode={mode}
+          setMode={setMode}
+          relationshipStartTag={relationshipStartTag}
+          setRelationshipStartTag={setRelationshipStartTag}
+          showRelationships={showRelationships}
         />
       </div>
       <SelectionPanel

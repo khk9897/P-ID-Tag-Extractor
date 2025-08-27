@@ -126,6 +126,7 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
     const categoryPatterns = [
         { category: Category.Equipment, regex: patterns[Category.Equipment] },
         { category: Category.Line, regex: patterns[Category.Line] },
+        { category: Category.NotesAndHolds, regex: patterns[Category.NotesAndHolds] },
         // Instrument is now handled in Pass 1
     ];
 

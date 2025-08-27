@@ -8,6 +8,7 @@ export const DEFAULT_PATTERNS = {
     num: '\\d{4}(?:\\s?[A-Z])?'
   },
   [Category.DrawingNumber]: '[A-Z\\d-]{5,}-[A-Z\\d-]{5,}-\\d{3,}',
+  [Category.NotesAndHolds]: '^(NOTE|HOLD).*',
 };
 
 export const DEFAULT_TOLERANCES = {
@@ -37,6 +38,11 @@ export const CATEGORY_COLORS = {
     border: 'border-indigo-400',
     bg: 'bg-indigo-500/20',
     text: 'text-indigo-400',
+  },
+  [Category.NotesAndHolds]: {
+    border: 'border-teal-400',
+    bg: 'bg-teal-500/20',
+    text: 'text-teal-400',
   },
   [Category.Uncategorized]: {
     border: 'border-slate-500',

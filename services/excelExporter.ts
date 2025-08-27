@@ -5,6 +5,7 @@ export const exportToExcel = (tags, relationships) => {
   const lines = tags.filter(t => t.category === Category.Line);
   const instruments = tags.filter(t => t.category === Category.Instrument);
   const drawingNumbers = tags.filter(t => t.category === Category.DrawingNumber);
+  const notesAndHolds = tags.filter(t => t.category === Category.NotesAndHolds);
 
   // Create a map for quick lookup of drawing number by page
   const pageToDrawingNumberMap = new Map(drawingNumbers.map(tag => [tag.page, tag.text]));
@@ -78,6 +79,16 @@ export const exportToExcel = (tags, relationships) => {
       'Installed On': installedOn,
     };
   });
+
+  // 4. Notes & Holds List Data
+  const notesAndHoldsData = notesAndHolds.map(tag => {
+    const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
+    return {
+      'Note / Hold': tag.text,
+      'Page': tag.page,
+      'Drawing Number': drawingNumber,
+    };
+  });
   
   const wb = (window as any).XLSX.utils.book_new();
   
@@ -89,6 +100,9 @@ export const exportToExcel = (tags, relationships) => {
 
   const wsInstruments = (window as any).XLSX.utils.json_to_sheet(instrumentData);
   (window as any).XLSX.utils.book_append_sheet(wb, wsInstruments, 'Instrument List');
+
+  const wsNotes = (window as any).XLSX.utils.json_to_sheet(notesAndHoldsData);
+  (window as any).XLSX.utils.book_append_sheet(wb, wsNotes, 'Notes and Holds');
   
   (window as any).XLSX.writeFile(wb, 'P&ID_Tag_Export.xlsx');
 };

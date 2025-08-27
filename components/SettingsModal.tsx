@@ -104,10 +104,14 @@ export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
     [Category.DrawingNumber]: {
         description: "Finds drawing identifiers like drawing number, sheet number, etc. One per page, searched from bottom-right.",
         example: "PID-1234-001"
+    },
+    [Category.NotesAndHolds]: {
+        description: "Finds notes or holds, typically starting with 'NOTE' or 'HOLD'.",
+        example: "NOTE 1, HOLD FOR REVIEW"
     }
   };
 
-  const categories = [Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber];
+  const categories = [Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber, Category.NotesAndHolds];
   
   const instrumentCurrentTolerances = localTolerances[Category.Instrument] || { vertical: 0, horizontal: 0 };
 

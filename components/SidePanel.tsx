@@ -403,7 +403,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
     );
   };
 
-  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber];
+  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber, Category.NotesAndHolds];
   
   const totalTagCount = useMemo(() => {
     return tags.filter(tag => !showCurrentPageOnly || tag.page === currentPage).length;

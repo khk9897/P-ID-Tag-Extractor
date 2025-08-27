@@ -300,6 +300,81 @@ const App = () => {
     ));
   }, []);
 
+  const loadProjectData = useCallback((projectData) => {
+    if (!projectData.tags || !projectData.relationships || !projectData.rawTextItems) {
+        alert("Invalid project file structure. Cannot load.");
+        return;
+    }
+    
+    setTags(projectData.tags);
+    setRelationships(projectData.relationships);
+    setRawTextItems(projectData.rawTextItems);
+    
+    if (projectData.settings?.patterns) {
+        setPatterns(projectData.settings.patterns);
+    }
+    if (projectData.settings?.tolerances) {
+        setTolerances(projectData.settings.tolerances);
+    }
+    
+    console.log("Project loaded successfully.");
+  }, []);
+
+  const handleImportProject = useCallback(async (file) => {
+    if (!file || !pdfFile) {
+        alert("Please open a PDF file before importing a project file.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const projectData = JSON.parse(event.target.result as string);
+            
+            if (projectData.pdfFileName !== pdfFile.name) {
+                showConfirmation(
+                    `This project file seems to be for a different PDF ("${projectData.pdfFileName}"). You currently have "${pdfFile.name}" open. Do you want to load the project data anyway?`,
+                    () => loadProjectData(projectData)
+                );
+            } else {
+                loadProjectData(projectData);
+            }
+        } catch (error) {
+            console.error("Error parsing project file:", error);
+            alert("Could not load project. The file might be corrupted or in an invalid format.");
+        }
+    };
+    reader.readAsText(file);
+  }, [pdfFile, loadProjectData, showConfirmation]);
+
+  const handleExportProject = useCallback(() => {
+    if (!pdfFile) return;
+
+    const projectData = {
+        pdfFileName: pdfFile.name,
+        exportDate: new Date().toISOString(),
+        tags,
+        relationships,
+        rawTextItems,
+        settings: {
+            patterns,
+            tolerances,
+        },
+    };
+
+    const jsonString = JSON.stringify(projectData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const fileName = pdfFile.name.replace(/\.pdf$/i, '') + '-project.json';
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [pdfFile, tags, relationships, rawTextItems, patterns, tolerances]);
+
   const mainContent = () => {
     if (isLoading) {
       return (
@@ -337,7 +412,13 @@ const App = () => {
 
   return (
     <div className="flex flex-col h-screen bg-slate-900 font-sans">
-      <Header onReset={handleReset} hasData={!!pdfFile} onOpenSettings={() => setIsSettingsOpen(true)} />
+      <Header 
+        onReset={handleReset} 
+        hasData={!!pdfFile} 
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onImportProject={handleImportProject}
+        onExportProject={handleExportProject}
+      />
       <main className="flex-grow overflow-hidden">
         {mainContent()}
       </main>

@@ -3,6 +3,13 @@ import { RelationshipType, Category } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
 import { v4 as uuidv4 } from 'https://esm.sh/uuid@11.1.0';
 
+// FIX: Explicitly type props for Key component to include children, as required by React 19 with TypeScript.
+const Key = ({ children }: { children: React.ReactNode }) => (
+  <kbd className="px-2 py-1 text-xs font-semibold text-sky-300 bg-slate-700 rounded-md border-b-2 border-slate-600">
+    {children}
+  </kbd>
+);
+
 const HotkeyHelp = ({ onClose }) => {
   const ref = useRef(null);
 
@@ -31,13 +38,6 @@ const HotkeyHelp = ({ onClose }) => {
     { key: 'I', desc: 'Create "Install" relationship' },
     { key: 'Delete', desc: 'Delete selected tag(s)' },
   ];
-
-  // FIX: Explicitly type props for Key component to include children, as required by React 19 with TypeScript.
-  const Key = ({ children }: { children: React.ReactNode }) => (
-    <kbd className="px-2 py-1 text-xs font-semibold text-sky-300 bg-slate-700 rounded-md border-b-2 border-slate-600">
-      {children}
-    </kbd>
-  );
 
   return (
     <div ref={ref} className="absolute top-16 right-4 z-20 w-80 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl p-4 text-white animate-fade-in-up" style={{ animationDuration: '0.2s' }}>

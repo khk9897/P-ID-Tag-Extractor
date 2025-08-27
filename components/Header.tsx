@@ -1,6 +1,16 @@
-import React from 'https://esm.sh/react@19.1.1';
+import React, { useRef } from 'https://esm.sh/react@19.1.1';
 
-export const Header = ({ onReset, hasData, onOpenSettings }) => {
+export const Header = ({ onReset, hasData, onOpenSettings, onImportProject, onExportProject }) => {
+  const importInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      onImportProject(e.target.files[0]);
+      // Reset input value to allow selecting the same file again
+      e.target.value = null;
+    }
+  };
+
   return (
     <header className="flex-shrink-0 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 p-2 flex justify-between items-center z-50">
       <div className="flex items-center space-x-3">
@@ -12,6 +22,37 @@ export const Header = ({ onReset, hasData, onOpenSettings }) => {
         <h1 className="text-xl font-bold text-white tracking-tight">P&ID Tag Extractor</h1>
       </div>
       <div className="flex items-center space-x-2">
+        {hasData && (
+            <>
+              <button
+                onClick={() => importInputRef.current?.click()}
+                className="px-3 py-1.5 text-sm font-semibold text-white bg-slate-600 rounded-md hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900 flex items-center space-x-2"
+                title="Import project data from a .json file"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span>Import</span>
+              </button>
+              <input
+                type="file"
+                ref={importInputRef}
+                className="hidden"
+                accept=".json,application/json"
+                onChange={handleFileChange}
+              />
+              <button
+                onClick={onExportProject}
+                className="px-3 py-1.5 text-sm font-semibold text-white bg-slate-600 rounded-md hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900 flex items-center space-x-2"
+                title="Export current tags and relationships to a .json file"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>Export</span>
+              </button>
+            </>
+          )}
         <button
           onClick={onOpenSettings}
           className="px-3 py-1.5 text-sm font-semibold text-white bg-slate-600 rounded-md hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900 flex items-center space-x-2"

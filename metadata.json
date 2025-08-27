@@ -1,5 +1,5 @@
 {
-  "name": "P&ID Tag Extractor",
+  "name": "P&ID Smart Digitizer",
   "description": "An intelligent tool for engineers to automatically recognize, map, and export tags from P&ID PDF drawings directly in the browser, significantly speeding up the documentation process.",
   "requestFramePermissions": []
 }

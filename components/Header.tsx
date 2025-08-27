@@ -97,11 +97,14 @@ export const Header = ({
     <header className="relative flex-shrink-0 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 p-2 flex justify-between items-center z-50">
       <div className="flex items-center space-x-3">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
-          <path d="M12 12l4.243 4.243"></path><path d="M12 12l-4.243-4.243"></path>
-          <path d="M12 12l4.243-4.243"></path><path d="M12 12l-4.243 4.243"></path>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <path d="M14 2v6h6"></path>
+          <circle cx="12" cy="15" r="2"></circle>
+          <path d="M12 10v3"></path>
+          <path d="m15 12-1.5 2.6"></path>
+          <path d="m9 12 1.5 2.6"></path>
         </svg>
-        <h1 className="text-xl font-bold text-white tracking-tight">P&ID Tag Extractor</h1>
+        <h1 className="text-xl font-bold text-white tracking-tight">P&ID Smart Digitizer</h1>
       </div>
 
       {/* Viewer Controls - Centered */}

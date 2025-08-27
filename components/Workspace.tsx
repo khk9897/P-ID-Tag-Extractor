@@ -63,6 +63,7 @@ export const Workspace = ({
       <SidePanel 
         tags={tags} 
         setTags={setTags}
+        rawTextItems={rawTextItems}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         selectedTagIds={selectedTagIds}

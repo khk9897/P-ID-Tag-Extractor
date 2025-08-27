@@ -125,6 +125,24 @@ export const PdfViewer = ({
         } else {
             alert("The 'M' hotkey creates an Instrument tag from exactly TWO selected text items. For other cases, use the action panel at the bottom.");
         }
+      } else if (e.key.toLowerCase() === 'r' && mode === 'select' && selectedTagIds.length === 1 && selectedRawTextItemIds.length > 0) {
+        const tagId = selectedTagIds[0];
+        const newRelationships = selectedRawTextItemIds.map(rawId => ({
+            id: uuidv4(),
+            from: tagId,
+            to: rawId,
+            type: RelationshipType.Annotation,
+        }));
+        
+        const existingRels = new Set(relationships.map(r => `${r.from}-${r.to}-${r.type}`));
+        const uniqueNewRels = newRelationships.filter(r => !existingRels.has(`${r.from}-${r.to}-${r.type}`));
+
+        if (uniqueNewRels.length > 0) {
+            setRelationships(prev => [...prev, ...uniqueNewRels]);
+        }
+        setSelectedTagIds([]);
+        setSelectedRawTextItemIds([]);
+        console.info(`Created ${uniqueNewRels.length} new annotation relationship(s).`);
       } else if (e.key.toLowerCase() === 'i' && mode === 'select' && selectedTagIds.length > 1) {
         const selected = tags.filter(t => selectedTagIds.includes(t.id));
         const baseTags = selected.filter(t => t.category === Category.Equipment || t.category === Category.Line);
@@ -190,8 +208,6 @@ export const PdfViewer = ({
 
   const handleTagClick = (e, tagId) => {
     e.stopPropagation();
-    setSelectedRawTextItemIds([]); // Clear other selection type
-
     const isMultiSelect = e.ctrlKey || e.metaKey;
 
     if (mode === 'select') {
@@ -201,6 +217,7 @@ export const PdfViewer = ({
         );
       } else {
         setSelectedTagIds([tagId]);
+        setSelectedRawTextItemIds([]); // Clear other selection on single click
       }
     } else if (mode === 'connect') {
       if (!relationshipStartTag) {
@@ -223,8 +240,6 @@ export const PdfViewer = ({
 
   const handleRawTextItemMouseDown = (e, rawTextItemId) => {
     e.stopPropagation();
-    setSelectedTagIds([]); // Clear other selection type
-
     const isMultiSelect = e.ctrlKey || e.metaKey;
 
     if (isMultiSelect) {
@@ -233,6 +248,7 @@ export const PdfViewer = ({
         );
     } else {
         setSelectedRawTextItemIds([rawTextItemId]);
+        setSelectedTagIds([]); // Clear other selection on single click
     }
   };
 
@@ -340,8 +356,8 @@ export const PdfViewer = ({
 
     setIsDragging(false);
     
-    // Prioritize selecting existing tags over raw text items
-    const intersectingTags = new Set();
+    // Area selection can add both tags and raw items
+    const intersectingTags = new Set<string>();
     for (const tag of currentTags) {
       const { x1, y1, x2, y2 } = tag.bbox;
       const tagRect = {
@@ -359,33 +375,30 @@ export const PdfViewer = ({
         intersectingTags.add(tag.id);
       }
     }
-    
     if(intersectingTags.size > 0){
-        setSelectedTagIds(prev => Array.from(new Set([...prev, ...Array.from(intersectingTags)])));
-        setSelectedRawTextItemIds([]); // Ensure only one type is selected
-    } else {
-        const intersectingRawItems = new Set();
-         for (const item of currentRawTextItems) {
-            const { x1, y1, x2, y2 } = item.bbox;
-            const itemRect = {
-              x: x1 * scale,
-              y: viewport.height - (y2 * scale),
-              width: (x2 - x1) * scale,
-              height: (y2 - y1) * scale
-            };
-            if (
-                selectionRect.x < itemRect.x + itemRect.width &&
-                selectionRect.x + selectionRect.width > itemRect.x &&
-                selectionRect.y < itemRect.y + itemRect.height &&
-                selectionRect.y + selectionRect.height > itemRect.y
-            ) {
-                intersectingRawItems.add(item.id);
-            }
-         }
-         if (intersectingRawItems.size > 0) {
-            setSelectedRawTextItemIds(prev => Array.from(new Set([...prev, ...Array.from(intersectingRawItems)])));
-            setSelectedTagIds([]); // Ensure only one type is selected
-         }
+        setSelectedTagIds(prev => Array.from(new Set([...prev, ...intersectingTags])));
+    } 
+    
+    const intersectingRawItems = new Set<string>();
+    for (const item of currentRawTextItems) {
+        const { x1, y1, x2, y2 } = item.bbox;
+        const itemRect = {
+            x: x1 * scale,
+            y: viewport.height - (y2 * scale),
+            width: (x2 - x1) * scale,
+            height: (y2 - y1) * scale
+        };
+        if (
+            selectionRect.x < itemRect.x + itemRect.width &&
+            selectionRect.x + selectionRect.width > itemRect.x &&
+            selectionRect.y < itemRect.y + itemRect.height &&
+            selectionRect.y + selectionRect.height > itemRect.y
+        ) {
+            intersectingRawItems.add(item.id);
+        }
+    }
+    if (intersectingRawItems.size > 0) {
+        setSelectedRawTextItemIds(prev => Array.from(new Set([...prev, ...intersectingRawItems])));
     }
 
     setSelectionRect(null);
@@ -400,9 +413,23 @@ export const PdfViewer = ({
 
   const currentRelationships = relationships.filter(r => {
     const fromTag = tags.find(t => t.id === r.from);
+    // Annotations can link to raw text items which don't have a page property in the same way
+    if (r.type === RelationshipType.Annotation) {
+        const toItem = rawTextItems.find(item => item.id === r.to);
+        return fromTag?.page === currentPage && toItem?.page === currentPage;
+    }
     const toTag = tags.find(t => t.id === r.to);
     return fromTag?.page === currentPage && toTag?.page === currentPage;
   });
+  
+  const getAnnotationTargetCenter = (rawTextItemId) => {
+      if (!viewport) return { x: 0, y: 0 };
+      const item = rawTextItems.find(i => i.id === rawTextItemId);
+      if (!item) return { x: 0, y: 0 };
+      const centerX = ((item.bbox.x1 + item.bbox.x2) / 2) * scale;
+      const centerY = ((item.bbox.y1 + item.bbox.y2) / 2) * scale;
+      return { x: centerX, y: viewport.height - centerY };
+  }
 
   const getModeStyles = () => {
     switch(mode){
@@ -452,13 +479,28 @@ export const PdfViewer = ({
                     })}
                     
                     {showRelationships && currentRelationships.map(rel => {
-                    const fromTag = tags.find(t => t.id === rel.from);
-                    const toTag = tags.find(t => t.id === rel.to);
-                    if (!fromTag || !toTag) return null;
-                    const start = getTagCenter(fromTag);
-                    const end = getTagCenter(toTag);
-                    const isConnect = rel.type === RelationshipType.Connection;
-                    return <line key={rel.id} x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={isConnect ? '#38bdf8' : '#facc15'} strokeWidth="2" markerEnd={isConnect ? 'url(#arrowhead-connect)' : 'url(#arrowhead-install)'} />;
+                        const fromTag = tags.find(t => t.id === rel.from);
+                        if (!fromTag) return null;
+                        
+                        const start = getTagCenter(fromTag);
+                        let end, strokeColor, marker;
+                        
+                        if (rel.type === RelationshipType.Annotation) {
+                            const toItem = rawTextItems.find(i => i.id === rel.to);
+                            if (!toItem) return null;
+                            end = getAnnotationTargetCenter(rel.to);
+                            strokeColor = '#94a3b8'; // slate-400
+                            marker = '';
+                        } else {
+                            const toTag = tags.find(t => t.id === rel.to);
+                            if (!toTag) return null;
+                            end = getTagCenter(toTag);
+                            const isConnect = rel.type === RelationshipType.Connection;
+                            strokeColor = isConnect ? '#38bdf8' : '#facc15';
+                            marker = isConnect ? 'url(#arrowhead-connect)' : 'url(#arrowhead-install)';
+                        }
+
+                        return <line key={rel.id} x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={strokeColor} strokeWidth="2" strokeDasharray={rel.type === RelationshipType.Annotation ? '3 3' : 'none'} markerEnd={marker} />;
                     })}
                     
                     {currentTags.map(tag => {

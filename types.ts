@@ -9,4 +9,5 @@ export const Category = {
 export const RelationshipType = {
   Connection: 'Connection', // A -> B
   Installation: 'Installation', // A is on B
+  Annotation: 'Annotation', // Tag -> Raw Text Item
 };

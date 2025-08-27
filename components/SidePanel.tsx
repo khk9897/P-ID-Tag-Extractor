@@ -41,18 +41,20 @@ interface TagListItemProps {
   onGoToTag: (tag: any) => void;
   relationships: any[];
   allTags: any[];
+  allRawTextItems: any[];
   onDeleteRelationship: (relId: any) => void;
   onDeleteTag: (tagId: string) => void;
   onUpdateTagText: (tagId: string, newText: string) => void;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, onDeleteRelationship, onDeleteTag, onUpdateTagText }) => {
+const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, onDeleteRelationship, onDeleteTag, onUpdateTagText }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const inputRef = useRef<HTMLInputElement>(null);
   
   const colors = CATEGORY_COLORS[tag.category];
   const tagMap = useMemo(() => new Map(allTags.map(t => [t.id, t])), [allTags]);
+  const rawTextItemMap = useMemo(() => new Map(allRawTextItems.map(item => [item.id, item])), [allRawTextItems]);
   
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -110,8 +112,9 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   const incomingConnections = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Connection);
   const installationTarget = relationships.find(r => r.from === tag.id && r.type === RelationshipType.Installation);
   const installedInstruments = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Installation);
+  const annotationRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Annotation);
   
-  const hasRelationships = outgoingConnections.length > 0 || incomingConnections.length > 0 || installationTarget || installedInstruments.length > 0;
+  const hasRelationships = outgoingConnections.length > 0 || incomingConnections.length > 0 || installationTarget || installedInstruments.length > 0 || annotationRelationships.length > 0;
 
   return (
     <li
@@ -195,13 +198,33 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
               </div>
             </div>
           )}
+          {/* Annotation relationships */}
+          {annotationRelationships.length > 0 && (
+            <div>
+              <span className="text-slate-400 font-semibold">Notes:</span>
+              <div className="pl-3 space-y-0.5 mt-1">
+                {annotationRelationships.map(rel => {
+                  const note = rawTextItemMap.get(rel.to);
+                  return note ? (
+                    <div key={rel.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-1.5" title={note.text}>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-slate-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
+                          <span className="text-slate-300 font-mono truncate max-w-[180px]">{note.text}</span>
+                      </div>
+                      <DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} />
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </li>
   );
 };
 
-export const SidePanel = ({ tags, setTags, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, showConfirmation }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, showConfirmation }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
@@ -492,6 +515,7 @@ export const SidePanel = ({ tags, setTags, relationships, setRelationships, curr
                       onGoToTag={goToTag}
                       relationships={relationships}
                       allTags={tags}
+                      allRawTextItems={rawTextItems}
                       onDeleteRelationship={handleDeleteRelationship}
                       onDeleteTag={handleDeleteTag}
                       onUpdateTagText={onUpdateTagText}

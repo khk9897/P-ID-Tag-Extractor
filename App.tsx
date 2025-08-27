@@ -6,7 +6,7 @@ import { Header } from './components/Header.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import { extractTags } from './services/taggingService.ts';
 import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES } from './constants.ts';
-import { Category } from './types.ts';
+import { Category, RelationshipType } from './types.ts';
 
 // Set PDF.js worker source globally
 if ((window as any).pdfjsLib) {
@@ -255,6 +255,8 @@ const App = () => {
     setTags(prev => [...prev, newTag]);
     const idsToConvert = new Set(itemsToConvert.map(item => item.id));
     setRawTextItems(prev => prev.filter(item => !idsToConvert.has(item.id)));
+    // Clean up any annotation relationships involving the now-converted raw items
+    setRelationships(prev => prev.filter(rel => !(rel.type === RelationshipType.Annotation && idsToConvert.has(rel.to))));
   }, []);
 
   const handleCreateManualTag = useCallback(({ text, bbox, page, category }) => {

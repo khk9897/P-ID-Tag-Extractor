@@ -32,6 +32,7 @@ const HotkeyHelp = ({ onClose }) => {
   const actions = [
     { key: 'M', desc: 'Merge two text items to an Instrument' },
     { key: 'I', desc: 'Create "Install" relationship' },
+    { key: 'R', desc: 'Relate tag to selected text' },
     { key: 'Delete', desc: 'Delete selected tag(s)' },
   ];
 

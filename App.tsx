@@ -116,7 +116,19 @@ const App = () => {
     const [tolerances, setTolerances] = useState(() => {
         try {
             const saved = localStorage.getItem('pid-tagger-tolerances');
-            return saved ? JSON.parse(saved) : DEFAULT_TOLERANCES;
+            let parsed = saved ? JSON.parse(saved) : DEFAULT_TOLERANCES;
+
+            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                if (!parsed[Category.Instrument]) {
+                    parsed[Category.Instrument] = { ...DEFAULT_TOLERANCES[Category.Instrument] };
+                } else {
+                    if (!parsed[Category.Instrument].hasOwnProperty('autoLinkDistance')) {
+                        parsed[Category.Instrument].autoLinkDistance = DEFAULT_TOLERANCES[Category.Instrument].autoLinkDistance;
+                    }
+                }
+                return parsed;
+            }
+            return DEFAULT_TOLERANCES;
         } catch (error) {
             console.error("Failed to load tolerances from localStorage", error);
             return DEFAULT_TOLERANCES;
@@ -401,6 +413,76 @@ const App = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, [pdfFile, tags, relationships, rawTextItems, patterns, tolerances]);
+  
+  const handleAutoLinkInstrumentNotes = useCallback(() => {
+    const autoLinkDistance = tolerances[Category.Instrument]?.autoLinkDistance;
+    if (typeof autoLinkDistance !== 'number') {
+        alert("Auto-link distance is not configured. Please check your settings.");
+        return;
+    }
+
+    const performLinking = () => {
+        const instrumentTags = tags.filter(t => t.category === Category.Instrument);
+        const existingAnnotationTargets = new Set(
+            relationships
+                .filter(r => r.type === RelationshipType.Annotation)
+                .map(r => r.to)
+        );
+        const unlinkedRawItems = rawTextItems.filter(item => !existingAnnotationTargets.has(item.id));
+        const newRelationships = [];
+
+        for (const instTag of instrumentTags) {
+            const instCenter = {
+                x: (instTag.bbox.x1 + instTag.bbox.x2) / 2,
+                y: (instTag.bbox.y1 + instTag.bbox.y2) / 2
+            };
+
+            const pageRawItems = unlinkedRawItems.filter(item => item.page === instTag.page);
+
+            for (const item of pageRawItems) {
+                if (existingAnnotationTargets.has(item.id)) continue; // Already processed in this run
+
+                const itemCenter = {
+                    x: (item.bbox.x1 + item.bbox.x2) / 2,
+                    y: (item.bbox.y1 + item.bbox.y2) / 2
+                };
+
+                const dx = instCenter.x - itemCenter.x;
+                const dy = instCenter.y - itemCenter.y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                
+                if (distance <= autoLinkDistance) {
+                    newRelationships.push({
+                        id: uuidv4(),
+                        from: instTag.id,
+                        to: item.id,
+                        type: RelationshipType.Annotation
+                    });
+                    existingAnnotationTargets.add(item.id); 
+                }
+            }
+        }
+        
+        if (newRelationships.length > 0) {
+            const existingRelsSet = new Set(relationships.map(r => `${r.from}-${r.to}-${r.type}`));
+            const uniqueNewRels = newRelationships.filter(r => !existingRelsSet.has(`${r.from}-${r.to}-${r.type}`));
+            
+            if (uniqueNewRels.length > 0) {
+                setRelationships(prev => [...prev, ...uniqueNewRels]);
+                alert(`${uniqueNewRels.length} new annotation link(s) created.`);
+            } else {
+                alert('No new annotation links could be found. They may already exist.');
+            }
+        } else {
+            alert('No new annotation links could be found with the current settings.');
+        }
+    };
+    
+    showConfirmation(
+        `This will automatically create annotation links for all Instrument tags based on the current distance setting (${autoLinkDistance}px). This may create many relationships. Do you want to proceed?`,
+        performLinking
+    );
+  }, [tags, rawTextItems, relationships, tolerances, showConfirmation]);
 
   const mainContent = () => {
     if (isLoading) {
@@ -431,6 +513,7 @@ const App = () => {
           onUpdateTagText={handleUpdateTagText}
           onDeleteRawTextItems={handleDeleteRawTextItems}
           onUpdateRawTextItemText={handleUpdateRawTextItemText}
+          onAutoLinkInstrumentNotes={handleAutoLinkInstrumentNotes}
           showConfirmation={showConfirmation}
           // Pass down viewer state
           currentPage={currentPage}

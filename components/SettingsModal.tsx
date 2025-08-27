@@ -75,14 +75,14 @@ export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
     }));
   };
   
-  const handleToleranceChange = (axis: 'vertical' | 'horizontal', value: string) => {
+  const handleToleranceChange = (property: 'vertical' | 'horizontal' | 'autoLinkDistance', value: string) => {
       const numValue = parseInt(value, 10);
       if (!isNaN(numValue) && numValue >= 0) {
           setLocalTolerances(prev => ({
               ...prev,
               [Category.Instrument]: {
                   ...prev[Category.Instrument],
-                  [axis]: numValue
+                  [property]: numValue
               }
           }));
       }
@@ -113,7 +113,7 @@ export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
 
   const categories = [Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber, Category.NotesAndHolds];
   
-  const instrumentCurrentTolerances = localTolerances[Category.Instrument] || { vertical: 0, horizontal: 0 };
+  const instrumentCurrentTolerances = localTolerances[Category.Instrument] || { vertical: 0, horizontal: 0, autoLinkDistance: 50 };
 
 
   return (
@@ -221,6 +221,21 @@ export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
                                </div>
                             </div>
                           </div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-slate-700">
+                          <h4 className="text-xs font-medium text-slate-400 mb-2">Automatic Annotation Linking</h4>
+                           <div>
+                               <label htmlFor="tolerance-autolink" className="block text-xs text-slate-400 mb-1">
+                                Max Link Distance ({instrumentCurrentTolerances.autoLinkDistance}px)
+                               </label>
+                               <div className="flex items-center space-x-2">
+                                <input id="tolerance-autolink" type="range" min="0" max="200"
+                                    value={instrumentCurrentTolerances.autoLinkDistance}
+                                    onChange={(e) => handleToleranceChange('autoLinkDistance', e.target.value)}
+                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                                <input type="number" min="0" max="200" value={instrumentCurrentTolerances.autoLinkDistance} onChange={(e) => handleToleranceChange('autoLinkDistance', e.target.value)} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
+                               </div>
+                            </div>
                         </div>
                     </div>
                   );

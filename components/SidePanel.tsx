@@ -307,7 +307,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   );
 };
 
-export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, onDeleteRawTextItems, onUpdateRawTextItemText, showConfirmation }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkInstrumentNotes, showConfirmation }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
@@ -564,7 +564,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                     )
                   })}
                 </div>
-                 <div className="pt-2">
+                 <div className="pt-2 grid grid-cols-2 gap-2">
                   <button
                     onClick={handleRemoveWhitespace}
                     className="w-full flex items-center justify-center space-x-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold py-1.5 px-2 rounded-md transition-colors text-sm"
@@ -573,7 +573,17 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" />
                     </svg>
-                    <span>Remove All Whitespace</span>
+                    <span>Strip Whitespace</span>
+                  </button>
+                   <button
+                    onClick={onAutoLinkInstrumentNotes}
+                    className="w-full flex items-center justify-center space-x-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold py-1.5 px-2 rounded-md transition-colors text-sm"
+                    title="Automatically link nearby text as notes to Instrument tags."
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    <span>Auto-link Notes</span>
                   </button>
                 </div>
             </div>

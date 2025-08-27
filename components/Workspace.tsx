@@ -16,6 +16,7 @@ export const Workspace = ({
   onUpdateTagText,
   onDeleteRawTextItems,
   onUpdateRawTextItemText,
+  onAutoLinkInstrumentNotes,
   showConfirmation,
   // Viewer state from App
   currentPage,
@@ -80,6 +81,7 @@ export const Workspace = ({
         onUpdateTagText={onUpdateTagText}
         onDeleteRawTextItems={onDeleteRawTextItems}
         onUpdateRawTextItemText={onUpdateRawTextItemText}
+        onAutoLinkInstrumentNotes={onAutoLinkInstrumentNotes}
         showConfirmation={showConfirmation}
       />
       <div className="flex-grow h-full overflow-auto bg-slate-800/30">

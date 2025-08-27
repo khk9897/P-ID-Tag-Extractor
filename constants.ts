@@ -13,8 +13,9 @@ export const DEFAULT_PATTERNS = {
 
 export const DEFAULT_TOLERANCES = {
     [Category.Instrument]: {
-        vertical: 15, // px
-        horizontal: 20, // px
+        vertical: 15, // px for combining parts
+        horizontal: 20, // px for combining parts
+        autoLinkDistance: 50, // px for auto-linking notes
     },
 };
 

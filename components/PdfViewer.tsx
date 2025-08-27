@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'https://esm.sh/react@19.1.1';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'https://esm.sh/react@19.1.1';
 import { RelationshipType, Category } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
 import { v4 as uuidv4 } from 'https://esm.sh/uuid@11.1.0';
 
-// FIX: Explicitly type props for Key component to include children, as required by React 19 with TypeScript.
-const Key = ({ children }: { children: React.ReactNode }) => (
+// FIX: The Key component's props are now explicitly typed using a type alias to ensure compatibility with React 19 and fix the missing 'children' property error.
+type KeyProps = {
+  children: React.ReactNode;
+};
+const Key = ({ children }: KeyProps) => (
   <kbd className="px-2 py-1 text-xs font-semibold text-sky-300 bg-slate-700 rounded-md border-b-2 border-slate-600">
     {children}
   </kbd>
@@ -24,10 +27,6 @@ const HotkeyHelp = ({ onClose }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  const controls = [
-    { key: 'Drag', desc: 'Pan View' },
-    { key: 'Ctrl + Drag', desc: 'Area Select Tags/Text' },
-  ];
   const modes = [
     { key: 'C', desc: 'Enter Connect Mode' },
     { key: 'K', desc: 'Enter Manual Create Mode' },
@@ -47,6 +46,8 @@ const HotkeyHelp = ({ onClose }) => {
             <h4 className="font-semibold text-sm text-slate-400 mb-2">Navigation & Selection</h4>
             <dl className="space-y-2 text-sm text-slate-300">
                 <div className="flex justify-between items-center"><dt>Pan View</dt><dd><Key>Drag</Key></dd></div>
+                <div className="flex justify-between items-center"><dt>Zoom In</dt><dd><Key>1</Key></dd></div>
+                <div className="flex justify-between items-center"><dt>Zoom Out</dt><dd><Key>2</Key></dd></div>
                 <div className="flex justify-between items-center"><dt>Area Select</dt><dd><Key>Ctrl</Key> + <Key>Drag</Key></dd></div>
             </dl>
         </div>
@@ -125,9 +126,9 @@ export const PdfViewer = ({
     await page.render(renderContext).promise;
   }, [pdfDoc, scale]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     renderPage(currentPage);
-  }, [currentPage, renderPage, scale]);
+  }, [currentPage, renderPage, scale]); // Rerender on scale change
 
   useEffect(() => {
     if (selectedTagIds.length === 1) {
@@ -145,7 +146,18 @@ export const PdfViewer = ({
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        return;
+      }
+      
+      if (e.key === '1') {
+        setScale(s => Math.min(10, s + 0.25));
+        e.preventDefault();
+      } else if (e.key === '2') {
+        setScale(s => Math.max(0.25, s - 0.25));
+        e.preventDefault();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedTagIds.length > 0) {
           e.preventDefault(); // Prevent browser back navigation on Backspace
           onDeleteTags(selectedTagIds);
@@ -207,7 +219,7 @@ export const PdfViewer = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, setSelectedRawTextItemIds, onDeleteTags]);
   
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (selectedTagIds.length === 1 && scrollContainerRef.current && viewport) {
       const tagId = selectedTagIds[0];
       const tag = tags.find(t => t.id === tagId);

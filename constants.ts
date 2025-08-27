@@ -24,9 +24,9 @@ export const CATEGORY_COLORS = {
     text: 'text-sky-400',
   },
   [Category.Line]: {
-    border: 'border-emerald-400',
-    bg: 'bg-emerald-500/20',
-    text: 'text-emerald-400',
+    border: 'border-rose-400',
+    bg: 'bg-rose-500/20',
+    text: 'text-rose-400',
   },
   [Category.Instrument]: {
     border: 'border-amber-400',

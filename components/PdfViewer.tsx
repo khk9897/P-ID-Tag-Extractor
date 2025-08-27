@@ -32,6 +32,7 @@ export const PdfViewer = ({
   const viewerRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const startPoint = useRef({ x: 0, y: 0 });
+  const isClickOnItem = useRef(false); // Ref to track if mousedown was on an item
   
   const [viewport, setViewport] = useState(null);
   const [isDragging, setIsDragging] = useState(false); // For selection rect
@@ -230,18 +231,21 @@ export const PdfViewer = ({
     }
   }, [selectedTagIds, currentPage, viewport, tags, scale]);
 
-  const handleTagClick = (e, tagId) => {
+  const handleTagMouseDown = (e, tagId) => {
     e.stopPropagation();
+    isClickOnItem.current = true;
     const isMultiSelect = e.ctrlKey || e.metaKey;
 
     if (mode === 'select') {
       if (isMultiSelect) {
+        // Add to or remove from tag selection without affecting raw text selection
         setSelectedTagIds(prev =>
           prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
         );
       } else {
+        // A single click replaces the entire selection with just this one tag.
         setSelectedTagIds([tagId]);
-        setSelectedRawTextItemIds([]); // Clear other selection on single click
+        setSelectedRawTextItemIds([]);
       }
     } else if (mode === 'connect') {
       if (!relationshipStartTag) {
@@ -264,15 +268,18 @@ export const PdfViewer = ({
 
   const handleRawTextItemMouseDown = (e, rawTextItemId) => {
     e.stopPropagation();
+    isClickOnItem.current = true;
     const isMultiSelect = e.ctrlKey || e.metaKey;
 
     if (isMultiSelect) {
+        // Add to or remove from raw text selection without affecting tag selection
         setSelectedRawTextItemIds(prev =>
             prev.includes(rawTextItemId) ? prev.filter(id => id !== rawTextItemId) : [...prev, rawTextItemId]
         );
     } else {
+        // A single click replaces the entire selection with just this one raw text item.
         setSelectedRawTextItemIds([rawTextItemId]);
-        setSelectedTagIds([]); // Clear other selection on single click
+        setSelectedTagIds([]);
     }
   };
 
@@ -284,9 +291,11 @@ export const PdfViewer = ({
       (e.target as Element).closest('[data-tag-id]') ||
       (e.target as Element).closest('[data-raw-text-id]')
     ) {
+      // The item's own onMouseDown will fire and set the isClickOnItem ref.
       return;
     }
   
+    isClickOnItem.current = false; // A true background click
     isMoved.current = false;
   
     if (mode === 'manualCreate' && viewerRef.current) {
@@ -344,7 +353,18 @@ export const PdfViewer = ({
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e) => {
+    // If the interaction started on an item, don't clear selection or process area selection.
+    // This is more robust than checking e.target on mouseup, which can be affected by re-renders.
+    if (isClickOnItem.current) {
+      isClickOnItem.current = false; // Reset for next interaction
+      if (isDragging) { // This can happen if user clicks item and drags off
+        setIsDragging(false);
+        setSelectionRect(null);
+      }
+      return;
+    }
+      
     if (isPanning) {
       setIsPanning(false);
     }
@@ -553,7 +573,7 @@ export const PdfViewer = ({
                     const colors = CATEGORY_COLORS[tag.category];
 
                     return (
-                        <g key={tag.id} data-tag-id={tag.id} onClick={(e) => handleTagClick(e, tag.id)} className="cursor-pointer">
+                        <g key={tag.id} data-tag-id={tag.id} onMouseDown={(e) => handleTagMouseDown(e, tag.id)} className="cursor-pointer">
                         <rect x={rectX} y={rectY} width={rectWidth} height={rectHeight} className={`fill-opacity-20 stroke-2 transition-all duration-150 ${colors.bg.replace('bg-', 'fill-')} ${colors.border.replace('border-', 'stroke-')}`} strokeDasharray={isRelStart ? "4 2" : "none"} />
                         {isSelected && <rect x={rectX - 2} y={rectY - 2} width={rectWidth + 4} height={rectHeight + 4} className="fill-none stroke-pink-500" strokeWidth="3" />}
                         {isRelated && !isSelected && (

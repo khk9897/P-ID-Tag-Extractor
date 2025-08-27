@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'https://esm.sh/react@19.1.1';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'https://esm.sh/react@19.1.1';
 import { RelationshipType, Category } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
 import { v4 as uuidv4 } from 'https://esm.sh/uuid@11.1.0';
@@ -37,6 +37,15 @@ export const PdfViewer = ({
   const [isDragging, setIsDragging] = useState(false); // For selection rect
   const [selectionRect, setSelectionRect] = useState(null);
   const [relatedTagIds, setRelatedTagIds] = useState(new Set());
+  const [highlightedRawTextItemIds, setHighlightedRawTextItemIds] = useState(new Set());
+
+  const linkedRawTextItemIds = useMemo(() => {
+    return new Set(
+      relationships
+        .filter(r => r.type === RelationshipType.Annotation)
+        .map(r => r.to)
+    );
+  }, [relationships]);
 
   const isMoved = useRef(false);
   const [isPanning, setIsPanning] = useState(false);
@@ -68,17 +77,32 @@ export const PdfViewer = ({
   }, [currentPage, renderPage, scale]); // Rerender on scale change
 
   useEffect(() => {
-    if (selectedTagIds.length === 1) {
-      const selectedTag = tags.find(t => t.id === selectedTagIds[0]);
-      if (selectedTag && (selectedTag.category === Category.Equipment || selectedTag.category === Category.Line)) {
-        const relatedIds = relationships
-          .filter(r => r.type === RelationshipType.Installation && r.to === selectedTag.id)
-          .map(r => r.from);
-        setRelatedTagIds(new Set(relatedIds));
-        return;
+    let newRelatedTagIds = new Set();
+    let newHighlightedNoteIds = new Set();
+
+    if (selectedTagIds.length > 0) {
+      // For related notes (annotations), show for any selection
+      newHighlightedNoteIds = new Set(
+        relationships
+          .filter(r => r.type === RelationshipType.Annotation && selectedTagIds.includes(r.from))
+          .map(r => r.to)
+      );
+
+      // For related instruments (installed on Equipment/Line), only show for single selection
+      if (selectedTagIds.length === 1) {
+        const selectedTag = tags.find(t => t.id === selectedTagIds[0]);
+        if (selectedTag && (selectedTag.category === Category.Equipment || selectedTag.category === Category.Line)) {
+          newRelatedTagIds = new Set(
+            relationships
+              .filter(r => r.type === RelationshipType.Installation && r.to === selectedTag.id)
+              .map(r => r.from)
+          );
+        }
       }
     }
-    setRelatedTagIds(new Set());
+    
+    setRelatedTagIds(newRelatedTagIds);
+    setHighlightedRawTextItemIds(newHighlightedNoteIds);
   }, [selectedTagIds, relationships, tags]);
 
   useEffect(() => {
@@ -466,13 +490,27 @@ export const PdfViewer = ({
                          const rectWidth = (x2 - x1) * scale;
                          const rectHeight = (y2 - y1) * scale;
                          const isSelected = selectedRawTextItemIds.includes(item.id);
+                         const isHighlighted = highlightedRawTextItemIds.has(item.id);
+                         const isLinked = linkedRawTextItemIds.has(item.id);
+                         
+                         const getRectProps = () => {
+                             if (isSelected) {
+                                 return { className: "fill-sky-400/30 stroke-sky-400", strokeWidth: "1.5", strokeDasharray: "none" };
+                             }
+                             if (isHighlighted) {
+                                 return { className: "fill-violet-500/20 stroke-violet-500", strokeWidth: "2", strokeDasharray: "none" };
+                             }
+                             if (isLinked) {
+                                return { className: "fill-teal-500/10 stroke-teal-500", strokeWidth: "1.5", strokeDasharray: "none" };
+                             }
+                             return { className: "fill-transparent stroke-slate-600/80 group-hover:stroke-sky-400 group-hover:fill-sky-400/20 transition-all", strokeWidth: "1.5", strokeDasharray: "3 3" };
+                         };
+
                          return (
                             <g key={item.id} data-raw-text-id={item.id} onMouseDown={(e) => handleRawTextItemMouseDown(e, item.id)} className="cursor-pointer group">
                                 <rect 
                                     x={rectX} y={rectY} width={rectWidth} height={rectHeight} 
-                                    className={isSelected ? "fill-sky-400/30 stroke-sky-400" : "fill-transparent stroke-slate-600/80 group-hover:stroke-sky-400 group-hover:fill-sky-400/20 transition-all"} 
-                                    strokeWidth="1.5"
-                                    strokeDasharray={isSelected ? "none" : "3 3"} 
+                                    {...getRectProps()}
                                 />
                             </g>
                          )

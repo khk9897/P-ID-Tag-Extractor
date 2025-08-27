@@ -52,6 +52,7 @@ export const Workspace = ({
     <div className="flex h-full bg-slate-900 relative">
       <SidePanel 
         tags={tags} 
+        setTags={setTags}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         selectedTagIds={selectedTagIds}

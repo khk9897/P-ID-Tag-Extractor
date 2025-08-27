@@ -201,7 +201,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   );
 };
 
-export const SidePanel = ({ tags, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText }) => {
+export const SidePanel = ({ tags, setTags, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
@@ -218,8 +218,20 @@ export const SidePanel = ({ tags, relationships, setRelationships, currentPage, 
     onDeleteTags([tagId]);
   };
   
+  const handleRemoveWhitespace = () => {
+    if (window.confirm('Are you sure you want to remove all whitespace from every tag? This action cannot be undone.')) {
+      const updatedTags = tags.map(tag => ({
+        ...tag,
+        text: tag.text.replace(/\s/g, '')
+      }));
+      setTags(updatedTags);
+    }
+  };
+  
   const sortedAndFilteredTags = useMemo(() => {
-    const filtered = tags
+    let baseTags = tags;
+    
+    const filtered = baseTags
       .filter(tag => !showCurrentPageOnly || tag.page === currentPage)
       .filter(tag => filterCategory === 'All' || tag.category === filterCategory)
       .filter(tag => tag.text.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -367,6 +379,10 @@ export const SidePanel = ({ tags, relationships, setRelationships, currentPage, 
 
   const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber];
   
+  const totalTagCount = useMemo(() => {
+    return tags.filter(tag => !showCurrentPageOnly || tag.page === currentPage).length;
+  }, [tags, showCurrentPageOnly, currentPage]);
+  
   return (
     <aside className="w-80 h-full bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0">
       <div className="p-4 border-b border-slate-700">
@@ -374,7 +390,7 @@ export const SidePanel = ({ tags, relationships, setRelationships, currentPage, 
       </div>
       
       <div className="border-b border-slate-700 flex">
-        <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({tags.length})</button>
+        <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({totalTagCount})</button>
         <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relationships ({relationships.length})</button>
       </div>
 
@@ -438,6 +454,18 @@ export const SidePanel = ({ tags, relationships, setRelationships, currentPage, 
                       </button>
                     )
                   })}
+                </div>
+                 <div className="pt-2">
+                  <button
+                    onClick={handleRemoveWhitespace}
+                    className="w-full flex items-center justify-center space-x-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold py-1.5 px-2 rounded-md transition-colors text-sm"
+                    title="Remove all spaces from all tag names. This action cannot be undone."
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" />
+                    </svg>
+                    <span>Remove All Whitespace</span>
+                  </button>
                 </div>
             </div>
             

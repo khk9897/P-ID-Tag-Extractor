@@ -41,6 +41,20 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
   const [localPatterns, setLocalPatterns] = useState(patterns);
   const [showRegexHelp, setShowRegexHelp] = useState(false);
 
+  // State for split Instrument pattern parts
+  const [instrumentParts, setInstrumentParts] = useState(() => {
+    const pattern = patterns[Category.Instrument] || '';
+    const separator = '\\s?';
+    const separatorIndex = pattern.indexOf(separator);
+    if (separatorIndex > -1) {
+      return {
+        func: pattern.substring(0, separatorIndex),
+        num: pattern.substring(separatorIndex + separator.length),
+      };
+    }
+    return { func: pattern, num: '' };
+  });
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -52,15 +66,34 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
   }, [onClose]);
 
   const handleSave = () => {
-    onSave(localPatterns);
+    const finalPatterns = {
+      ...localPatterns,
+      [Category.Instrument]: `${instrumentParts.func}\\s?${instrumentParts.num}`,
+    };
+    onSave(finalPatterns);
   };
   
   const handleReset = () => {
     setLocalPatterns(DEFAULT_PATTERNS);
+    const defaultInstrumentPattern = DEFAULT_PATTERNS[Category.Instrument] || '';
+    const separator = '\\s?';
+    const separatorIndex = defaultInstrumentPattern.indexOf(separator);
+    if (separatorIndex > -1) {
+      setInstrumentParts({
+        func: defaultInstrumentPattern.substring(0, separatorIndex),
+        num: defaultInstrumentPattern.substring(separatorIndex + separator.length),
+      });
+    } else {
+      setInstrumentParts({ func: defaultInstrumentPattern, num: '' });
+    }
   }
 
   const handlePatternChange = (category, value) => {
     setLocalPatterns(prev => ({...prev, [category]: value}));
+  };
+
+  const handleInstrumentPartChange = (part: 'func' | 'num', value: string) => {
+    setInstrumentParts(prev => ({ ...prev, [part]: value }));
   };
   
   const categoryInfo = {
@@ -73,8 +106,8 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
         example: `4"-P-1501-C1, 10"-CW-203-A2`
     },
     [Category.Instrument]: {
-        description: "계측기기 태그를 찾습니다. 보통 기능(P, T, F, L)과 일련번호로 구성됩니다.",
-        example: "PI-101, FIT-203, LT-100"
+        description: "기능(Function)과 번호(Number) 부분으로 구성된 계측기 태그를 찾습니다. 두 부분 사이에는 공백이 있을 수도 있고 없을 수도 있습니다.",
+        example: "PI 1001, FIT1002A, TIC 1004 B"
     },
     [Category.DrawingNumber]: {
         description: "도면 번호, 시트 번호 등 도면 식별 태그를 찾습니다. 페이지 당 하나, 우측 하단에서 검색됩니다.",
@@ -125,6 +158,46 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
 
             {categories.map(category => {
                 const info = categoryInfo[category];
+                
+                if (category === Category.Instrument) {
+                  return (
+                    <div key={category}>
+                      <label className="block text-sm font-semibold mb-1 text-slate-200">{category}</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="pattern-inst-func" className="block text-xs font-medium text-slate-400 mb-1">Function Part</label>
+                          <input
+                            id="pattern-inst-func"
+                            type="text"
+                            value={instrumentParts.func}
+                            onChange={(e) => handleInstrumentPartChange('func', e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="pattern-inst-num" className="block text-xs font-medium text-slate-400 mb-1">Number Part</label>
+                          <input
+                            id="pattern-inst-num"
+                            type="text"
+                            value={instrumentParts.num}
+                            onChange={(e) => handleInstrumentPartChange('num', e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
+                          />
+                        </div>
+                      </div>
+                      {info && (
+                        <div className="mt-2 text-xs text-slate-400 space-y-1 pl-1">
+                          <p>{info.description}</p>
+                          <p>
+                            <span className="font-semibold">매칭 예시:</span>{' '}
+                            <code className="bg-slate-700/50 px-1 py-0.5 rounded">{info.example}</code>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
                 return (
                     <div key={category}>
                         <label htmlFor={`pattern-${category}`} className="block text-sm font-semibold mb-1 text-slate-200">{category}</label>

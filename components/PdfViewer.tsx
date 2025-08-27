@@ -357,7 +357,6 @@ export const PdfViewer = ({
     // If the interaction started on an item, don't clear selection or process area selection.
     // This is more robust than checking e.target on mouseup, which can be affected by re-renders.
     if (isClickOnItem.current) {
-      isClickOnItem.current = false; // Reset for next interaction
       if (isDragging) { // This can happen if user clicks item and drags off
         setIsDragging(false);
         setSelectionRect(null);

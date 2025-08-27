@@ -36,6 +36,10 @@ export const Workspace = ({
     setSelectedTagIds(prev => prev.filter(id => id !== tagId));
   };
   
+  const handleDeselectRawTextItem = (itemId) => {
+    setSelectedRawTextItemIds(prev => prev.filter(id => id !== itemId));
+  };
+
   const handleClearSelection = () => {
     setSelectedTagIds([]);
     setSelectedRawTextItemIds([]);
@@ -114,6 +118,7 @@ export const Workspace = ({
         onClear={handleClearSelection}
         rawTextItems={rawTextItems}
         selectedRawTextItemIds={selectedRawTextItemIds}
+        onDeselectRawTextItem={handleDeselectRawTextItem}
         onCreateTag={onCreateTag}
         manualCreationData={manualCreationData}
         onManualTagCreate={handleManualTagCreate}

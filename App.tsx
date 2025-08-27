@@ -5,7 +5,7 @@ import { Workspace } from './components/Workspace.tsx';
 import { Header } from './components/Header.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import { extractTags } from './services/taggingService.ts';
-import { DEFAULT_PATTERNS } from './constants.ts';
+import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES } from './constants.ts';
 import { Category } from './types.ts';
 
 // Set PDF.js worker source globally
@@ -77,8 +77,23 @@ const App = () => {
                   updated = true;
               }
           }
+           // Migration for Instrument pattern from string to object
+          if (typeof parsed[Category.Instrument] === 'string') {
+              const pattern = parsed[Category.Instrument];
+              const separator = '\\s?';
+              const separatorIndex = pattern.indexOf(separator);
+              if (separatorIndex > -1) {
+                  parsed[Category.Instrument] = {
+                      func: pattern.substring(0, separatorIndex),
+                      num: pattern.substring(separatorIndex + separator.length),
+                  };
+              } else {
+                  parsed[Category.Instrument] = { func: pattern, num: '' };
+              }
+              updated = true;
+          }
           if (updated) {
-               console.log("Updated patterns with new categories from defaults.");
+               console.log("Updated patterns with new categories or structure from defaults.");
           }
           return parsed;
       }
@@ -91,6 +106,16 @@ const App = () => {
     }
   });
 
+    const [tolerances, setTolerances] = useState(() => {
+        try {
+            const saved = localStorage.getItem('pid-tagger-tolerances');
+            return saved ? JSON.parse(saved) : DEFAULT_TOLERANCES;
+        } catch (error) {
+            console.error("Failed to load tolerances from localStorage", error);
+            return DEFAULT_TOLERANCES;
+        }
+    });
+
   useEffect(() => {
     try {
       localStorage.setItem('pid-tagger-patterns', JSON.stringify(patterns));
@@ -99,6 +124,14 @@ const App = () => {
       console.error("Failed to save patterns to localStorage", error);
     }
   }, [patterns]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('pid-tagger-tolerances', JSON.stringify(tolerances));
+        } catch (error) {
+            console.error("Failed to save tolerances to localStorage", error);
+        }
+    }, [tolerances]);
 
   const showConfirmation = (message, onConfirm) => {
     setConfirmation({ isOpen: true, message, onConfirm });
@@ -111,7 +144,7 @@ const App = () => {
     handleCloseConfirmation();
   };
 
-  const processPdf = useCallback(async (doc, patternsToUse) => {
+  const processPdf = useCallback(async (doc, patternsToUse, tolerancesToUse) => {
     setIsLoading(true);
     setTags([]);
     setRawTextItems([]);
@@ -122,7 +155,7 @@ const App = () => {
       let allTags = [];
       let allRawTextItems = [];
       for (let i = 1; i <= doc.numPages; i++) {
-        const { tags: pageTags, rawTextItems: pageRawTextItems } = await extractTags(doc, i, patternsToUse);
+        const { tags: pageTags, rawTextItems: pageRawTextItems } = await extractTags(doc, i, patternsToUse, tolerancesToUse);
         allTags = [...allTags, ...pageTags];
         allRawTextItems = [...allRawTextItems, ...pageRawTextItems];
         setProgress(p => ({ ...p, current: i }));
@@ -150,19 +183,20 @@ const App = () => {
       const loadingTask = (window as any).pdfjsLib.getDocument({ data: arrayBuffer });
       const doc = await loadingTask.promise;
       setPdfDoc(doc);
-      await processPdf(doc, patterns);
+      await processPdf(doc, patterns, tolerances);
     } catch (error) {
       console.error("Error loading PDF:", error);
       console.error("Failed to load PDF file. It might be corrupted or in an unsupported format.");
       setIsLoading(false);
     }
-  }, [patterns, processPdf]);
+  }, [patterns, tolerances, processPdf]);
 
-  const handleSaveSettings = async (newPatterns) => {
+  const handleSaveSettings = async (newPatterns, newTolerances) => {
     setPatterns(newPatterns);
+    setTolerances(newTolerances);
     setIsSettingsOpen(false);
     if (pdfDoc) {
-      await processPdf(pdfDoc, newPatterns);
+      await processPdf(pdfDoc, newPatterns, newTolerances);
     }
   };
 
@@ -310,6 +344,7 @@ const App = () => {
       {isSettingsOpen && (
         <SettingsModal 
           patterns={patterns}
+          tolerances={tolerances}
           onSave={handleSaveSettings}
           onClose={() => setIsSettingsOpen(false)}
         />

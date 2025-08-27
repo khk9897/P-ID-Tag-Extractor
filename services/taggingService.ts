@@ -28,67 +28,104 @@ const calculateBbox = (item) => {
 };
 
 
-export const extractTags = async (pdfDoc, pageNum, patterns) => {
+export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
     const page = await pdfDoc.getPage(pageNum);
     const textContent = await page.getTextContent();
     const foundTags = [];
     const rawTextItems = [];
     const textItems = textContent.items.filter((item) => 'str' in item && item.str.trim() !== '');
     const consumedIndices = new Set();
+    
+    // Pass 1: Combine multi-part instrument tags using tolerances
+    if (patterns[Category.Instrument] && patterns[Category.Instrument].func && patterns[Category.Instrument].num) {
+        try {
+            const funcRegex = new RegExp(`^${patterns[Category.Instrument].func}$`);
+            const numRegex = new RegExp(`^${patterns[Category.Instrument].num}$`);
+            const instrumentTolerances = tolerances[Category.Instrument];
 
-    // Pass 1: Combine multi-part instrument tags
-    const instrumentPrefixRegex = /^[A-Z]{2,3}$/;
-    const instrumentNumberRegex = /^\d{3,}$/;
+            const funcCandidates = [];
+            const numCandidates = [];
 
-    for (let i = 0; i < textItems.length; i++) {
-        if (consumedIndices.has(i)) continue;
+            textItems.forEach((item, index) => {
+                if (funcRegex.test(item.str)) {
+                    funcCandidates.push({ item, index, bbox: calculateBbox(item) });
+                } else if (numRegex.test(item.str)) {
+                    numCandidates.push({ item, index, bbox: calculateBbox(item) });
+                }
+            });
 
-        const item1 = textItems[i];
-        if (instrumentPrefixRegex.test(item1.str)) {
-            const bbox1 = calculateBbox(item1);
+            for (const func of funcCandidates) {
+                if (consumedIndices.has(func.index)) continue;
 
-            for (let j = 0; j < textItems.length; j++) {
-                if (i === j || consumedIndices.has(j)) continue;
+                let bestPartner = null;
+                let minDistanceSq = Infinity;
 
-                const item2 = textItems[j];
-                if (instrumentNumberRegex.test(item2.str)) {
-                    const bbox2 = calculateBbox(item2);
+                const funcCenter = {
+                    x: (func.bbox.x1 + func.bbox.x2) / 2,
+                    y: (func.bbox.y1 + func.bbox.y2) / 2,
+                };
+                
+                for (const num of numCandidates) {
+                    if (consumedIndices.has(num.index)) continue;
+                    
+                    const numCenter = {
+                        x: (num.bbox.x1 + num.bbox.x2) / 2,
+                        y: (num.bbox.y1 + num.bbox.y2) / 2,
+                    };
 
-                    // Check for spatial proximity (item2 is roughly below item1)
-                    const isHorizontallyAligned = Math.abs((bbox1.x1 + bbox1.x2) / 2 - (bbox2.x1 + bbox2.x2) / 2) < 10;
-                    const isVerticallyClose = bbox1.y1 > bbox2.y2 && (bbox1.y1 - bbox2.y2) < 10;
-
-                    if (isHorizontallyAligned && isVerticallyClose) {
-                        const combinedText = `${item1.str}-${item2.str}`;
-                        const combinedBbox = {
-                            x1: Math.min(bbox1.x1, bbox2.x1),
-                            y1: Math.min(bbox1.y1, bbox2.y1),
-                            x2: Math.max(bbox1.x2, bbox2.x2),
-                            y2: Math.max(bbox1.y2, bbox2.y2),
-                        };
-
-                        foundTags.push({
-                            id: uuidv4(),
-                            text: combinedText,
-                            page: pageNum,
-                            bbox: combinedBbox,
-                            category: Category.Instrument,
-                        });
-
-                        consumedIndices.add(i);
-                        consumedIndices.add(j);
-                        break; // Found a pair, move to the next item
+                    const dx = Math.abs(funcCenter.x - numCenter.x);
+                    const dy = Math.abs(funcCenter.y - numCenter.y);
+                    
+                    if (dx <= instrumentTolerances.horizontal && dy <= instrumentTolerances.vertical) {
+                        const distanceSq = dx * dx + dy * dy;
+                        if (distanceSq < minDistanceSq) {
+                            minDistanceSq = distanceSq;
+                            bestPartner = num;
+                        }
                     }
                 }
+
+                if (bestPartner) {
+                    // Determine order based on position (left-to-right or top-to-bottom)
+                    const isVertical = Math.abs(funcCenter.y - bestPartner.bbox.y1) < Math.abs(funcCenter.x - bestPartner.bbox.x1);
+                    const combinedText = isVertical 
+                        ? (funcCenter.y > bestPartner.y) ? `${func.item.str} ${bestPartner.item.str}` : `${bestPartner.item.str} ${func.item.str}`
+                        : (funcCenter.x < bestPartner.x) ? `${func.item.str} ${bestPartner.item.str}` : `${bestPartner.item.str} ${func.item.str}`;
+
+                    const combinedBbox = {
+                        x1: Math.min(func.bbox.x1, bestPartner.bbox.x1),
+                        y1: Math.min(func.bbox.y1, bestPartner.bbox.y1),
+                        x2: Math.max(func.bbox.x2, bestPartner.bbox.x2),
+                        y2: Math.max(func.bbox.y2, bestPartner.bbox.y2),
+                    };
+
+                    foundTags.push({
+                        id: uuidv4(),
+                        text: combinedText,
+                        page: pageNum,
+                        bbox: combinedBbox,
+                        category: Category.Instrument,
+                        sourceItems: [
+                            {...func.item, id: uuidv4(), bbox: func.bbox, page: pageNum}, 
+                            {...bestPartner.item, id: uuidv4(), bbox: bestPartner.bbox, page: pageNum}
+                        ]
+                    });
+
+                    consumedIndices.add(func.index);
+                    consumedIndices.add(bestPartner.index);
+                }
             }
+        } catch (e) {
+            console.error("Error processing instrument tags:", e);
         }
     }
+
 
     // Pass 2: Process remaining tags with user-defined patterns
     const categoryPatterns = [
         { category: Category.Equipment, regex: patterns[Category.Equipment] },
         { category: Category.Line, regex: patterns[Category.Line] },
-        { category: Category.Instrument, regex: patterns[Category.Instrument] },
+        // Instrument is now handled in Pass 1
     ];
 
     for (let i = 0; i < textItems.length; i++) {
@@ -106,17 +143,13 @@ export const extractTags = async (pdfDoc, pageNum, patterns) => {
                 if (matches) {
                     itemHasBeenTagged = true;
                     for (const matchText of matches) {
-                         // Avoid adding duplicates if a combined tag from Pass 1 also matches here
-                        const alreadyExists = foundTags.some(tag => tag.text === matchText && tag.page === pageNum);
-                        if (!alreadyExists) {
-                            foundTags.push({
-                                id: uuidv4(),
-                                text: matchText,
-                                page: pageNum,
-                                bbox: calculateBbox(item),
-                                category: pattern.category,
-                            });
-                        }
+                        foundTags.push({
+                            id: uuidv4(),
+                            text: matchText,
+                            page: pageNum,
+                            bbox: calculateBbox(item),
+                            category: pattern.category,
+                        });
                     }
                 }
             } catch (error) {

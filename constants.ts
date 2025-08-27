@@ -3,8 +3,18 @@ import { Category } from './types.ts';
 export const DEFAULT_PATTERNS = {
   [Category.Equipment]: '^([^-]*-){2}[^-]*$',
   [Category.Line]: '^([^-]*-){3,}[^-]*$',
-  [Category.Instrument]: '[A-Z]{2,4}\\s?\\d{4}(\\s?[A-Z])?',
+  [Category.Instrument]: {
+    func: '[A-Z]{2,4}',
+    num: '\\d{4}(?:\\s?[A-Z])?'
+  },
   [Category.DrawingNumber]: '[A-Z\\d-]{5,}-[A-Z\\d-]{5,}-\\d{3,}',
+};
+
+export const DEFAULT_TOLERANCES = {
+    [Category.Instrument]: {
+        vertical: 15, // px
+        horizontal: 20, // px
+    },
 };
 
 export const CATEGORY_COLORS = {

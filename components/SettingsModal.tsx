@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'https://esm.sh/react@19.1.1';
 import { Category } from '../types.ts';
-import { DEFAULT_PATTERNS } from '../constants.ts';
+import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES } from '../constants.ts';
 
 const RegexHelp = () => {
   const cheatSheet = [
@@ -37,23 +37,10 @@ const RegexHelp = () => {
   );
 };
 
-export const SettingsModal = ({ patterns, onSave, onClose }) => {
+export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
   const [localPatterns, setLocalPatterns] = useState(patterns);
+  const [localTolerances, setLocalTolerances] = useState(tolerances);
   const [showRegexHelp, setShowRegexHelp] = useState(false);
-
-  // State for split Instrument pattern parts
-  const [instrumentParts, setInstrumentParts] = useState(() => {
-    const pattern = patterns[Category.Instrument] || '';
-    const separator = '\\s?';
-    const separatorIndex = pattern.indexOf(separator);
-    if (separatorIndex > -1) {
-      return {
-        func: pattern.substring(0, separatorIndex),
-        num: pattern.substring(separatorIndex + separator.length),
-      };
-    }
-    return { func: pattern, num: '' };
-  });
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -66,26 +53,12 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
   }, [onClose]);
 
   const handleSave = () => {
-    const finalPatterns = {
-      ...localPatterns,
-      [Category.Instrument]: `${instrumentParts.func}\\s?${instrumentParts.num}`,
-    };
-    onSave(finalPatterns);
+    onSave(localPatterns, localTolerances);
   };
   
   const handleReset = () => {
     setLocalPatterns(DEFAULT_PATTERNS);
-    const defaultInstrumentPattern = DEFAULT_PATTERNS[Category.Instrument] || '';
-    const separator = '\\s?';
-    const separatorIndex = defaultInstrumentPattern.indexOf(separator);
-    if (separatorIndex > -1) {
-      setInstrumentParts({
-        func: defaultInstrumentPattern.substring(0, separatorIndex),
-        num: defaultInstrumentPattern.substring(separatorIndex + separator.length),
-      });
-    } else {
-      setInstrumentParts({ func: defaultInstrumentPattern, num: '' });
-    }
+    setLocalTolerances(DEFAULT_TOLERANCES);
   }
 
   const handlePatternChange = (category, value) => {
@@ -93,7 +66,26 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
   };
 
   const handleInstrumentPartChange = (part: 'func' | 'num', value: string) => {
-    setInstrumentParts(prev => ({ ...prev, [part]: value }));
+    setLocalPatterns(prev => ({ 
+        ...prev, 
+        [Category.Instrument]: {
+            ...prev[Category.Instrument],
+            [part]: value
+        }
+    }));
+  };
+  
+  const handleToleranceChange = (axis: 'vertical' | 'horizontal', value: string) => {
+      const numValue = parseInt(value, 10);
+      if (!isNaN(numValue) && numValue >= 0) {
+          setLocalTolerances(prev => ({
+              ...prev,
+              [Category.Instrument]: {
+                  ...prev[Category.Instrument],
+                  [axis]: numValue
+              }
+          }));
+      }
   };
   
   const categoryInfo = {
@@ -116,6 +108,9 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
   };
 
   const categories = [Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber];
+  
+  const instrumentCurrentTolerances = localTolerances[Category.Instrument] || { vertical: 0, horizontal: 0 };
+
 
   return (
     <div 
@@ -161,15 +156,15 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
                 
                 if (category === Category.Instrument) {
                   return (
-                    <div key={category}>
-                      <label className="block text-sm font-semibold mb-1 text-slate-200">{category}</label>
+                    <div key={category} className="p-3 bg-slate-900/30 rounded-lg">
+                      <label className="block text-sm font-semibold mb-2 text-slate-200">{category}</label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label htmlFor="pattern-inst-func" className="block text-xs font-medium text-slate-400 mb-1">Function Part</label>
                           <input
                             id="pattern-inst-func"
                             type="text"
-                            value={instrumentParts.func}
+                            value={localPatterns[Category.Instrument]?.func || ''}
                             onChange={(e) => handleInstrumentPartChange('func', e.target.value)}
                             className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
                           />
@@ -179,7 +174,7 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
                           <input
                             id="pattern-inst-num"
                             type="text"
-                            value={instrumentParts.num}
+                            value={localPatterns[Category.Instrument]?.num || ''}
                             onChange={(e) => handleInstrumentPartChange('num', e.target.value)}
                             className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
                           />
@@ -194,6 +189,35 @@ export const SettingsModal = ({ patterns, onSave, onClose }) => {
                           </p>
                         </div>
                       )}
+                        <div className="mt-4 pt-3 border-t border-slate-700">
+                          <h4 className="text-xs font-medium text-slate-400 mb-2">Part Combination Tolerances</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                               <label htmlFor="tolerance-vertical" className="block text-xs text-slate-400 mb-1">
+                                Max Vertical Distance ({instrumentCurrentTolerances.vertical}px)
+                              </label>
+                              <div className="flex items-center space-x-2">
+                                <input id="tolerance-vertical" type="range" min="0" max="100"
+                                    value={instrumentCurrentTolerances.vertical}
+                                    onChange={(e) => handleToleranceChange('vertical', e.target.value)}
+                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                                <input type="number" value={instrumentCurrentTolerances.vertical} onChange={(e) => handleToleranceChange('vertical', e.target.value)} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
+                              </div>
+                            </div>
+                            <div>
+                               <label htmlFor="tolerance-horizontal" className="block text-xs text-slate-400 mb-1">
+                                Max Horizontal Distance ({instrumentCurrentTolerances.horizontal}px)
+                               </label>
+                               <div className="flex items-center space-x-2">
+                                <input id="tolerance-horizontal" type="range" min="0" max="100"
+                                    value={instrumentCurrentTolerances.horizontal}
+                                    onChange={(e) => handleToleranceChange('horizontal', e.target.value)}
+                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                                <input type="number" value={instrumentCurrentTolerances.horizontal} onChange={(e) => handleToleranceChange('horizontal', e.target.value)} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
+                               </div>
+                            </div>
+                          </div>
+                        </div>
                     </div>
                   );
                 }

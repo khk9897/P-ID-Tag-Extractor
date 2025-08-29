@@ -211,7 +211,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
           onItemClick(e);
         }
       }}
-      className={`group p-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-pink-500/30 ring-1 ring-pink-500' : 'hover:bg-slate-700/50'}`}
+      className={`group p-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-red-500/30 ring-1 ring-red-500' : 'hover:bg-slate-700/50'}`}
     >
       <div className="flex justify-between items-start">
         <div className="flex-grow mr-2">
@@ -333,7 +333,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   );
 };
 
-export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, showConfirmation }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, showConfirmation, onPingTag }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
@@ -420,6 +420,11 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
       );
       lastClickedIndex.current = index;
     } else {
+      // This is a simple click.
+      // Check if it's a re-click on the single selected tag to trigger a ping.
+      if (selectedTagIds.length === 1 && selectedTagIds[0] === tag.id) {
+        onPingTag(tag.id);
+      }
       setCurrentPage(tag.page);
       setSelectedTagIds([tag.id]);
       lastClickedIndex.current = index;

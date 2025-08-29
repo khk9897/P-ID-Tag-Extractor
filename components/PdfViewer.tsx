@@ -27,6 +27,7 @@ export const PdfViewer = ({
   relationshipStartTag,
   setRelationshipStartTag,
   showRelationships,
+  pingedTagId,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -525,7 +526,7 @@ export const PdfViewer = ({
             >
                 <canvas ref={canvasRef} />
                 {viewport && (
-                <svg className="absolute top-0 left-0" width={viewport.width} height={viewport.height}>
+                <svg className="absolute top-0 left-0" width={viewport.width} height={viewport.height} style={{ overflow: 'visible' }}>
                     <defs>
                     <marker id="arrowhead-connect" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#38bdf8" /></marker>
                     <marker id="arrowhead-install" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#facc15" /></marker>
@@ -613,7 +614,7 @@ export const PdfViewer = ({
                     return (
                         <g key={tag.id} data-tag-id={tag.id} onMouseDown={(e) => handleTagMouseDown(e, tag.id)} className="cursor-pointer">
                         <rect x={rectX} y={rectY} width={rectWidth} height={rectHeight} className={`fill-opacity-20 stroke-2 transition-all duration-150 ${colors.bg.replace('bg-', 'fill-')} ${colors.border.replace('border-', 'stroke-')}`} strokeDasharray={isRelStart ? "4 2" : "none"} />
-                        {isSelected && <rect x={rectX - 2} y={rectY - 2} width={rectWidth + 4} height={rectHeight + 4} className="fill-none stroke-pink-500" strokeWidth="3" />}
+                        {isSelected && <rect x={rectX - 4} y={rectY - 4} width={rectWidth + 8} height={rectHeight + 8} className="fill-none stroke-red-500" strokeWidth="3.5" rx="2" />}
                         {isRelated && !isSelected && (
                             <rect 
                             x={rectX} 
@@ -627,6 +628,35 @@ export const PdfViewer = ({
                         </g>
                     );
                     })}
+
+                    {pingedTagId && (() => {
+                      const tagToPing = currentTags.find(t => t.id === pingedTagId);
+                      if (!tagToPing) return null;
+
+                      const { x1, y1, x2, y2 } = tagToPing.bbox;
+                      const rectX = x1 * scale;
+                      const rectY = viewport.height - (y2 * scale);
+                      const rectWidth = (x2 - x1) * scale;
+                      const rectHeight = (y2 - y1) * scale;
+                      
+                      const paddings = [10, 20, 30];
+
+                      return (
+                        <g style={{ pointerEvents: 'none' }}>
+                            {paddings.map((padding, index) => (
+                                <rect
+                                    key={index}
+                                    x={rectX - padding}
+                                    y={rectY - padding}
+                                    width={rectWidth + padding * 2}
+                                    height={rectHeight + padding * 2}
+                                    className="fill-none stroke-red-500 ping-highlight-box"
+                                    rx="4"
+                                />
+                            ))}
+                        </g>
+                      );
+                    })()}
 
                     {selectionRect && <rect x={selectionRect.x} y={selectionRect.y} width={selectionRect.width} height={selectionRect.height} className={`stroke-2 ${mode === 'manualCreate' ? 'fill-green-400/20 stroke-green-400' : 'fill-sky-400/20 stroke-sky-400'}`} />}
                 </svg>

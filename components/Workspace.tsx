@@ -1,4 +1,4 @@
-import React, { useState } from 'https://esm.sh/react@19.1.1';
+import React, { useState, useCallback } from 'https://esm.sh/react@19.1.1';
 import { PdfViewer } from './PdfViewer.tsx';
 import { SidePanel } from './SidePanel.tsx';
 import { SelectionPanel } from './SelectionPanel.tsx';
@@ -32,6 +32,7 @@ export const Workspace = ({
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
   const [manualCreationData, setManualCreationData] = useState(null); // {bbox, page}
+  const [pingedTagId, setPingedTagId] = useState(null);
 
   const handleDeselectTag = (tagId) => {
     setSelectedTagIds(prev => prev.filter(id => id !== tagId));
@@ -65,6 +66,12 @@ export const Workspace = ({
     setManualCreationData(null);
   };
 
+  const handlePingTag = useCallback((tagId) => {
+    setPingedTagId(tagId);
+    // Clear after animation is over
+    setTimeout(() => setPingedTagId(null), 2000);
+  }, []);
+
   return (
     <div className="flex h-full bg-slate-900 relative">
       <SidePanel 
@@ -83,6 +90,7 @@ export const Workspace = ({
         onUpdateRawTextItemText={onUpdateRawTextItemText}
         onAutoLinkDescriptions={onAutoLinkDescriptions}
         showConfirmation={showConfirmation}
+        onPingTag={handlePingTag}
       />
       <div className="flex-grow h-full overflow-auto bg-slate-800/30">
         <PdfViewer
@@ -109,6 +117,7 @@ export const Workspace = ({
           relationshipStartTag={relationshipStartTag}
           setRelationshipStartTag={setRelationshipStartTag}
           showRelationships={showRelationships}
+          pingedTagId={pingedTagId}
         />
       </div>
       <SelectionPanel

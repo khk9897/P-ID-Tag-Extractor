@@ -655,7 +655,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
               </div>
             )}
             
-            <ul ref={listRef} className="flex-grow overflow-y-auto p-2 space-y-1">
+            <ul ref={listRef} className="flex-grow overflow-y-auto p-2 divide-y divide-slate-700/80">
                 {sortedAndFilteredTags.map((tag, index) => (
                     <TagListItem 
                       key={tag.id} 

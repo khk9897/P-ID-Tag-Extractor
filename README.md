@@ -1,161 +1,336 @@
-# P&ID Smart Digitizer: 사용자 매뉴얼
+# P&ID Smart Digitizer
 
-## 1. 소개
+<div align="center">
 
-**P&ID Smart Digitizer**는 엔지니어를 위한 지능형 P&ID(Piping and Instrumentation Diagram) 디지털화 도구입니다. 복잡한 P&ID 도면 PDF 파일에서 태그(Tag) 정보를 자동으로 인식하고, 태그 간의 관계를 설정하며, 최종적으로 구조화된 엑셀(Excel) 파일로 추출하는 전 과정을 브라우저 내에서 처리합니다. 이를 통해 수작업으로 진행되던 문서화 프로세스를 획기적으로 단축하고 정확도를 높일 수 있습니다.
+![P&ID Smart Digitizer](https://img.shields.io/badge/P%26ID-Smart%20Digitizer-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMgM0g4VjhIM1YzWiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxwYXRoIGQ9Ik0xNiAzSDIxVjhIMTZWM1oiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIvPgo8cGF0aCBkPSJNMyAxNkg4VjIxSDNWMTZaIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz4KPHBhdGggZD0iTTE2IDE2SDIxVjIxSDE2VjE2WiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxwYXRoIGQ9Ik04IDVIMTYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIvPgo8cGF0aCBkPSJNNSA4VjE2IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz4KPHBhdGggZD0iTTE5IDhWMTYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIvPgo8cGF0aCBkPSJNOCAxOUgxNiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPgo=)
 
-### 주요 특징
+![React](https://img.shields.io/badge/React-18.2.0-61DAFB?style=flat-square&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-3178C6?style=flat-square&logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-6.3.5-646CFF?style=flat-square&logo=vite)
+![PDF.js](https://img.shields.io/badge/PDF.js-4.10.38-FF6B6B?style=flat-square)
 
-*   **지능형 태그 인식**: Regex(정규표현식) 기반의 강력한 패턴 매칭을 통해 도면 내의 장비(Equipment), 라인(Line), 계기(Instrument) 등의 태그를 자동으로 추출합니다.
-*   **관계 매핑**: 태그 간의 연결(Connection), 설치(Installation), 주석(Annotation) 관계를 시각적으로 손쉽게 설정할 수 있습니다.
-*   **데이터 내보내기**: 작업한 모든 태그와 관계 정보를 체계적으로 정리된 Excel 파일로 한 번에 내보낼 수 있습니다.
-*   **프로젝트 저장 및 불러오기**: 현재까지의 작업 내용을 JSON 프로젝트 파일로 저장하여 언제든지 이어서 작업할 수 있습니다.
-*   **100% 브라우저 기반**: 모든 데이터 처리 과정이 사용자의 컴퓨터 브라우저 내에서만 이루어집니다. **파일이 외부 서버로 절대 전송되지 않아** 도면 정보 보안을 완벽하게 보장합니다.
-*   **사용자 맞춤 설정**: 각 프로젝트의 P&ID 태그 규칙에 맞게 인식 패턴을 자유롭게 수정하고 저장할 수 있습니다.
+**🎯 Intelligent P&ID digitization tool for engineers**
 
-## 2. 시작하기
+*Transform complex P&ID diagrams into structured data with AI-powered tag recognition*
 
-### PDF 파일 업로드
+[🚀 Live Demo](https://khk9897.github.io/P-ID-Tag-Extractor) | [📖 Documentation](#documentation) | [🛠️ Installation](#installation)
 
-애플리케이션을 처음 실행하면 PDF 파일을 업로드하는 화면이 나타납니다.
+</div>
 
-1.  **드래그 앤 드롭**: P&ID PDF 파일을 화면 중앙의 점선 영역으로 끌어다 놓습니다.
-2.  **파일 선택**: `Select File` 버튼을 클릭하여 컴퓨터에서 PDF 파일을 직접 선택합니다.
+---
 
-파일이 선택되면, 애플리케이션은 자동으로 PDF를 분석하고 페이지별로 태그 추출을 시작합니다. 이 과정은 잠시 시간이 소요될 수 있습니다.
+## ✨ Features
 
-## 3. 화면 구성
+### 🧠 Smart Recognition
+- **Intelligent Tag Detection**: Advanced regex-based pattern matching for Equipment, Lines, and Instruments
+- **Automatic Categorization**: Smart classification of engineering tags by type
+- **Custom Pattern Support**: Configurable recognition patterns for project-specific requirements
 
-PDF 처리가 완료되면 작업 공간이 나타납니다. 화면은 크게 세 부분으로 구성됩니다.
+### 🎨 Interactive Workspace  
+- **Visual Tag Management**: Color-coded tag highlighting with category-based organization
+- **Relationship Mapping**: Intuitive connection, installation, and annotation relationship creation
+- **Multi-selection Tools**: Advanced selection capabilities with area and multi-tag selection
 
-1.  **헤더 (Header)**: 상단에 위치하며, 파일 관리, 설정, 보기 제어 등 주요 기능을 제공합니다.
-    *   **PDF 제어**: 페이지 이동, 확대/축소, 관계선 표시/숨기기 등의 뷰어 컨트롤 기능.
-    *   **모드(Mode)**: 현재 작업 모드(선택, 연결, 수동 생성)를 표시합니다.
-    *   **프로젝트 관리**: 작업 내용 가져오기(Import)/내보내기(Export).
-    *   **설정 (Settings)**: 태그 인식 패턴을 수정합니다.
-    *   **초기화 (Reset)**: 현재 작업을 모두 초기화하고 새 파일을 업로드할 수 있도록 합니다.
+### 🔐 Privacy-First Design
+- **100% Client-Side Processing**: All data stays in your browser - no server uploads
+- **Secure by Design**: Zero data transmission ensures complete confidentiality
+- **Offline Capable**: Works entirely without internet connectivity
 
-2.  **사이드 패널 (Side Panel)**: 왼쪽에 위치하며, 추출된 태그와 관계 목록을 관리합니다. 헤더의 패널 아이콘이나 `S` 키를 눌러 보이거나 숨길 수 있습니다.
-    *   **Tags 탭**: 인식된 모든 태그를 검색, 필터링, 정렬하여 볼 수 있습니다. 태그를 클릭하면 해당 위치로 PDF 뷰어가 자동으로 이동합니다.
-    *   **Relationships 탭**: 생성된 모든 관계 목록을 확인하고 관리할 수 있습니다.
-    *   **Export to Excel 버튼**: 최종 결과를 엑셀 파일로 다운로드합니다.
+### 📊 Professional Export
+- **Structured Excel Output**: Organized sheets for Equipment, Line, and Instrument lists
+- **Complete Data Export**: Includes relationships, annotations, and drawing references
+- **Project Continuity**: Save/load projects for iterative work sessions
 
-3.  **PDF 뷰어 (PDF Viewer)**: 중앙의 가장 넓은 영역으로, 실제 P&ID 도면이 표시됩니다.
-    *   인식된 태그는 카테고리별로 색상이 다른 사각형으로 표시됩니다.
-    *   이곳에서 태그를 직접 선택하고 관계를 연결하는 등 모든 시각적 작업을 수행합니다.
+---
 
-4.  **선택 패널 (Selection Panel)**: 하단에 나타나는 패널로, PDF 뷰어에서 태그나 텍스트 조각을 선택했을 때 활성화됩니다.
-    *   선택한 항목에 대해 수행할 수 있는 작업(새 태그 생성, 관계 설정 등)을 제공합니다.
+## 🚀 Quick Start
 
-## 4. 핵심 기능 사용법
+### Online Usage
+1. **Visit**: [P&ID Smart Digitizer](https://khk9897.github.io/P-ID-Tag-Extractor)
+2. **Upload**: Drag and drop your P&ID PDF file
+3. **Process**: Wait for automatic tag recognition
+4. **Refine**: Review and adjust detected tags
+5. **Export**: Download structured Excel reports
 
-### 4.1. 태그 관리
+### Local Development
 
-#### 태그 확인 및 선택
+```bash
+# Clone the repository
+git clone https://github.com/khk9897/P-ID-Tag-Extractor.git
+cd P-ID-Tag-Extractor
 
-*   사이드 패널에서 태그를 클릭하면 뷰어의 해당 태그 위치로 부드럽게 이동하며, 분홍색 테두리로 강조 표시됩니다.
-*   뷰어에서 직접 태그 사각형을 클릭하여 선택할 수 있습니다.
-    *   `Ctrl (Cmd) + 클릭`: 여러 개의 태그를 동시에 선택합니다.
-    *   `Ctrl (Cmd) + 드래그`: 영역을 지정하여 그 안의 모든 태그와 텍스트를 선택합니다.
+# Install dependencies
+npm install
 
-#### 태그 생성 (미인식된 텍스트로부터)
+# Start development server
+npm run dev
 
-자동으로 인식되지 않은 텍스트 조각(회색 점선 사각형)들을 조합하여 새로운 태그를 만들 수 있습니다.
+# Build for production
+npm run build
+```
 
-1.  뷰어에서 태그로 만들고 싶은 텍스트 조각들을 `Ctrl (Cmd) + 클릭`으로 모두 선택합니다.
-2.  화면 하단에 **선택 패널**이 나타납니다.
-3.  패널에서 원하는 카테고리(Equipment, Line 등)의 버튼을 클릭하면 선택된 텍스트들이 하나의 태그로 병합됩니다.
-4.  **단축키 `M`**: 두 개의 텍스트 조각을 선택한 후 `M` 키를 누르면 즉시 **Instrument** 태그로 병합됩니다.
+---
 
-#### 태그 수동 생성
+## 📖 Documentation
 
-도면에서 텍스트가 아닌 심볼 등을 태그로 만들어야 할 때 사용합니다.
+### 🏗️ Architecture Overview
 
-1.  `K` 키를 눌러 '수동 생성(Manual Create) 모드'로 전환합니다. (뷰어에 초록색 테두리가 생깁니다) 모드를 취소하려면 `K`키를 다시 누릅니다.
-2.  뷰어에서 태그를 만들고 싶은 영역을 마우스로 드래그하여 사각형을 그립니다.
-3.  하단 선택 패널에 텍스트 입력창과 카테고리 버튼이 나타납니다.
-4.  태그 텍스트를 입력하고 원하는 카테고리를 클릭하면 태그 생성이 완료됩니다.
+```mermaid
+graph TB
+    A[PDF Upload] --> B[PDF.js Parser]
+    B --> C[Text Extraction]
+    C --> D[Regex Pattern Matching]
+    D --> E[Tag Classification]
+    E --> F[Interactive Workspace]
+    F --> G[Relationship Editor]
+    G --> H[Excel Export]
+    
+    subgraph "Core Components"
+    I[PdfViewer] 
+    J[SidePanel]
+    K[TagManager]
+    L[RelationshipEngine]
+    end
+```
 
-#### 태그 수정 및 삭제
+### 🎯 Tag Categories
 
-*   **수정**: 사이드 패널의 태그 목록에서 연필 모양 아이콘을 클릭하여 태그 텍스트를 수정할 수 있습니다.
-*   **삭제**:
-    *   뷰어 또는 사이드 패널에서 삭제할 태그를 선택한 후 `Delete` 또는 `Backspace` 키를 누릅니다.
-    *   사이드 패널의 태그 목록에서 휴지통 아이콘을 클릭합니다.
-    *   삭제된 태그는 원래의 텍스트 조각으로 되돌아가므로, 실수로 삭제했더라도 다시 태그로 만들 수 있습니다.
+| Category | Description | Pattern Example | Color |
+|----------|-------------|-----------------|-------|
+| **Equipment** | Process equipment tags | `E-101A`, `V-203B` | 🔵 Sky Blue |
+| **Line** | Piping and pipeline tags | `P-101-A-6"-CS` | 🔴 Rose |
+| **Instrument** | Control & measurement devices | `FT-101`, `PIC-203A` | 🟡 Amber |
+| **Drawing Number** | Document references | `P&ID-001-REV-A` | 🟣 Indigo |
+| **Notes & Holds** | Special annotations | `NOTE: See spec` | 🟢 Teal |
 
-### 4.2. 관계 설정
+### ⌨️ Keyboard Shortcuts
 
-태그 간의 관계를 설정하여 도면의 정보를 더욱 풍부하게 만들 수 있습니다.
+<details>
+<summary><strong>View All Shortcuts</strong></summary>
 
-#### 연결 (Connection) 관계: A → B
+| Shortcut | Function | Mode |
+|----------|----------|------|
+| `S` | Toggle side panel | Global |
+| `1` / `2` | Zoom in / Zoom out | Global |
+| `C` | Connect mode toggle | Selection |
+| `K` | Manual create mode | Selection |
+| `M` | Merge selected text to Instrument | Selection |
+| `I` | Create installation relationship | Selection |
+| `R` | Create annotation/note relationship | Selection |
+| `Esc` | Exit current mode | All modes |
+| `Delete` | Delete selected items | Selection |
+| `Ctrl+Click` | Multi-select | Selection |
+| `Ctrl+Drag` | Area select | Selection |
 
-장비와 장비, 또는 장비와 라인을 연결합니다. 이 모드에서는 연속적으로 관계를 만들 수 있습니다.
+</details>
 
-1.  `C` 키를 눌러 '연결(Connect) 모드'로 전환합니다. (뷰어에 파란색 테두리가 생깁니다)
-2.  시작 태그(A)를 클릭합니다.
-3.  다음 태그(B)를 클릭하면 `A → B` 관계가 생성됩니다. 이제 B가 새로운 시작점이 됩니다.
-4.  연이어 다음 태그(C)를 클릭하면 `B → C` 관계가 생성됩니다.
-5.  이런 방식으로 파이프라인이나 프로세스 흐름을 따라 계속해서 연결 관계를 만들 수 있습니다.
-6.  연결을 마치려면 `C` 키를 다시 누르거나 `Esc` 키를 눌러 '선택(Select) 모드'로 돌아옵니다.
+---
 
-#### 설치 (Installation) 관계: 계기 on 장비/라인
+## 🔧 Technical Stack
 
-계기가 어떤 장비나 라인에 설치되었는지를 나타냅니다.
+### Core Technologies
+- **Frontend**: React 18 + TypeScript
+- **Build Tool**: Vite 6 with optimized chunking
+- **PDF Processing**: PDF.js with local worker
+- **Styling**: Tailwind CSS with custom components
+- **Data Export**: XLSX library for Excel generation
 
-1.  뷰어에서 기준이 되는 **Equipment** 또는 **Line** 태그 1개와, 그 위에 설치된 **Instrument** 태그 1개 이상을 `Ctrl (Cmd) + 클릭`으로 함께 선택합니다.
-2.  `I` 키를 누릅니다.
-3.  선택된 계기들과 장비/라인 사이에 설치 관계(노란색 화살표)가 생성됩니다.
+### Key Libraries
+```json
+{
+  "react": "^18.2.0",
+  "pdfjs-dist": "^4.10.38",
+  "xlsx": "^0.18.5",
+  "uuid": "^9.0.0",
+  "typescript": "~5.8.2"
+}
+```
 
-#### 관계 생성 (주석 / 노트)
+### Performance Optimizations
+- **Code Splitting**: Vendor, PDF.js, and XLSX chunks
+- **Bundle Size**: ~276KB gzipped total
+- **Memory Management**: Efficient PDF rendering with viewport optimization
+- **Worker Threading**: PDF.js processing in dedicated worker
 
-`R` 키는 선택한 항목에 따라 지능적으로 '주석(Annotation)' 또는 '노트(Note)' 관계를 생성합니다.
+---
 
-*   **주석(Annotation) 관계 (태그 + 설명 텍스트)**: 태그에 대한 추가 설명 텍스트를 연결합니다.
-    1.  주체가 되는 태그(들)와, 설명에 해당하는 텍스트 조각(회색 점선)들을 `Ctrl (Cmd) + 클릭`으로 함께 선택합니다.
-    2.  `R` 키를 누르면 태그와 텍스트 조각들 사이에 주석 관계(회색 점선)가 생성됩니다.
+## 📋 Usage Guide
 
-*   **노트(Note) 관계 (태그 + 노트 태그)**: 장비, 라인, 계기 태그에 특정 'Notes & Holds' 태그를 연결합니다.
-    1.  주체가 되는 **Equipment**, **Line**, 또는 **Instrument** 태그(들)와, 연결할 **Notes & Holds** 태그(들)를 함께 선택합니다.
-    2.  `R` 키를 누르면 선택된 주체 태그들과 노트 태그 사이에 노트 관계(청록색 점선)가 생성됩니다.
+### 1. File Upload & Processing
 
-💡 **팁**: 여러 종류의 항목(예: 장비 태그, 노트 태그, 설명 텍스트)을 한 번에 선택하고 `R` 키를 누르면, 가능한 모든 관계(주석 및 노트)가 동시에 생성됩니다.
+```typescript
+// Supported formats
+const supportedFiles = ['.pdf'];
+const maxFileSize = '100MB'; // Recommended
+```
 
-## 5. 고급 기능
+### 2. Tag Management Workflow
 
-### 5.1. 설정 (Settings)
+1. **Automatic Recognition**: Upload triggers pattern matching
+2. **Manual Review**: Verify and adjust detected tags  
+3. **Custom Creation**: Add tags for unrecognized elements
+4. **Relationship Building**: Connect related components
 
-헤더의 `Settings` 버튼을 클릭하여 태그 인식 규칙을 프로젝트에 맞게 수정할 수 있습니다.
+### 3. Relationship Types
 
-*   **Regex 패턴 수정**: 각 카테고리별로 태그를 찾아내는 정규표현식(Regex) 패턴을 직접 수정할 수 있습니다.
-*   **허용 오차(Tolerance) 조절**: Instrument 태그는 보통 '기능(Function)'과 '번호(Number)' 두 부분으로 나뉩니다. 이 두 텍스트 조각을 하나로 합칠 때의 최대 허용 거리(수직/수평)를 조절할 수 있습니다.
+#### 🔗 Connection (A → B)
+- **Purpose**: Process flow connections
+- **Usage**: Connect equipment, lines in sequence
+- **Visual**: Solid arrows with flow direction
 
-**주의**: 설정을 저장하면 현재 PDF 문서를 새로운 규칙으로 다시 스캔합니다.
+#### 🔧 Installation (Instrument on Equipment/Line)  
+- **Purpose**: Show instrument mounting locations
+- **Usage**: Select base + instruments, press `I`
+- **Visual**: Yellow arrows indicating installation
 
-### 5.2. 프로젝트 가져오기/내보내기
+#### 📝 Annotation (Tag + Description)
+- **Purpose**: Link tags to explanatory text
+- **Usage**: Select tags + text, press `R`  
+- **Visual**: Gray dashed lines
 
-*   **내보내기 (Export)**: 현재까지 작업한 모든 태그, 관계, 미지정 텍스트 정보를 담은 `.json` 파일을 생성합니다. 작업을 중단해야 할 때 사용하면 좋습니다.
-*   **가져오기 (Import)**: 이전에 내보냈던 `.json` 프로젝트 파일을 불러와 작업을 이어서 할 수 있습니다. PDF가 먼저 열려 있어야 프로젝트 파일을 불러올 수 있습니다.
+#### 📋 Note (Tag + Note Tag)
+- **Purpose**: Associate tags with special notes
+- **Usage**: Select primary tags + note tags, press `R`
+- **Visual**: Teal dashed lines
 
-### 5.3. Excel로 내보내기
+---
 
-사이드 패널 하단의 `Export to Excel` 버튼을 클릭하면, 모든 작업 결과가 정리된 Excel 파일을 다운로드합니다.
+## ⚙️ Configuration
 
-*   파일은 'Equipment List', 'Line List', 'Instrument List' 시트로 구분되어 생성됩니다.
-*   각 시트에는 태그 정보뿐만 아니라 설정된 관계(From/To, Installed On 등), 관련 설명, 'Note & Hold' 정보 및 도면 번호가 자동으로 포함되어 있어, 후속 작업에 바로 활용할 수 있습니다.
+### Pattern Customization
 
-## 6. 유용한 단축키
+Access via Settings button to modify recognition patterns:
 
-| 키         | 기능                                                 |
-| :--------- | :--------------------------------------------------- |
-| `S`        | 사이드 패널 보이기/숨기기                            |
-| `1` / `2`  | 확대 / 축소                                          |
-| `C`        | 연결(Connect) 모드 전환/해제                         |
-| `K`        | 수동 생성(Manual Create) 모드 전환/해제              |
-| `Esc`      | 현재 모드 나가기 / 선택 해제                         |
-| `Delete`   | 선택한 태그 삭제                                     |
-| `M`        | 선택한 텍스트 2개를 Instrument 태그로 병합           |
-| `I`        | 설치(Installation) 관계 생성                         |
-| `R`        | 관계 생성 (주석/노트)                                |
-| `Ctrl+클릭`  | 다중 선택                                            |
-| `Ctrl+드래그` | 영역 선택                                            |
+```javascript
+// Example Equipment pattern
+const equipmentPattern = '^([^-]*-){2}[^-]*$';
+
+// Example Instrument pattern  
+const instrumentPattern = {
+  func: '[A-Z]{2,4}',     // Function code
+  num: '\\d{4}(?:\\s?[A-Z])?' // Tag number
+};
+```
+
+### Tolerance Settings
+
+Fine-tune text combination thresholds:
+
+```javascript
+const tolerances = {
+  vertical: 15,      // px for combining parts vertically
+  horizontal: 20,    // px for combining parts horizontally  
+  autoLinkDistance: 50 // px for auto-linking annotations
+};
+```
+
+---
+
+## 📊 Export Format
+
+### Excel Structure
+
+The generated Excel file contains organized sheets:
+
+#### Equipment List
+| Column | Description |
+|--------|-------------|
+| Tag | Equipment identifier |
+| Page | Source drawing page |
+| Connected From | Input connections |
+| Connected To | Output connections |
+| Instruments | Installed instruments |
+| Description | Associated annotations |
+| Notes | Special notes/holds |
+
+#### Line List  
+| Column | Description |
+|--------|-------------|
+| Tag | Line identifier |
+| Page | Source drawing page |
+| Connected From | Origin equipment |
+| Connected To | Destination equipment |
+| Instruments | Installed instruments |
+| Description | Associated annotations |
+| Notes | Special notes/holds |
+
+#### Instrument List
+| Column | Description |
+|--------|-------------|
+| Tag | Instrument identifier |  
+| Page | Source drawing page |
+| Installed On | Host equipment/line |
+| Description | Associated annotations |
+| Notes | Special notes/holds |
+
+---
+
+## 🔒 Privacy & Security
+
+### Data Protection
+- **No Server Communication**: All processing occurs client-side
+- **Local Storage Only**: Temporary browser storage for session data
+- **Zero Data Retention**: No persistent storage on external servers
+- **Secure by Default**: No user authentication or data collection
+
+### Browser Requirements
+- **Modern Browser**: Chrome 90+, Firefox 88+, Safari 14+
+- **JavaScript**: Must be enabled
+- **Memory**: Minimum 4GB RAM recommended for large PDFs
+- **Storage**: Temporary space for PDF processing
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Development Workflow
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/AmazingFeature`)
+3. **Commit** your changes (`git commit -m 'Add AmazingFeature'`)
+4. **Push** to the branch (`git push origin feature/AmazingFeature`)
+5. **Open** a Pull Request
+
+### Code Standards
+- **TypeScript**: Strict mode enabled
+- **ESLint**: Airbnb configuration
+- **Prettier**: Automated formatting
+- **Testing**: Jest + React Testing Library
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **PDF.js Team** - Excellent PDF rendering library
+- **React Community** - Robust frontend framework
+- **Tailwind CSS** - Utility-first CSS framework
+- **Vite Team** - Lightning-fast build tool
+
+---
+
+## 🐛 Issues & Support
+
+**Found a bug?** Please check [existing issues](https://github.com/khk9897/P-ID-Tag-Extractor/issues) before creating a new one.
+
+**Need help?** Check our [FAQ](FAQ.md) or create a [discussion](https://github.com/khk9897/P-ID-Tag-Extractor/discussions).
+
+---
+
+<div align="center">
+
+**Made with ❤️ for the engineering community**
+
+*Transform your P&ID digitization workflow today*
+
+[![GitHub Stars](https://img.shields.io/github/stars/khk9897/P-ID-Tag-Extractor?style=social)](https://github.com/khk9897/P-ID-Tag-Extractor/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/khk9897/P-ID-Tag-Extractor?style=social)](https://github.com/khk9897/P-ID-Tag-Extractor/network/members)
+
+</div>

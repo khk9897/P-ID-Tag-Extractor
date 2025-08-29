@@ -558,15 +558,15 @@ export const PdfViewer = ({
                          
                          const getRectProps = () => {
                              if (isSelected) {
-                                 return { className: "fill-sky-400/30 stroke-sky-400", strokeWidth: "1.5", strokeDasharray: "none" };
+                                 return { fill: "rgb(56 189 248 / 0.5)", className: "stroke-sky-400", strokeWidth: "2.5", strokeDasharray: "none" };
                              }
                              if (isHighlighted) {
-                                 return { className: "fill-violet-500/20 stroke-violet-500", strokeWidth: "2", strokeDasharray: "none" };
+                                 return { fill: "rgb(139 69 255 / 0.4)", className: "stroke-violet-500", strokeWidth: "2.5", strokeDasharray: "none" };
                              }
                              if (isLinked) {
-                                return { className: "fill-teal-500/10 stroke-teal-500", strokeWidth: "1.5", strokeDasharray: "none" };
+                                return { fill: "rgb(20 184 166 / 0.3)", className: "stroke-teal-500", strokeWidth: "2", strokeDasharray: "none" };
                              }
-                             return { className: "fill-transparent stroke-slate-600/80 group-hover:stroke-sky-400 group-hover:fill-sky-400/20 transition-all", strokeWidth: "1.5", strokeDasharray: "3 3" };
+                             return { className: "fill-transparent stroke-slate-600/80 group-hover:stroke-sky-400 group-hover:fill-sky-400/30 transition-all", strokeWidth: "2", strokeDasharray: "3 3" };
                          };
 
                          return (
@@ -627,16 +627,17 @@ export const PdfViewer = ({
 
                     return (
                         <g key={tag.id} data-tag-id={tag.id} onMouseDown={(e) => handleTagMouseDown(e, tag.id)} className="cursor-pointer">
-                        <rect x={rectX} y={rectY} width={rectWidth} height={rectHeight} className={`fill-opacity-20 stroke-2 transition-all duration-150 ${colors.bg.replace('bg-', 'fill-')} ${colors.border.replace('border-', 'stroke-')}`} strokeDasharray={isRelStart ? "4 2" : "none"} />
-                        {isSelected && <rect x={rectX - 4} y={rectY - 4} width={rectWidth + 8} height={rectHeight + 8} className="fill-none stroke-red-500" strokeWidth="3.5" rx="2" />}
+                        <rect x={rectX} y={rectY} width={rectWidth} height={rectHeight} className={`stroke-[3] transition-all duration-150 ${colors.border.replace('border-', 'stroke-')}`} fill={colors.bg.includes('sky') ? 'rgb(14 165 233 / 0.4)' : colors.bg.includes('rose') ? 'rgb(244 63 94 / 0.4)' : colors.bg.includes('amber') ? 'rgb(245 158 11 / 0.4)' : colors.bg.includes('indigo') ? 'rgb(99 102 241 / 0.4)' : colors.bg.includes('teal') ? 'rgb(20 184 166 / 0.4)' : 'rgb(100 116 139 / 0.4)'} strokeDasharray={isRelStart ? "4 2" : "none"} />
+                        {isSelected && <rect x={rectX - 4} y={rectY - 4} width={rectWidth + 8} height={rectHeight + 8} className="fill-none stroke-red-500" strokeWidth="4" rx="2" />}
                         {isRelated && !isSelected && (
                             <rect 
                             x={rectX} 
                             y={rectY} 
                             width={rectWidth} 
                             height={rectHeight} 
-                            className="fill-violet-500/20 stroke-violet-500" 
-                            strokeWidth="2"
+                            fill="rgb(139 69 255 / 0.4)" 
+                            className="stroke-violet-500" 
+                            strokeWidth="3"
                             />
                         )}
                         </g>

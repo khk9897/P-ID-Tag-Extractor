@@ -24,7 +24,8 @@
       "WebFetch(domain:khk9897.github.io)",
       "Bash(git checkout:*)",
       "Bash(surge:*)",
-      "Bash(gh repo view:*)"
+      "Bash(gh repo view:*)",
+      "Bash(timeout 10 npm run preview)"
     ],
     "deny": [],
     "ask": []

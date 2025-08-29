@@ -24,8 +24,8 @@ import {
   ManualTagData
 } from './types.ts';
 
-// Set PDF.js worker source - use CDN for worker reliability
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`;
+// Set PDF.js worker source - use local worker to avoid CORS issues
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('/pdf.worker.min.mjs', import.meta.url).href;
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm, onCancel }) => {
   if (!isOpen) return null;

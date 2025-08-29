@@ -25,8 +25,8 @@ const HotkeyHelp = ({ onClose }) => {
   }, [onClose]);
 
   const modes = [
-    { key: 'C', desc: 'Enter Connect Mode' },
-    { key: 'K', desc: 'Enter Manual Create Mode' },
+    { key: 'C', desc: 'Toggle Connect Mode' },
+    { key: 'K', desc: 'Toggle Manual Create Mode' },
     { key: 'Esc', desc: 'Exit Mode / Clear Selection' },
   ];
   const actions = [

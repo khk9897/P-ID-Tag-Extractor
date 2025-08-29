@@ -127,14 +127,24 @@ export const PdfViewer = ({
           setSelectedTagIds([]);
         }
       } else if (e.key.toLowerCase() === 'c') {
-        setMode('connect');
-        setRelationshipStartTag(null);
-        setSelectedTagIds([]);
+        if (mode === 'connect') {
+          setMode('select');
+          setRelationshipStartTag(null);
+        } else {
+          setMode('connect');
+          setRelationshipStartTag(null);
+          setSelectedTagIds([]);
+          setSelectedRawTextItemIds([]);
+        }
       } else if (e.key.toLowerCase() === 'k') {
-        setMode('manualCreate');
-        setRelationshipStartTag(null);
-        setSelectedTagIds([]);
-        setSelectedRawTextItemIds([]);
+        if (mode === 'manualCreate') {
+          setMode('select');
+        } else {
+          setMode('manualCreate');
+          setRelationshipStartTag(null);
+          setSelectedTagIds([]);
+          setSelectedRawTextItemIds([]);
+        }
       } else if (e.key === 'Escape') {
         setMode('select');
         setRelationshipStartTag(null);

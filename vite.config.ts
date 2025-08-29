@@ -5,6 +5,7 @@ import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig(() => {
     return {
+      base: '/P-ID-Tag-Extractor/',
       plugins: [
         react(),
         visualizer({

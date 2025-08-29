@@ -16,7 +16,9 @@
       "Bash(npm run build:*)",
       "Bash(timeout 5 npm run preview)",
       "Bash(npm install:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(vercel:*)"
     ],
     "deny": [],
     "ask": []

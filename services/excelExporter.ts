@@ -1,6 +1,6 @@
 import { Category, RelationshipType } from '../types.ts';
 
-export const exportToExcel = (tags, relationships) => {
+export const exportToExcel = (tags, relationships, rawTextItems) => {
   const equipment = tags.filter(t => t.category === Category.Equipment);
   const lines = tags.filter(t => t.category === Category.Line);
   const instruments = tags.filter(t => t.category === Category.Instrument);
@@ -9,6 +9,7 @@ export const exportToExcel = (tags, relationships) => {
 
   // Create a map for quick lookup of drawing number by page
   const pageToDrawingNumberMap = new Map(drawingNumbers.map(tag => [tag.page, tag.text]));
+  const rawTextItemMap = new Map(rawTextItems.map(item => [item.id, item.text]));
 
   const getTagText = (id) => tags.find(t => t.id === id)?.text || '';
 
@@ -22,11 +23,18 @@ export const exportToExcel = (tags, relationships) => {
     
     const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
 
+    const notes = relationships
+      .filter(r => r.from === tag.id && r.type === RelationshipType.Annotation)
+      .map(r => rawTextItemMap.get(r.to))
+      .filter(Boolean)
+      .join(' | ');
+
     return {
       'Tag': tag.text,
       'Page': tag.page,
       'Drawing Number': drawingNumber,
       'Instruments Installed': instrumentsInstalled,
+      'Notes': notes,
     };
   });
 
@@ -52,6 +60,12 @@ export const exportToExcel = (tags, relationships) => {
       
     const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
 
+    const notes = relationships
+      .filter(r => r.from === tag.id && r.type === RelationshipType.Annotation)
+      .map(r => rawTextItemMap.get(r.to))
+      .filter(Boolean)
+      .join(' | ');
+
     return {
       'Tag': tag.text,
       'Page': tag.page,
@@ -59,6 +73,7 @@ export const exportToExcel = (tags, relationships) => {
       'From': from,
       'To': to,
       'Instruments Installed': instrumentsInstalled,
+      'Notes': notes,
     };
   });
 
@@ -72,11 +87,18 @@ export const exportToExcel = (tags, relationships) => {
 
     const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
 
+    const notes = relationships
+      .filter(r => r.from === tag.id && r.type === RelationshipType.Annotation)
+      .map(r => rawTextItemMap.get(r.to))
+      .filter(Boolean)
+      .join(' | ');
+
     return {
       'Tag': tag.text,
       'Page': tag.page,
       'Drawing Number': drawingNumber,
       'Installed On': installedOn,
+      'Notes': notes,
     };
   });
 

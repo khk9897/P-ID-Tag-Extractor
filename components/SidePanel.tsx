@@ -415,7 +415,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
   
 
   const handleExport = () => {
-    exportToExcel(tags, relationships);
+    exportToExcel(tags, relationships, rawTextItems);
   };
 
   const RelationshipViewer = () => {

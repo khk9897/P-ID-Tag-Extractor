@@ -11,4 +11,5 @@ export const RelationshipType = {
   Connection: 'Connection', // A -> B
   Installation: 'Installation', // A is on B
   Annotation: 'Annotation', // Tag -> Raw Text Item
+  Note: 'Note', // Equipment/Line/Instrument -> NotesAndHolds Tag
 };

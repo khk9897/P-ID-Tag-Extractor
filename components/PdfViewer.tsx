@@ -193,6 +193,35 @@ export const PdfViewer = ({
         } else {
           console.warn('To create an installation, please select exactly one Equipment or Line, and one or more Instruments.');
         }
+      } else if (e.key.toLowerCase() === 'n' && mode === 'select' && selectedTagIds.length > 1) {
+        const selected = tags.filter(t => selectedTagIds.includes(t.id));
+        const noteTags = selected.filter(t => t.category === Category.NotesAndHolds);
+        const targetTags = selected.filter(t =>
+            t.category === Category.Equipment ||
+            t.category === Category.Line ||
+            t.category === Category.Instrument
+        );
+    
+        if (noteTags.length === 1 && targetTags.length >= 1) {
+            const noteTag = noteTags[0];
+            const newRelationships = targetTags.map(target => ({
+                id: uuidv4(),
+                from: target.id,
+                to: noteTag.id,
+                type: RelationshipType.Note,
+            }));
+            
+            const existingRels = new Set(relationships.map(r => `${r.from}-${r.to}-${r.type}`));
+            const uniqueNewRels = newRelationships.filter(r => !existingRels.has(`${r.from}-${r.to}-${r.type}`));
+    
+            if (uniqueNewRels.length > 0) {
+                setRelationships(prev => [...prev, ...uniqueNewRels]);
+            }
+            setSelectedTagIds([]);
+            console.info(`Created ${uniqueNewRels.length} new note relationship(s).`);
+        } else {
+          console.warn('To create a note relationship, please select exactly one Note tag, and one or more Equipment, Line, or Instrument tags.');
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -552,12 +581,22 @@ export const PdfViewer = ({
                             const toTag = tags.find(t => t.id === rel.to);
                             if (!toTag) return null;
                             end = getTagCenter(toTag);
-                            const isConnect = rel.type === RelationshipType.Connection;
-                            strokeColor = isConnect ? '#38bdf8' : '#facc15';
-                            marker = isConnect ? 'url(#arrowhead-connect)' : 'url(#arrowhead-install)';
+                            
+                            if (rel.type === RelationshipType.Connection) {
+                                strokeColor = '#38bdf8';
+                                marker = 'url(#arrowhead-connect)';
+                            } else if (rel.type === RelationshipType.Installation) {
+                                strokeColor = '#facc15';
+                                marker = 'url(#arrowhead-install)';
+                            } else if (rel.type === RelationshipType.Note) {
+                                strokeColor = '#2dd4bf'; // teal-400
+                                marker = '';
+                            } else {
+                                return null;
+                            }
                         }
 
-                        return <line key={rel.id} x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={strokeColor} strokeWidth="2" strokeDasharray={rel.type === RelationshipType.Annotation ? '3 3' : 'none'} markerEnd={marker} />;
+                        return <line key={rel.id} x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={strokeColor} strokeWidth="2" strokeDasharray={rel.type === RelationshipType.Annotation || rel.type === RelationshipType.Note ? '3 3' : 'none'} markerEnd={marker} />;
                     })}
                     
                     {currentTags.map(tag => {

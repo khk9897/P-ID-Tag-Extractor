@@ -198,8 +198,10 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   const installationTarget = relationships.find(r => r.from === tag.id && r.type === RelationshipType.Installation);
   const installedInstruments = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Installation);
   const annotationRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Annotation);
+  const noteRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Note);
+  const notedByRelationships = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Note);
   
-  const hasRelationships = outgoingConnections.length > 0 || incomingConnections.length > 0 || installationTarget || installedInstruments.length > 0 || annotationRelationships.length > 0;
+  const hasRelationships = outgoingConnections.length > 0 || incomingConnections.length > 0 || installationTarget || installedInstruments.length > 0 || annotationRelationships.length > 0 || noteRelationships.length > 0 || notedByRelationships.length > 0;
 
   return (
     <li
@@ -297,6 +299,30 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
                         onUpdateItemText={onUpdateItemText}
                     />
                   ) : null;
+                })}
+              </div>
+            </div>
+          )}
+          {/* Note relationships (tag -> note) */}
+          {noteRelationships.length > 0 && (
+            <div>
+              <span className="text-slate-400 font-semibold">Notes:</span>
+              <div className="pl-3 space-y-0.5 mt-1">
+                {noteRelationships.map(rel => {
+                  const noteTag = tagMap.get(rel.to);
+                  return noteTag ? <div key={rel.id} className="flex items-center justify-between"><div className="flex items-center space-x-1.5"><span title="Note">📝</span>{renderRelationship(noteTag.id, noteTag.text)}</div><DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} /></div> : null;
+                })}
+              </div>
+            </div>
+          )}
+          {/* Noted by relationships (target -> this note tag) */}
+          {notedByRelationships.length > 0 && (
+            <div>
+              <span className="text-slate-400 font-semibold">Note for:</span>
+              <div className="pl-3 space-y-0.5 mt-1">
+                {notedByRelationships.map(rel => {
+                  const targetTag = tagMap.get(rel.from);
+                  return targetTag ? <div key={rel.id} className="flex items-center justify-between"><div>{renderRelationship(targetTag.id, targetTag.text)}</div><DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} /></div> : null;
                 })}
               </div>
             </div>

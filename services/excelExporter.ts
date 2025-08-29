@@ -12,6 +12,23 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
   const rawTextItemMap = new Map(rawTextItems.map(item => [item.id, item.text]));
 
   const getTagText = (id) => tags.find(t => t.id === id)?.text || '';
+  
+  const getDescriptionsForTag = (tagId) => {
+    const annotations = relationships
+        .filter(r => r.from === tagId && r.type === RelationshipType.Annotation)
+        .map(r => rawTextItemMap.get(r.to))
+        .filter(Boolean)
+        .join(' | ');
+    
+    const notes = relationships
+        .filter(r => r.from === tagId && r.type === RelationshipType.Note)
+        .map(r => getTagText(r.to))
+        .filter(Boolean)
+        .join(' | ');
+
+    return [annotations, notes].filter(Boolean).join(' | ');
+  };
+
 
   // 1. Equipment List Data
   const equipmentData = equipment.map(tag => {
@@ -22,19 +39,14 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
       .join(', ');
     
     const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
-
-    const notes = relationships
-      .filter(r => r.from === tag.id && r.type === RelationshipType.Annotation)
-      .map(r => rawTextItemMap.get(r.to))
-      .filter(Boolean)
-      .join(' | ');
+    const description = getDescriptionsForTag(tag.id);
 
     return {
       'Tag': tag.text,
       'Page': tag.page,
       'Drawing Number': drawingNumber,
       'Instruments Installed': instrumentsInstalled,
-      'Description': notes,
+      'Description': description,
     };
   });
 
@@ -59,12 +71,7 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
       .join(', ');
       
     const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
-
-    const notes = relationships
-      .filter(r => r.from === tag.id && r.type === RelationshipType.Annotation)
-      .map(r => rawTextItemMap.get(r.to))
-      .filter(Boolean)
-      .join(' | ');
+    const description = getDescriptionsForTag(tag.id);
 
     return {
       'Tag': tag.text,
@@ -73,7 +80,7 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
       'From': from,
       'To': to,
       'Instruments Installed': instrumentsInstalled,
-      'Description': notes,
+      'Description': description,
     };
   });
 
@@ -86,19 +93,14 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
       .join(', ');
 
     const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
-
-    const notes = relationships
-      .filter(r => r.from === tag.id && r.type === RelationshipType.Annotation)
-      .map(r => rawTextItemMap.get(r.to))
-      .filter(Boolean)
-      .join(' | ');
+    const description = getDescriptionsForTag(tag.id);
 
     return {
       'Tag': tag.text,
       'Page': tag.page,
       'Drawing Number': drawingNumber,
       'Installed On': installedOn,
-      'Description': notes,
+      'Description': description,
     };
   });
 

@@ -3,7 +3,7 @@ export const Category = {
   Line: 'Line',
   Instrument: 'Instrument',
   DrawingNumber: 'DrawingNumber',
-  NotesAndHolds: 'Notes & Holds',
+  NotesAndHolds: 'NotesAndHolds',
   Uncategorized: 'Uncategorized',
 };
 

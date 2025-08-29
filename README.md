@@ -141,8 +141,8 @@ PDF 처리가 완료되면 작업 공간이 나타납니다. 화면은 크게 �
 
 사이드 패널 하단의 `Export to Excel` 버튼을 클릭하면, 모든 작업 결과가 정리된 Excel 파일을 다운로드합니다.
 
-*   파일은 'Equipment List', 'Line List', 'Instrument List', 'Notes and Holds' 시트로 구분되어 생성됩니다.
-*   각 시트에는 태그 정보뿐만 아니라 설정된 관계(From/To, Installed On 등)와 도면 번호가 자동으로 포함되어 있어, 후속 작업에 바로 활용할 수 있습니다.
+*   파일은 'Equipment List', 'Line List', 'Instrument List' 시트로 구분되어 생성됩니다.
+*   각 시트에는 태그 정보뿐만 아니라 설정된 관계(From/To, Installed On 등), 관련 설명, 'Note & Hold' 정보 및 도면 번호가 자동으로 포함되어 있어, 후속 작업에 바로 활용할 수 있습니다.
 
 ## 6. 유용한 단축키
 

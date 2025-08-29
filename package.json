@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://khk98.github.io/P-ID-Tag-Extractor",
+  "homepage": "https://khk9897.github.io/P-ID-Tag-Extractor",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

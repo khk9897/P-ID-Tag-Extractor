@@ -67,6 +67,7 @@ const App = () => {
   const [mode, setMode] = useState('select'); // 'select', 'connect', 'manualCreate'
   const [relationshipStartTag, setRelationshipStartTag] = useState(null);
   const [showRelationships, setShowRelationships] = useState(true);
+  const [isSidePanelVisible, setIsSidePanelVisible] = useState(true);
 
   
   const [patterns, setPatterns] = useState(() => {
@@ -151,6 +152,23 @@ const App = () => {
             console.error("Failed to save tolerances to localStorage", error);
         }
     }, [tolerances]);
+  
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+            return;
+        }
+
+        if (e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            setIsSidePanelVisible(prev => !prev);
+        }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []); // Run only once
 
   const showConfirmation = (message, onConfirm) => {
     setConfirmation({ isOpen: true, message, onConfirm });
@@ -526,6 +544,7 @@ const App = () => {
           setRelationshipStartTag={setRelationshipStartTag}
           showRelationships={showRelationships}
           setShowRelationships={setShowRelationships}
+          isSidePanelVisible={isSidePanelVisible}
         />
       );
     }
@@ -547,6 +566,7 @@ const App = () => {
         scale={scale}
         setScale={setScale}
         mode={mode}
+        onToggleSidePanel={() => setIsSidePanelVisible(p => !p)}
       />
       <main className="flex-grow overflow-hidden">
         {mainContent()}

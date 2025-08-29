@@ -25,6 +25,7 @@ const HotkeyHelp = ({ onClose }) => {
   }, [onClose]);
 
   const modes = [
+    { key: 'S', desc: 'Toggle Side Panel' },
     { key: 'C', desc: 'Toggle Connect Mode' },
     { key: 'K', desc: 'Toggle Manual Create Mode' },
     { key: 'Esc', desc: 'Exit Mode / Clear Selection' },
@@ -79,6 +80,7 @@ export const Header = ({
   scale,
   setScale,
   mode,
+  onToggleSidePanel,
 }) => {
   const importInputRef = useRef(null);
   const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
@@ -93,7 +95,7 @@ export const Header = ({
 
   return (
     <header className="relative flex-shrink-0 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 p-2 flex justify-between items-center z-50">
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <path d="M14 2v6h6"></path>
@@ -103,6 +105,18 @@ export const Header = ({
           <path d="m9 12 1.5 2.6"></path>
         </svg>
         <h1 className="text-xl font-bold text-white tracking-tight">P&ID Smart Digitizer</h1>
+        {hasData && (
+          <button
+            onClick={onToggleSidePanel}
+            className="p-1.5 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+            title="Toggle Side Panel (S)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Viewer Controls - Centered */}

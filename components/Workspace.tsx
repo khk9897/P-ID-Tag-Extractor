@@ -29,6 +29,7 @@ export const Workspace = ({
   setRelationshipStartTag,
   showRelationships,
   setShowRelationships,
+  isSidePanelVisible,
 }) => {
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
@@ -75,7 +76,7 @@ export const Workspace = ({
 
   return (
     <div className="flex h-full bg-slate-900 relative">
-      <SidePanel 
+      {isSidePanelVisible && <SidePanel 
         tags={tags} 
         setTags={setTags}
         rawTextItems={rawTextItems}
@@ -94,7 +95,7 @@ export const Workspace = ({
         onPingTag={handlePingTag}
         showRelationships={showRelationships}
         setShowRelationships={setShowRelationships}
-      />
+      />}
       <div className="flex-grow h-full overflow-auto bg-slate-800/30">
         <PdfViewer
           pdfDoc={pdfDoc}

@@ -390,6 +390,24 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
         return [...filtered].sort((a, b) => a.text.length - b.text.length);
       case 'length-desc':
         return [...filtered].sort((a, b) => b.text.length - a.text.length);
+      case 'pos-top-bottom':
+        return [...filtered].sort((a, b) => {
+          if (a.page !== b.page) return a.page - b.page;
+          const yDiff = b.bbox.y2 - a.bbox.y2;
+          if (Math.abs(yDiff) < 1) {
+            return a.bbox.x1 - b.bbox.x1;
+          }
+          return yDiff;
+        });
+      case 'pos-left-right':
+        return [...filtered].sort((a, b) => {
+          if (a.page !== b.page) return a.page - b.page;
+          const xDiff = a.bbox.x1 - b.bbox.x1;
+          if (Math.abs(xDiff) < 1) {
+             return b.bbox.y2 - a.bbox.y2;
+          }
+          return xDiff;
+        });
       case 'default':
       default:
         return [...filtered].sort((a, b) => {
@@ -574,7 +592,9 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                         onChange={(e) => setSortOrder(e.target.value)}
                         className="bg-slate-700 border-slate-600 rounded-md pl-2 pr-7 py-1 text-sm focus:ring-sky-500 focus:border-sky-500"
                       >
-                        <option value="default">Default</option>
+                        <option value="default">Default (A-Z)</option>
+                        <option value="pos-top-bottom">Position (Top-Bottom)</option>
+                        <option value="pos-left-right">Position (Left-Right)</option>
                         <option value="length-asc">Length (Asc)</option>
                         <option value="length-desc">Length (Desc)</option>
                       </select>
@@ -584,7 +604,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                 {/* View Options & Category Filter Section */}
                 <hr className="border-slate-700" />
                 <div>
-                  <button onClick={() => toggleSection('viewOptions')} className="w-full flex justify-between items-center text-left">
+                  <button onClick={() => toggleSection('viewOptions')} className="w-full flex justify-between items-center text-left py-1">
                     <h4 className="text-sm font-semibold text-slate-400">View Options</h4>
                     <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-slate-400 transition-transform ${sections.viewOptions ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -646,7 +666,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                 {/* Toolbox Section */}
                 <hr className="border-slate-700" />
                 <div>
-                   <button onClick={() => toggleSection('tools')} className="w-full flex justify-between items-center text-left">
+                   <button onClick={() => toggleSection('tools')} className="w-full flex justify-between items-center text-left py-1">
                     <h4 className="text-sm font-semibold text-slate-400">Tools</h4>
                      <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-slate-400 transition-transform ${sections.tools ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />

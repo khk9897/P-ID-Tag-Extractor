@@ -22,7 +22,9 @@
       "Bash(git push:*)",
       "Bash(npm run deploy:*)",
       "WebFetch(domain:khk9897.github.io)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(surge:*)",
+      "Bash(gh repo view:*)"
     ],
     "deny": [],
     "ask": []

@@ -3,9 +3,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 
-export default defineConfig(() => {
+export default defineConfig(({ command }) => {
+    const base = command === 'serve' ? '/' : '/P-ID-Tag-Extractor/';
     return {
-      base: '/P-ID-Tag-Extractor/',
+      base,
       plugins: [
         react(),
         visualizer({
@@ -37,6 +38,7 @@ export default defineConfig(() => {
       },
       worker: {
         format: 'es'
-      }
+      },
+      assetsInclude: ['**/*.pdf']
     };
 });

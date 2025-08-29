@@ -414,7 +414,7 @@ const App = () => {
     URL.revokeObjectURL(url);
   }, [pdfFile, tags, relationships, rawTextItems, patterns, tolerances]);
   
-  const handleAutoLinkInstrumentNotes = useCallback(() => {
+  const handleAutoLinkDescriptions = useCallback(() => {
     const autoLinkDistance = tolerances[Category.Instrument]?.autoLinkDistance;
     if (typeof autoLinkDistance !== 'number') {
         alert("Auto-link distance is not configured. Please check your settings.");
@@ -469,17 +469,17 @@ const App = () => {
             
             if (uniqueNewRels.length > 0) {
                 setRelationships(prev => [...prev, ...uniqueNewRels]);
-                alert(`${uniqueNewRels.length} new annotation link(s) created.`);
+                alert(`${uniqueNewRels.length} new description link(s) created.`);
             } else {
-                alert('No new annotation links could be found. They may already exist.');
+                alert('No new description links could be found. They may already exist.');
             }
         } else {
-            alert('No new annotation links could be found with the current settings.');
+            alert('No new description links could be found with the current settings.');
         }
     };
     
     showConfirmation(
-        `This will automatically create annotation links for all Instrument tags based on the current distance setting (${autoLinkDistance}px). This may create many relationships. Do you want to proceed?`,
+        `This will automatically create description links for all Instrument tags based on the current distance setting (${autoLinkDistance}px). This may create many relationships. Do you want to proceed?`,
         performLinking
     );
   }, [tags, rawTextItems, relationships, tolerances, showConfirmation]);
@@ -513,7 +513,7 @@ const App = () => {
           onUpdateTagText={handleUpdateTagText}
           onDeleteRawTextItems={handleDeleteRawTextItems}
           onUpdateRawTextItemText={handleUpdateRawTextItemText}
-          onAutoLinkInstrumentNotes={handleAutoLinkInstrumentNotes}
+          onAutoLinkDescriptions={handleAutoLinkDescriptions}
           showConfirmation={showConfirmation}
           // Pass down viewer state
           currentPage={currentPage}

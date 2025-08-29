@@ -49,15 +49,15 @@ const EditTagButton = ({ onClick }) => (
   </button>
 );
 
-const AnnotationItem: React.FC<{
-  note: any;
+const RelatedTextItem: React.FC<{
+  item: any;
   relId: string;
   onDeleteRelationship: (relId: string) => void;
-  onDeleteNote: (noteId: string) => void;
-  onUpdateNoteText: (noteId: string, newText: string) => void;
-}> = ({ note, relId, onDeleteRelationship, onDeleteNote, onUpdateNoteText }) => {
+  onDeleteItem: (itemId: string) => void;
+  onUpdateItemText: (itemId: string, newText: string) => void;
+}> = ({ item, relId, onDeleteRelationship, onDeleteItem, onUpdateItemText }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(note.text);
+  const [editText, setEditText] = useState(item.text);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -68,13 +68,13 @@ const AnnotationItem: React.FC<{
   }, [isEditing]);
   
   useEffect(() => {
-    setEditText(note.text);
-  }, [note.text]);
+    setEditText(item.text);
+  }, [item.text]);
 
   const handleSave = () => {
     const trimmedText = editText.trim();
-    if (trimmedText && trimmedText !== note.text) {
-      onUpdateNoteText(note.id, trimmedText);
+    if (trimmedText && trimmedText !== item.text) {
+      onUpdateItemText(item.id, trimmedText);
     }
     setIsEditing(false);
   };
@@ -83,14 +83,14 @@ const AnnotationItem: React.FC<{
     if (e.key === 'Enter') {
       handleSave();
     } else if (e.key === 'Escape') {
-      setEditText(note.text);
+      setEditText(item.text);
       setIsEditing(false);
     }
   };
 
   return (
     <div className="group flex items-center justify-between" onClick={(e) => {if(isEditing) e.stopPropagation()}}>
-      <div className="flex items-center space-x-1.5 flex-grow min-w-0" title={note.text}>
+      <div className="flex items-center space-x-1.5 flex-grow min-w-0" title={item.text}>
         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-slate-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
         {isEditing ? (
           <input
@@ -104,12 +104,12 @@ const AnnotationItem: React.FC<{
             className="font-mono text-sm text-white bg-slate-600 border border-sky-500 rounded px-1 w-full"
           />
         ) : (
-          <span className="text-slate-300 font-mono truncate max-w-[180px]">{note.text}</span>
+          <span className="text-slate-300 font-mono truncate max-w-[180px]">{item.text}</span>
         )}
       </div>
       <div className="flex items-center flex-shrink-0">
           <EditTagButton onClick={() => setIsEditing(true)} />
-          <DeleteTagButton onClick={() => onDeleteNote(note.id)} />
+          <DeleteTagButton onClick={() => onDeleteItem(item.id)} />
           <DeleteRelationshipButton onClick={() => onDeleteRelationship(relId)} />
       </div>
     </div>
@@ -128,11 +128,11 @@ interface TagListItemProps {
   onDeleteRelationship: (relId: any) => void;
   onDeleteTag: (tagId: string) => void;
   onUpdateTagText: (tagId: string, newText: string) => void;
-  onDeleteNote: (noteId: string) => void;
-  onUpdateNoteText: (noteId: string, newText: string) => void;
+  onDeleteItem: (itemId: string) => void;
+  onUpdateItemText: (itemId: string, newText: string) => void;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteNote, onUpdateNoteText }) => {
+const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -283,18 +283,18 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
           {/* Annotation relationships */}
           {annotationRelationships.length > 0 && (
             <div>
-              <span className="text-slate-400 font-semibold">Notes:</span>
+              <span className="text-slate-400 font-semibold">Related Text:</span>
               <div className="pl-3 space-y-1 mt-1">
                 {annotationRelationships.map(rel => {
                   const note = rawTextItemMap.get(rel.to);
                   return note ? (
-                    <AnnotationItem
+                    <RelatedTextItem
                         key={rel.id}
-                        note={note}
+                        item={note}
                         relId={rel.id}
                         onDeleteRelationship={onDeleteRelationship}
-                        onDeleteNote={onDeleteNote}
-                        onUpdateNoteText={onUpdateNoteText}
+                        onDeleteItem={onDeleteItem}
+                        onUpdateItemText={onUpdateItemText}
                     />
                   ) : null;
                 })}
@@ -307,7 +307,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   );
 };
 
-export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkInstrumentNotes, showConfirmation }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, showConfirmation }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
@@ -324,8 +324,8 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
     onDeleteTags([tagId]);
   };
   
-  const handleDeleteNote = (noteId) => {
-    onDeleteRawTextItems([noteId]);
+  const handleDeleteItem = (itemId) => {
+    onDeleteRawTextItems([itemId]);
   };
   
   const handleRemoveWhitespace = () => {
@@ -576,14 +576,14 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                     <span>Strip Whitespace</span>
                   </button>
                    <button
-                    onClick={onAutoLinkInstrumentNotes}
+                    onClick={onAutoLinkDescriptions}
                     className="w-full flex items-center justify-center space-x-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold py-1.5 px-2 rounded-md transition-colors text-sm"
-                    title="Automatically link nearby text as notes to Instrument tags."
+                    title="Automatically link nearby text as descriptions to Instrument tags."
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
-                    <span>Auto-link Notes</span>
+                    <span>Auto-link Descriptions</span>
                   </button>
                 </div>
             </div>
@@ -616,8 +616,8 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                       onDeleteRelationship={handleDeleteRelationship}
                       onDeleteTag={handleDeleteTag}
                       onUpdateTagText={onUpdateTagText}
-                      onDeleteNote={handleDeleteNote}
-                      onUpdateNoteText={onUpdateRawTextItemText}
+                      onDeleteItem={handleDeleteItem}
+                      onUpdateItemText={onUpdateRawTextItemText}
                     />
                 ))}
             </ul>

@@ -34,7 +34,7 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
       'Page': tag.page,
       'Drawing Number': drawingNumber,
       'Instruments Installed': instrumentsInstalled,
-      'Notes': notes,
+      'Description': notes,
     };
   });
 
@@ -73,7 +73,7 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
       'From': from,
       'To': to,
       'Instruments Installed': instrumentsInstalled,
-      'Notes': notes,
+      'Description': notes,
     };
   });
 
@@ -98,7 +98,7 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
       'Page': tag.page,
       'Drawing Number': drawingNumber,
       'Installed On': installedOn,
-      'Notes': notes,
+      'Description': notes,
     };
   });
 

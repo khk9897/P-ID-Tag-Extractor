@@ -1,4 +1,5 @@
 import { Category, RelationshipType } from '../types.ts';
+import * as XLSX from 'xlsx';
 
 export const exportToExcel = (tags, relationships, rawTextItems) => {
   const equipment = tags.filter(t => t.category === Category.Equipment);
@@ -109,16 +110,16 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
     };
   });
   
-  const wb = (window as any).XLSX.utils.book_new();
+  const wb = XLSX.utils.book_new();
   
-  const wsEquipment = (window as any).XLSX.utils.json_to_sheet(equipmentData);
-  (window as any).XLSX.utils.book_append_sheet(wb, wsEquipment, 'Equipment List');
+  const wsEquipment = XLSX.utils.json_to_sheet(equipmentData);
+  XLSX.utils.book_append_sheet(wb, wsEquipment, 'Equipment List');
 
-  const wsLines = (window as any).XLSX.utils.json_to_sheet(lineData);
-  (window as any).XLSX.utils.book_append_sheet(wb, wsLines, 'Line List');
+  const wsLines = XLSX.utils.json_to_sheet(lineData);
+  XLSX.utils.book_append_sheet(wb, wsLines, 'Line List');
 
-  const wsInstruments = (window as any).XLSX.utils.json_to_sheet(instrumentData);
-  (window as any).XLSX.utils.book_append_sheet(wb, wsInstruments, 'Instrument List');
+  const wsInstruments = XLSX.utils.json_to_sheet(instrumentData);
+  XLSX.utils.book_append_sheet(wb, wsInstruments, 'Instrument List');
   
-  (window as any).XLSX.writeFile(wb, 'P&ID_Tag_Export.xlsx');
+  XLSX.writeFile(wb, 'P&ID_Tag_Export.xlsx');
 };

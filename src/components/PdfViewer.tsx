@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'https://esm.sh/react@19.1.1';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { RelationshipType, Category } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
-import { v4 as uuidv4 } from 'https://esm.sh/uuid@11.1.0';
+import { v4 as uuidv4 } from 'uuid';
 
 export const PdfViewer = ({
   pdfDoc,

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'https://esm.sh/react@19.1.1';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Category, RelationshipType } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
 import { exportToExcel } from '../services/excelExporter.ts';
@@ -488,8 +488,8 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
             const fromTag = tagMap.get(rel.from);
             const toTag = tagMap.get(rel.to);
             return (
-                fromTag?.text.toLowerCase().includes(lowerCaseQuery) ||
-                toTag?.text.toLowerCase().includes(lowerCaseQuery)
+                (fromTag as any)?.text?.toLowerCase().includes(lowerCaseQuery) ||
+                (toTag as any)?.text?.toLowerCase().includes(lowerCaseQuery)
             );
         });
     }, [relSearchQuery, relationships, tagMap]);

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'https://esm.sh/react@19.1.1';
+import React, { useState, useCallback } from 'react';
 import { PdfViewer } from './PdfViewer.tsx';
 import { SidePanel } from './SidePanel.tsx';
 import { SelectionPanel } from './SelectionPanel.tsx';

@@ -1,5 +1,5 @@
 import { Category } from '../types.ts';
-import { v4 as uuidv4 } from 'https://esm.sh/uuid@11.1.0';
+import { v4 as uuidv4 } from 'uuid';
 
 // Helper function to calculate bounding box
 const calculateBbox = (item) => {

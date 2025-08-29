@@ -1,19 +1,36 @@
-import React, { useState, useCallback, useEffect, useRef } from 'https://esm.sh/react@19.1.1';
-import { v4 as uuidv4 } from 'https://esm.sh/uuid@11.1.0';
+import React, { useState, useCallback, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import * as pdfjsLib from 'pdfjs-dist';
 import { PdfUpload } from './components/PdfUpload.tsx';
 import { Workspace } from './components/Workspace.tsx';
 import { Header } from './components/Header.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
+import ErrorBoundary from './components/ErrorBoundary.tsx';
 import { extractTags } from './services/taggingService.ts';
 import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES } from './constants.ts';
-import { Category, RelationshipType } from './types.ts';
+import { 
+  Category, 
+  RelationshipType, 
+  CategoryType,
+  Tag,
+  RawTextItem,
+  Relationship,
+  ConfirmModalProps,
+  ProcessingProgress,
+  ProjectData,
+  PatternConfig,
+  ToleranceConfig,
+  ViewMode,
+  ManualTagData
+} from './types.ts';
 
-// Set PDF.js worker source globally
-if ((window as any).pdfjsLib) {
-  (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = (window as any).pdfjsWorker;
-}
+// Set PDF.js worker source
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url
+).toString();
 
-const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
+const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm, onCancel }) => {
   if (!isOpen) return null;
 
   return (
@@ -50,27 +67,31 @@ const ConfirmModal = ({ isOpen, message, onConfirm, onCancel }) => {
 };
 
 
-const App = () => {
-  const [pdfFile, setPdfFile] = useState(null);
-  const [pdfDoc, setPdfDoc] = useState(null);
-  const [tags, setTags] = useState([]);
-  const [rawTextItems, setRawTextItems] = useState([]);
-  const [relationships, setRelationships] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState({ current: 0, total: 0 });
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [confirmation, setConfirmation] = useState({ isOpen: false, message: '', onConfirm: () => {} });
+const App: React.FC = () => {
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfDoc, setPdfDoc] = useState<any>(null); // TODO: Add proper PDF.js type
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [rawTextItems, setRawTextItems] = useState<RawTextItem[]>([]);
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [progress, setProgress] = useState<ProcessingProgress>({ current: 0, total: 0 });
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [confirmation, setConfirmation] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, message: '', onConfirm: () => {} });
 
   // State lifted from viewer/workspace for toolbar
-  const [currentPage, setCurrentPage] = useState(1);
-  const [scale, setScale] = useState(1.5);
-  const [mode, setMode] = useState('select'); // 'select', 'connect', 'manualCreate'
-  const [relationshipStartTag, setRelationshipStartTag] = useState(null);
-  const [showRelationships, setShowRelationships] = useState(true);
-  const [isSidePanelVisible, setIsSidePanelVisible] = useState(true);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [scale, setScale] = useState<number>(1.5);
+  const [mode, setMode] = useState<ViewMode>('select');
+  const [relationshipStartTag, setRelationshipStartTag] = useState<Tag | null>(null);
+  const [showRelationships, setShowRelationships] = useState<boolean>(true);
+  const [isSidePanelVisible, setIsSidePanelVisible] = useState<boolean>(true);
 
   
-  const [patterns, setPatterns] = useState(() => {
+  const [patterns, setPatterns] = useState<PatternConfig>(() => {
     try {
       const savedPatterns = localStorage.getItem('pid-tagger-patterns');
       let parsed = savedPatterns ? JSON.parse(savedPatterns) : DEFAULT_PATTERNS;
@@ -114,7 +135,7 @@ const App = () => {
     }
   });
 
-    const [tolerances, setTolerances] = useState(() => {
+    const [tolerances, setTolerances] = useState<ToleranceConfig>(() => {
         try {
             const saved = localStorage.getItem('pid-tagger-tolerances');
             let parsed = saved ? JSON.parse(saved) : DEFAULT_TOLERANCES;
@@ -170,7 +191,7 @@ const App = () => {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []); // Run only once
 
-  const showConfirmation = (message, onConfirm) => {
+  const showConfirmation = (message: string, onConfirm: () => void): void => {
     setConfirmation({ isOpen: true, message, onConfirm });
   };
   const handleCloseConfirmation = () => {
@@ -181,7 +202,7 @@ const App = () => {
     handleCloseConfirmation();
   };
 
-  const processPdf = useCallback(async (doc, patternsToUse, tolerancesToUse) => {
+  const processPdf = useCallback(async (doc: any, patternsToUse: PatternConfig, tolerancesToUse: ToleranceConfig): Promise<void> => {
     setIsLoading(true);
     setTags([]);
     setRawTextItems([]);
@@ -208,7 +229,7 @@ const App = () => {
     }
   }, []);
 
-  const handleFileSelect = useCallback(async (file) => {
+  const handleFileSelect = useCallback(async (file: File): Promise<void> => {
     setPdfFile(file);
     setIsLoading(true);
     setTags([]);
@@ -219,7 +240,7 @@ const App = () => {
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const loadingTask = (window as any).pdfjsLib.getDocument({ data: arrayBuffer });
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const doc = await loadingTask.promise;
       setPdfDoc(doc);
       await processPdf(doc, patterns, tolerances);
@@ -230,7 +251,7 @@ const App = () => {
     }
   }, [patterns, tolerances, processPdf]);
 
-  const handleSaveSettings = async (newPatterns, newTolerances) => {
+  const handleSaveSettings = async (newPatterns: PatternConfig, newTolerances: ToleranceConfig): Promise<void> => {
     setPatterns(newPatterns);
     setTolerances(newTolerances);
     setIsSettingsOpen(false);
@@ -252,7 +273,7 @@ const App = () => {
     setMode('select');
   };
   
-  const handleCreateTag = useCallback((itemsToConvert, category) => {
+  const handleCreateTag = useCallback((itemsToConvert: RawTextItem[], category: CategoryType): void => {
     if (!itemsToConvert || itemsToConvert.length === 0) return;
 
     // All items must be on the same page
@@ -289,7 +310,8 @@ const App = () => {
     setRelationships(prev => prev.filter(rel => !(rel.type === RelationshipType.Annotation && idsToConvert.has(rel.to))));
   }, []);
 
-  const handleCreateManualTag = useCallback(({ text, bbox, page, category }) => {
+  const handleCreateManualTag = useCallback((tagData: ManualTagData): void => {
+    const { text, bbox, page, category } = tagData;
     if (!text || !bbox || !page || !category) {
         console.error("Missing data for manual tag creation.");
         return;
@@ -307,7 +329,7 @@ const App = () => {
     setTags(prev => [...prev, newTag]);
   }, []);
 
-  const handleDeleteTags = useCallback((tagIdsToDelete) => {
+  const handleDeleteTags = useCallback((tagIdsToDelete: string[]): void => {
     const idsToDelete = new Set(tagIdsToDelete);
 
     // Find the tags being deleted
@@ -338,59 +360,153 @@ const App = () => {
     setRelationships(prev => prev.filter(rel => !idsToDelete.has(rel.from) && !idsToDelete.has(rel.to)));
   }, [tags]);
   
-  const handleDeleteRawTextItems = useCallback((itemIdsToDelete) => {
+  const handleDeleteRawTextItems = useCallback((itemIdsToDelete: string[]): void => {
     const idsToDelete = new Set(itemIdsToDelete);
     setRawTextItems(prev => prev.filter(item => !idsToDelete.has(item.id)));
     // Also remove any relationships pointing to these items
     setRelationships(prev => prev.filter(rel => !idsToDelete.has(rel.to)));
   }, []);
 
-  const handleUpdateTagText = useCallback((tagId, newText) => {
+  const handleUpdateTagText = useCallback((tagId: string, newText: string): void => {
     setTags(prevTags => prevTags.map(tag => 
       tag.id === tagId ? { ...tag, text: newText } : tag
     ));
   }, []);
 
-  const handleUpdateRawTextItemText = useCallback((itemId, newText) => {
+  const handleUpdateRawTextItemText = useCallback((itemId: string, newText: string): void => {
     setRawTextItems(prevItems => prevItems.map(item =>
         item.id === itemId ? { ...item, text: newText } : item
     ));
   }, []);
 
-  const loadProjectData = useCallback((projectData) => {
-    if (!projectData.tags || !projectData.relationships || !projectData.rawTextItems) {
-        alert("Invalid project file structure. Cannot load.");
-        return;
+  const validateProjectData = (data: any): data is ProjectData => {
+    // Basic structure validation
+    if (!data || typeof data !== 'object') return false;
+    
+    // Required fields validation
+    const requiredFields = ['pdfFileName', 'exportDate', 'tags', 'relationships', 'rawTextItems'];
+    for (const field of requiredFields) {
+      if (!(field in data)) return false;
     }
     
-    setTags(projectData.tags);
-    setRelationships(projectData.relationships);
-    setRawTextItems(projectData.rawTextItems);
-    
-    if (projectData.settings?.patterns) {
-        setPatterns(projectData.settings.patterns);
+    // Type validation for arrays
+    if (!Array.isArray(data.tags) || !Array.isArray(data.relationships) || !Array.isArray(data.rawTextItems)) {
+      return false;
     }
-    if (projectData.settings?.tolerances) {
-        setTolerances(projectData.settings.tolerances);
+    
+    // Validate tag structure
+    for (const tag of data.tags) {
+      if (!tag.id || !tag.text || !tag.page || !tag.bbox || !tag.category) {
+        return false;
+      }
+      if (!tag.bbox.hasOwnProperty('x1') || !tag.bbox.hasOwnProperty('y1') || 
+          !tag.bbox.hasOwnProperty('x2') || !tag.bbox.hasOwnProperty('y2')) {
+        return false;
+      }
+    }
+    
+    // Validate relationship structure
+    for (const rel of data.relationships) {
+      if (!rel.id || !rel.from || !rel.to || !rel.type) {
+        return false;
+      }
+      if (!Object.values(RelationshipType).includes(rel.type)) {
+        return false;
+      }
+    }
+    
+    // Validate rawTextItems structure
+    for (const item of data.rawTextItems) {
+      if (!item.id || !item.text || !item.page || !item.bbox) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  const sanitizeProjectData = (data: ProjectData): ProjectData => {
+    // Sanitize strings to prevent XSS
+    const sanitizeString = (str: string): string => {
+      return str.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                .replace(/javascript:/gi, '')
+                .replace(/on\w+="[^"]*"/gi, '');
+    };
+    
+    return {
+      ...data,
+      pdfFileName: sanitizeString(data.pdfFileName),
+      tags: data.tags.map(tag => ({
+        ...tag,
+        text: sanitizeString(tag.text)
+      })),
+      rawTextItems: data.rawTextItems.map(item => ({
+        ...item,
+        text: sanitizeString(item.text)
+      }))
+    };
+  };
+
+  const loadProjectData = useCallback((projectData: any): void => {
+    if (!validateProjectData(projectData)) {
+      alert("Invalid project file structure or corrupted data. Cannot load.");
+      return;
+    }
+    
+    const sanitizedData = sanitizeProjectData(projectData);
+    
+    setTags(sanitizedData.tags);
+    setRelationships(sanitizedData.relationships);
+    setRawTextItems(sanitizedData.rawTextItems);
+    
+    if (sanitizedData.settings?.patterns) {
+        setPatterns(sanitizedData.settings.patterns);
+    }
+    if (sanitizedData.settings?.tolerances) {
+        setTolerances(sanitizedData.settings.tolerances);
     }
     
     console.log("Project loaded successfully.");
   }, []);
 
-  const handleImportProject = useCallback(async (file) => {
+  const handleImportProject = useCallback(async (file: File): Promise<void> => {
     if (!file || !pdfFile) {
         alert("Please open a PDF file before importing a project file.");
+        return;
+    }
+    
+    // File size validation (max 50MB)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+        alert("Project file is too large. Maximum file size is 50MB.");
+        return;
+    }
+    
+    // File type validation
+    if (!file.name.toLowerCase().endsWith('.json')) {
+        alert("Please select a valid JSON project file.");
         return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
         try {
-            const projectData = JSON.parse(event.target.result as string);
+            const content = event.target?.result as string;
+            if (!content) {
+                throw new Error("File content is empty");
+            }
+            
+            // Additional JSON parsing security
+            if (content.includes('<script>') || content.includes('javascript:')) {
+                throw new Error("Project file contains potentially malicious content");
+            }
+            
+            const projectData = JSON.parse(content);
             
             if (projectData.pdfFileName !== pdfFile.name) {
+                const sanitizedOldName = projectData.pdfFileName?.replace(/[<>]/g, '') || 'Unknown';
                 showConfirmation(
-                    `This project file seems to be for a different PDF ("${projectData.pdfFileName}"). You currently have "${pdfFile.name}" open. Do you want to load the project data anyway?`,
+                    `This project file seems to be for a different PDF ("${sanitizedOldName}"). You currently have "${pdfFile.name}" open. Do you want to load the project data anyway?`,
                     () => loadProjectData(projectData)
                 );
             } else {
@@ -398,9 +514,24 @@ const App = () => {
             }
         } catch (error) {
             console.error("Error parsing project file:", error);
-            alert("Could not load project. The file might be corrupted or in an invalid format.");
+            let errorMessage = "Could not load project. ";
+            
+            if (error instanceof SyntaxError) {
+                errorMessage += "The file contains invalid JSON format.";
+            } else if (error.message.includes('malicious')) {
+                errorMessage += "The file contains potentially unsafe content.";
+            } else {
+                errorMessage += "The file might be corrupted or in an invalid format.";
+            }
+            
+            alert(errorMessage);
         }
     };
+    
+    reader.onerror = () => {
+        alert("Error reading file. Please try again.");
+    };
+    
     reader.readAsText(file);
   }, [pdfFile, loadProjectData, showConfirmation]);
 
@@ -518,66 +649,124 @@ const App = () => {
 
     if (pdfFile && pdfDoc) {
       return (
-        <Workspace
+        <ErrorBoundary
+          fallback={
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-red-300">
+                <p className="mb-4">Error loading workspace. Please try refreshing the page.</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Reload
+                </button>
+              </div>
+            </div>
+          }
+        >
+          <Workspace
+            pdfDoc={pdfDoc}
+            tags={tags}
+            setTags={setTags}
+            relationships={relationships}
+            setRelationships={setRelationships}
+            rawTextItems={rawTextItems}
+            onCreateTag={handleCreateTag}
+            onCreateManualTag={handleCreateManualTag}
+            onDeleteTags={handleDeleteTags}
+            onUpdateTagText={handleUpdateTagText}
+            onDeleteRawTextItems={handleDeleteRawTextItems}
+            onUpdateRawTextItemText={handleUpdateRawTextItemText}
+            onAutoLinkDescriptions={handleAutoLinkDescriptions}
+            showConfirmation={showConfirmation}
+            // Pass down viewer state
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            scale={scale}
+            setScale={setScale}
+            mode={mode}
+            setMode={setMode}
+            relationshipStartTag={relationshipStartTag}
+            setRelationshipStartTag={setRelationshipStartTag}
+            showRelationships={showRelationships}
+            setShowRelationships={setShowRelationships}
+            isSidePanelVisible={isSidePanelVisible}
+          />
+        </ErrorBoundary>
+      );
+    }
+    
+    return (
+      <ErrorBoundary
+        fallback={
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-red-300">
+              <p className="mb-4">Error loading file upload. Please refresh the page.</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Reload
+              </button>
+            </div>
+          </div>
+        }
+      >
+        <PdfUpload onFileSelect={handleFileSelect} />
+      </ErrorBoundary>
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-slate-900 font-sans">
+      <ErrorBoundary
+        fallback={
+          <div className="h-16 bg-slate-800 flex items-center justify-center">
+            <p className="text-red-300">Error loading header</p>
+          </div>
+        }
+      >
+        <Header 
+          onReset={handleReset} 
+          hasData={!!pdfFile} 
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onImportProject={handleImportProject}
+          onExportProject={handleExportProject}
           pdfDoc={pdfDoc}
-          tags={tags}
-          setTags={setTags}
-          relationships={relationships}
-          setRelationships={setRelationships}
-          rawTextItems={rawTextItems}
-          onCreateTag={handleCreateTag}
-          onCreateManualTag={handleCreateManualTag}
-          onDeleteTags={handleDeleteTags}
-          onUpdateTagText={handleUpdateTagText}
-          onDeleteRawTextItems={handleDeleteRawTextItems}
-          onUpdateRawTextItemText={handleUpdateRawTextItemText}
-          onAutoLinkDescriptions={handleAutoLinkDescriptions}
-          showConfirmation={showConfirmation}
-          // Pass down viewer state
           currentPage={currentPage}
           setCurrentPage={setCurrentPage}
           scale={scale}
           setScale={setScale}
           mode={mode}
-          setMode={setMode}
-          relationshipStartTag={relationshipStartTag}
-          setRelationshipStartTag={setRelationshipStartTag}
-          showRelationships={showRelationships}
-          setShowRelationships={setShowRelationships}
-          isSidePanelVisible={isSidePanelVisible}
+          onToggleSidePanel={() => setIsSidePanelVisible(p => !p)}
         />
-      );
-    }
-    
-    return <PdfUpload onFileSelect={handleFileSelect} />;
-  };
-
-  return (
-    <div className="flex flex-col h-screen bg-slate-900 font-sans">
-      <Header 
-        onReset={handleReset} 
-        hasData={!!pdfFile} 
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onImportProject={handleImportProject}
-        onExportProject={handleExportProject}
-        pdfDoc={pdfDoc}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        scale={scale}
-        setScale={setScale}
-        mode={mode}
-        onToggleSidePanel={() => setIsSidePanelVisible(p => !p)}
-      />
+      </ErrorBoundary>
       <main className="flex-grow overflow-hidden">
         {mainContent()}
       </main>
       {isSettingsOpen && (
-        <SettingsModal 
-          patterns={patterns}
-          tolerances={tolerances}
-          onSave={handleSaveSettings}
-          onClose={() => setIsSettingsOpen(false)}
-        />
+        <ErrorBoundary
+          fallback={
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+              <div className="bg-slate-800 rounded-lg p-6">
+                <p className="text-red-300 mb-4">Error loading settings modal</p>
+                <button
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          }
+        >
+          <SettingsModal 
+            patterns={patterns}
+            tolerances={tolerances}
+            onSave={handleSaveSettings}
+            onClose={() => setIsSettingsOpen(false)}
+          />
+        </ErrorBoundary>
       )}
       <ConfirmModal 
         isOpen={confirmation.isOpen}

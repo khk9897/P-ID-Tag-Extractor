@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'https://esm.sh/react@19.1.1';
+import React, { useCallback, useState } from 'react';
 
 export const PdfUpload = ({ onFileSelect }) => {
   const [isDragging, setIsDragging] = useState(false);

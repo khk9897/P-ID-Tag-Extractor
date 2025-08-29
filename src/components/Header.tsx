@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'https://esm.sh/react@19.1.1';
+import React, { useState, useRef, useEffect } from 'react';
 
 // --- Components moved from App.tsx for colocation ---
 

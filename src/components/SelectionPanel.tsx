@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'https://esm.sh/react@19.1.1';
+import React, { useState, useEffect } from 'react';
 import { Category, RelationshipType } from '../types.ts';
 
 export const SelectionPanel = ({

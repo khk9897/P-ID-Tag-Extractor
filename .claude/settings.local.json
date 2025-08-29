@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(move App.tsx srcApp.tsx)",
+      "Bash(move types.ts srctypes.ts)",
+      "Bash(move constants.ts srcconstants.ts)",
+      "Bash(move components srccomponents)",
+      "Bash(move:*)",
+      "Bash(npm install)",
+      "Bash(npm audit:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(find:*)",
+      "Bash(npm run lint)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(timeout 5 npm run dev)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 5 npm run preview)",
+      "Bash(npm install:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

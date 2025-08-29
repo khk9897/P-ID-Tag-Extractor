@@ -18,7 +18,11 @@
       "Bash(npm install:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(vercel:*)"
+      "Bash(vercel:*)",
+      "Bash(git push:*)",
+      "Bash(npm run deploy:*)",
+      "WebFetch(domain:khk9897.github.io)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

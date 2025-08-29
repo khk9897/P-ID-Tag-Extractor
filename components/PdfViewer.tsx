@@ -151,24 +151,57 @@ export const PdfViewer = ({
         } else {
             alert("The 'M' hotkey creates an Instrument tag from exactly TWO selected text items. For other cases, use the action panel at the bottom.");
         }
-      } else if (e.key.toLowerCase() === 'r' && mode === 'select' && selectedTagIds.length === 1 && selectedRawTextItemIds.length > 0) {
-        const tagId = selectedTagIds[0];
-        const newRelationships = selectedRawTextItemIds.map(rawId => ({
-            id: uuidv4(),
-            from: tagId,
-            to: rawId,
-            type: RelationshipType.Annotation,
-        }));
+      } else if (e.key.toLowerCase() === 'r' && mode === 'select' && (selectedTagIds.length > 0 || selectedRawTextItemIds.length > 0)) {
+        const newRelationships = [];
+        const selected = tags.filter(t => selectedTagIds.includes(t.id));
         
-        const existingRels = new Set(relationships.map(r => `${r.from}-${r.to}-${r.type}`));
-        const uniqueNewRels = newRelationships.filter(r => !existingRels.has(`${r.from}-${r.to}-${r.type}`));
+        // Specifically identify Equipment, Line, or Instrument tags
+        const itemTagCategories = [Category.Equipment, Category.Line, Category.Instrument];
+        const itemTags = selected.filter(t => itemTagCategories.includes(t.category));
 
-        if (uniqueNewRels.length > 0) {
-            setRelationships(prev => [...prev, ...uniqueNewRels]);
+        // VALIDATION: Ensure at most one item tag is selected
+        if (itemTags.length > 1) {
+            alert("Please select only one Equipment, Line, or Instrument tag at a time to create relationships.");
+            return; // Stop processing
         }
-        setSelectedTagIds([]);
-        setSelectedRawTextItemIds([]);
-        console.info(`Created ${uniqueNewRels.length} new annotation relationship(s).`);
+        
+        // Proceed if there is exactly one item tag.
+        if (itemTags.length === 1) {
+            const itemTag = itemTags[0];
+            const noteTags = selected.filter(t => t.category === Category.NotesAndHolds);
+
+            // Create Note relationships (item -> note)
+            for (const noteTag of noteTags) {
+                newRelationships.push({
+                    id: uuidv4(),
+                    from: itemTag.id,
+                    to: noteTag.id,
+                    type: RelationshipType.Note,
+                });
+            }
+            
+            // Create Annotation relationships (item -> raw text)
+            for (const rawId of selectedRawTextItemIds) {
+                newRelationships.push({
+                    id: uuidv4(),
+                    from: itemTag.id,
+                    to: rawId,
+                    type: RelationshipType.Annotation,
+                });
+            }
+        }
+        
+        if (newRelationships.length > 0) {
+            const existingRels = new Set(relationships.map(r => `${r.from}-${r.to}-${r.type}`));
+            const uniqueNewRels = newRelationships.filter(r => !existingRels.has(`${r.from}-${r.to}-${r.type}`));
+    
+            if (uniqueNewRels.length > 0) {
+                setRelationships(prev => [...prev, ...uniqueNewRels]);
+            }
+            setSelectedTagIds([]);
+            setSelectedRawTextItemIds([]);
+            console.info(`Created ${uniqueNewRels.length} new relationship(s).`);
+        }
       } else if (e.key.toLowerCase() === 'i' && mode === 'select' && selectedTagIds.length > 1) {
         const selected = tags.filter(t => selectedTagIds.includes(t.id));
         const baseTags = selected.filter(t => t.category === Category.Equipment || t.category === Category.Line);
@@ -193,35 +226,6 @@ export const PdfViewer = ({
           console.info(`Created ${uniqueNewRels.length} new installation relationship(s).`);
         } else {
           console.warn('To create an installation, please select exactly one Equipment or Line, and one or more Instruments.');
-        }
-      } else if (e.key.toLowerCase() === 'n' && mode === 'select' && selectedTagIds.length > 1) {
-        const selected = tags.filter(t => selectedTagIds.includes(t.id));
-        const noteTags = selected.filter(t => t.category === Category.NotesAndHolds);
-        const targetTags = selected.filter(t =>
-            t.category === Category.Equipment ||
-            t.category === Category.Line ||
-            t.category === Category.Instrument
-        );
-    
-        if (noteTags.length === 1 && targetTags.length >= 1) {
-            const noteTag = noteTags[0];
-            const newRelationships = targetTags.map(target => ({
-                id: uuidv4(),
-                from: target.id,
-                to: noteTag.id,
-                type: RelationshipType.Note,
-            }));
-            
-            const existingRels = new Set(relationships.map(r => `${r.from}-${r.to}-${r.type}`));
-            const uniqueNewRels = newRelationships.filter(r => !existingRels.has(`${r.from}-${r.to}-${r.type}`));
-    
-            if (uniqueNewRels.length > 0) {
-                setRelationships(prev => [...prev, ...uniqueNewRels]);
-            }
-            setSelectedTagIds([]);
-            console.info(`Created ${uniqueNewRels.length} new note relationship(s).`);
-        } else {
-          console.warn('To create a note relationship, please select exactly one Note tag, and one or more Equipment, Line, or Instrument tags.');
         }
       }
     };

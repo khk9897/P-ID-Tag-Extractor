@@ -28,6 +28,7 @@ export const Workspace = ({
   relationshipStartTag,
   setRelationshipStartTag,
   showRelationships,
+  setShowRelationships,
 }) => {
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
@@ -91,6 +92,8 @@ export const Workspace = ({
         onAutoLinkDescriptions={onAutoLinkDescriptions}
         showConfirmation={showConfirmation}
         onPingTag={handlePingTag}
+        showRelationships={showRelationships}
+        setShowRelationships={setShowRelationships}
       />
       <div className="flex-grow h-full overflow-auto bg-slate-800/30">
         <PdfViewer

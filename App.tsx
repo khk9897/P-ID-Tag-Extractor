@@ -525,6 +525,7 @@ const App = () => {
           relationshipStartTag={relationshipStartTag}
           setRelationshipStartTag={setRelationshipStartTag}
           showRelationships={showRelationships}
+          setShowRelationships={setShowRelationships}
         />
       );
     }
@@ -546,8 +547,6 @@ const App = () => {
         scale={scale}
         setScale={setScale}
         mode={mode}
-        showRelationships={showRelationships}
-        setShowRelationships={setShowRelationships}
       />
       <main className="flex-grow overflow-hidden">
         {mainContent()}

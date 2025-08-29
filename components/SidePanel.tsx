@@ -130,9 +130,10 @@ interface TagListItemProps {
   onUpdateTagText: (tagId: string, newText: string) => void;
   onDeleteItem: (itemId: string) => void;
   onUpdateItemText: (itemId: string, newText: string) => void;
+  showDetails: boolean;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText }) => {
+const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, showDetails }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -247,7 +248,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
         </div>
       </div>
       
-      {hasRelationships && (
+      {showDetails && hasRelationships && (
         <div className="mt-2 pt-2 border-t border-slate-700/50 space-y-1 text-xs text-slate-300">
           {/* Outgoing Connections */}
           {outgoingConnections.map(rel => {
@@ -333,8 +334,9 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   );
 };
 
-export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, showConfirmation, onPingTag }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, showConfirmation, onPingTag, showRelationships, setShowRelationships }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
+  const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
   const [filterCategory, setFilterCategory] = useState('All');
@@ -552,7 +554,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                           onChange={(e) => setShowCurrentPageOnly(e.target.checked)}
                           className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
                       />
-                      <span>Show current page only</span>
+                      <span>Show page only</span>
                     </label>
                     <div className="flex items-center space-x-1">
                       <label htmlFor="sort-order" className="text-xs text-slate-400">Sort:</label>
@@ -567,6 +569,26 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                         <option value="length-desc">Length (Desc)</option>
                       </select>
                     </div>
+                </div>
+                 <div className="space-y-1.5 pt-1">
+                    <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
+                        <input
+                            type="checkbox"
+                            checked={showRelationships}
+                            onChange={(e) => setShowRelationships(e.target.checked)}
+                            className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
+                        />
+                        <span>Show relationship lines</span>
+                    </label>
+                     <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
+                        <input
+                            type="checkbox"
+                            checked={showRelationshipDetails}
+                            onChange={(e) => setShowRelationshipDetails(e.target.checked)}
+                            className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
+                        />
+                        <span>Show list details</span>
+                    </label>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   {filterCategories.map(cat => {
@@ -649,6 +671,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                       onUpdateTagText={onUpdateTagText}
                       onDeleteItem={handleDeleteItem}
                       onUpdateItemText={onUpdateRawTextItemText}
+                      showDetails={showRelationshipDetails}
                     />
                 ))}
             </ul>

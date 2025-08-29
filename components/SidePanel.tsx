@@ -341,9 +341,17 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
   const [activeTab, setActiveTab] = useState('tags');
   const [filterCategory, setFilterCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('default');
+  const [sections, setSections] = useState({
+    viewOptions: true,
+    tools: true,
+  });
   const listRef = useRef(null);
   const lastClickedIndex = useRef(-1);
   
+  const toggleSection = (sectionName) => {
+    setSections(prev => ({ ...prev, [sectionName]: !prev[sectionName] }));
+  };
+
   const handleDeleteRelationship = (relId) => {
     setRelationships(prev => prev.filter(r => r.id !== relId));
   };
@@ -538,7 +546,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
 
       {activeTab === 'tags' && (
         <div className="flex-grow flex flex-col overflow-hidden">
-            <div className="p-2 space-y-2 border-b border-slate-700 flex-shrink-0">
+            <div className="p-3 space-y-2 border-b border-slate-700 flex-shrink-0">
                 <input
                   type="text"
                   placeholder="Search tags..."
@@ -546,6 +554,8 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 text-sm focus:ring-sky-500 focus:border-sky-500"
                 />
+                
+                {/* Filter & Sort Section */}
                 <div className="flex justify-between items-center">
                     <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
                       <input
@@ -557,12 +567,12 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                       <span>Show page only</span>
                     </label>
                     <div className="flex items-center space-x-1">
-                      <label htmlFor="sort-order" className="text-xs text-slate-400">Sort:</label>
+                      <label htmlFor="sort-order" className="text-sm text-slate-400">Sort:</label>
                       <select
                         id="sort-order"
                         value={sortOrder}
                         onChange={(e) => setSortOrder(e.target.value)}
-                        className="bg-slate-700 border-slate-600 rounded-md pl-1 pr-6 py-0.5 text-xs focus:ring-sky-500 focus:border-sky-500"
+                        className="bg-slate-700 border-slate-600 rounded-md pl-2 pr-7 py-1 text-sm focus:ring-sky-500 focus:border-sky-500"
                       >
                         <option value="default">Default</option>
                         <option value="length-asc">Length (Asc)</option>
@@ -570,74 +580,102 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                       </select>
                     </div>
                 </div>
-                 <div className="space-y-1.5 pt-1">
-                    <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
-                        <input
-                            type="checkbox"
-                            checked={showRelationships}
-                            onChange={(e) => setShowRelationships(e.target.checked)}
-                            className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
-                        />
-                        <span>Show relationship lines</span>
-                    </label>
-                     <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
-                        <input
-                            type="checkbox"
-                            checked={showRelationshipDetails}
-                            onChange={(e) => setShowRelationshipDetails(e.target.checked)}
-                            className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
-                        />
-                        <span>Show list details</span>
-                    </label>
+
+                {/* View Options & Category Filter Section */}
+                <hr className="border-slate-700" />
+                <div>
+                  <button onClick={() => toggleSection('viewOptions')} className="w-full flex justify-between items-center text-left">
+                    <h4 className="text-sm font-semibold text-slate-400">View Options</h4>
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-slate-400 transition-transform ${sections.viewOptions ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {sections.viewOptions && (
+                    <div className="space-y-4 mt-2 animate-fade-in-up" style={{animationDuration: '0.2s'}}>
+                      <div className="space-y-2">
+                        <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300 pl-1">
+                            <input
+                                type="checkbox"
+                                checked={showRelationships}
+                                onChange={(e) => setShowRelationships(e.target.checked)}
+                                className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
+                            />
+                            <span>Show relationship lines</span>
+                        </label>
+                         <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300 pl-1">
+                            <input
+                                type="checkbox"
+                                checked={showRelationshipDetails}
+                                onChange={(e) => setShowRelationshipDetails(e.target.checked)}
+                                className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
+                            />
+                            <span>Show list details</span>
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {filterCategories.map(cat => {
+                          const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage);
+                          const count = cat === 'All' ? baseTags.length : baseTags.filter(t => t.category === cat).length;
+                          const isActive = filterCategory === cat;
+                          const colors = cat !== 'All' ? CATEGORY_COLORS[cat] : null;
+
+                          let buttonClasses = 'px-2.5 py-1 text-xs font-semibold rounded-full transition-colors flex items-center';
+
+                          if (isActive) {
+                            if (cat === 'All') {
+                                buttonClasses += ' bg-sky-500 text-white';
+                            } else {
+                                buttonClasses += ` ${colors.bg} ${colors.text} ring-1 ${colors.border}`;
+                            }
+                          } else {
+                              buttonClasses += ' bg-slate-700 text-slate-300 hover:bg-slate-600';
+                          }
+
+                          return (
+                            <button key={cat} onClick={() => setFilterCategory(cat)} className={buttonClasses} disabled={count === 0 && cat !== 'All'}>
+                              {cat}
+                              <span className={`ml-1.5 px-1.5 text-xs rounded-full ${isActive ? 'bg-black/20' : 'bg-slate-600/80 text-slate-400'}`}>{count}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  {filterCategories.map(cat => {
-                    const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage);
-                    const count = cat === 'All' ? baseTags.length : baseTags.filter(t => t.category === cat).length;
-                    const isActive = filterCategory === cat;
-                    const colors = cat !== 'All' ? CATEGORY_COLORS[cat] : null;
 
-                    let buttonClasses = 'px-2.5 py-1 text-xs font-semibold rounded-full transition-colors flex items-center';
-
-                    if (isActive) {
-                      if (cat === 'All') {
-                          buttonClasses += ' bg-sky-500 text-white';
-                      } else {
-                          buttonClasses += ` ${colors.bg} ${colors.text} ring-1 ${colors.border}`;
-                      }
-                    } else {
-                        buttonClasses += ' bg-slate-700 text-slate-300 hover:bg-slate-600';
-                    }
-
-                    return (
-                      <button key={cat} onClick={() => setFilterCategory(cat)} className={buttonClasses} disabled={count === 0 && cat !== 'All'}>
-                        {cat}
-                        <span className={`ml-1.5 px-1.5 text-xs rounded-full ${isActive ? 'bg-black/20' : 'bg-slate-600/80 text-slate-400'}`}>{count}</span>
+                {/* Toolbox Section */}
+                <hr className="border-slate-700" />
+                <div>
+                   <button onClick={() => toggleSection('tools')} className="w-full flex justify-between items-center text-left">
+                    <h4 className="text-sm font-semibold text-slate-400">Tools</h4>
+                     <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-slate-400 transition-transform ${sections.tools ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {sections.tools && (
+                    <div className="grid grid-cols-2 gap-2 mt-2 animate-fade-in-up" style={{animationDuration: '0.2s'}}>
+                      <button
+                        onClick={handleRemoveWhitespace}
+                        className="w-full flex items-center justify-center space-x-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-1.5 px-2 rounded-md transition-colors text-xs"
+                        title="Remove all spaces from all tag names. This action cannot be undone."
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" />
+                        </svg>
+                        <span>Strip Whitespace</span>
                       </button>
-                    )
-                  })}
-                </div>
-                 <div className="pt-2 grid grid-cols-2 gap-2">
-                  <button
-                    onClick={handleRemoveWhitespace}
-                    className="w-full flex items-center justify-center space-x-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold py-1.5 px-2 rounded-md transition-colors text-sm"
-                    title="Remove all spaces from all tag names. This action cannot be undone."
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" />
-                    </svg>
-                    <span>Strip Whitespace</span>
-                  </button>
-                   <button
-                    onClick={onAutoLinkDescriptions}
-                    className="w-full flex items-center justify-center space-x-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold py-1.5 px-2 rounded-md transition-colors text-sm"
-                    title="Automatically link nearby text as descriptions to Instrument tags."
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                    <span>Auto-link Descriptions</span>
-                  </button>
+                       <button
+                        onClick={onAutoLinkDescriptions}
+                        className="w-full flex items-center justify-center space-x-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-1.5 px-2 rounded-md transition-colors text-xs"
+                        title="Automatically link nearby text as descriptions to Instrument tags."
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                        <span>Auto-link</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
             </div>
             

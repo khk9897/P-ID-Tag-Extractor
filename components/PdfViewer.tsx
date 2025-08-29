@@ -260,8 +260,8 @@ export const PdfViewer = ({
             type: RelationshipType.Connection,
           },
         ]);
-        setRelationshipStartTag(null);
-        setMode('select');
+        // For continuous connection, the destination tag becomes the new start tag.
+        setRelationshipStartTag(tagId);
       }
     }
   };

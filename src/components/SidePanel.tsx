@@ -490,6 +490,28 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
     }
   }, [tags, showCurrentPageOnly, currentPage, filterCategory, searchQuery, sortOrder]);
 
+  const filteredDescriptions = useMemo(() => {
+    return descriptions.filter(desc => !showCurrentPageOnly || desc.page === currentPage);
+  }, [descriptions, showCurrentPageOnly, currentPage]);
+
+  const filteredRelationships = useMemo(() => {
+    if (!showCurrentPageOnly) return relationships;
+    
+    // Filter relationships where both source and target are on the current page
+    return relationships.filter(rel => {
+      const fromTag = tags.find(t => t.id === rel.from);
+      const toTag = tags.find(t => t.id === rel.to);
+      const fromDesc = descriptions.find(d => d.id === rel.from);
+      const toDesc = descriptions.find(d => d.id === rel.to);
+      const fromRawItem = rawTextItems.find(r => r.id === rel.from);
+      const toRawItem = rawTextItems.find(r => r.id === rel.to);
+      
+      const fromPage = fromTag?.page || fromDesc?.page || fromRawItem?.page;
+      const toPage = toTag?.page || toDesc?.page || toRawItem?.page;
+      
+      return fromPage === currentPage && toPage === currentPage;
+    });
+  }, [relationships, showCurrentPageOnly, currentPage, tags, descriptions, rawTextItems]);
 
   useEffect(() => {
     if (activeTab === 'tags' && selectedTagIds.length === 1 && listRef.current) {
@@ -510,7 +532,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
-  }, [selectedDescriptionIds, activeTab, descriptions]);
+  }, [selectedDescriptionIds, activeTab, filteredDescriptions]);
 
   const handleTagClick = (tag, index, e) => {
     const isMultiSelect = e.ctrlKey || e.metaKey;
@@ -561,14 +583,14 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
     exportToExcel(tags, relationships, rawTextItems, descriptions);
   };
 
-  const RelationshipViewer = () => {
+  const RelationshipViewer = ({ relationships: inputRelationships }) => {
     const [relSearchQuery, setRelSearchQuery] = useState('');
     const tagMap = useMemo(() => new Map(tags.map(t => [t.id, t])), [tags]);
 
-    const filteredRelationships = useMemo(() => {
-        if (!relSearchQuery) return relationships;
+    const searchFilteredRelationships = useMemo(() => {
+        if (!relSearchQuery) return inputRelationships;
         const lowerCaseQuery = relSearchQuery.toLowerCase();
-        return relationships.filter(rel => {
+        return inputRelationships.filter(rel => {
             const fromTag = tagMap.get(rel.from);
             const toTag = tagMap.get(rel.to);
             return (
@@ -576,7 +598,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                 (toTag as any)?.text?.toLowerCase().includes(lowerCaseQuery)
             );
         });
-    }, [relSearchQuery, relationships, tagMap]);
+    }, [relSearchQuery, inputRelationships, tagMap]);
 
     return (
         <div className="flex-grow flex flex-col overflow-hidden">
@@ -590,10 +612,10 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                 />
             </div>
             <ul className="flex-grow overflow-y-auto p-2 space-y-2">
-                {filteredRelationships.length === 0 && (
+                {searchFilteredRelationships.length === 0 && (
                     <li className="text-center text-slate-400 py-4">No relationships found.</li>
                 )}
-                {filteredRelationships.map(rel => {
+                {searchFilteredRelationships.map(rel => {
                     const fromTag = tagMap.get(rel.from);
                     const toTag = tagMap.get(rel.to);
                     if (!fromTag || !toTag) return null;
@@ -641,10 +663,23 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
   
   return (
     <aside className="w-80 h-full bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0">
+      {/* Show page only checkbox - above tabs */}
+      <div className="p-2 border-b border-slate-700">
+        <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
+          <input
+            type="checkbox"
+            checked={showCurrentPageOnly}
+            onChange={(e) => setShowCurrentPageOnly(e.target.checked)}
+            className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
+          />
+          <span>Show page only</span>
+        </label>
+      </div>
+      
       <div className="border-b border-slate-700 flex">
         <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({totalTagCount})</button>
-        <button onClick={() => setActiveTab('descriptions')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'descriptions' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Descriptions ({descriptions.length})</button>
-        <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relationships ({relationships.length})</button>
+        <button onClick={() => setActiveTab('descriptions')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'descriptions' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Descriptions ({filteredDescriptions.length})</button>
+        <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relationships ({filteredRelationships.length})</button>
       </div>
 
       {activeTab === 'tags' && (
@@ -657,34 +692,6 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 text-sm focus:ring-sky-500 focus:border-sky-500"
                 />
-                
-                {/* Filter & Sort Section */}
-                <div className="flex justify-between items-center">
-                    <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
-                      <input
-                          type="checkbox"
-                          checked={showCurrentPageOnly}
-                          onChange={(e) => setShowCurrentPageOnly(e.target.checked)}
-                          className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
-                      />
-                      <span>Show page only</span>
-                    </label>
-                    <div className="flex items-center space-x-1">
-                      <label htmlFor="sort-order" className="text-sm text-slate-400">Sort:</label>
-                      <select
-                        id="sort-order"
-                        value={sortOrder}
-                        onChange={(e) => setSortOrder(e.target.value)}
-                        className="bg-slate-700 border-slate-600 rounded-md pl-2 pr-7 py-1 text-sm focus:ring-sky-500 focus:border-sky-500"
-                      >
-                        <option value="default">Default (A-Z)</option>
-                        <option value="pos-top-bottom">Position (Top-Bottom)</option>
-                        <option value="pos-left-right">Position (Left-Right)</option>
-                        <option value="length-asc">Length (Asc)</option>
-                        <option value="length-desc">Length (Desc)</option>
-                      </select>
-                    </div>
-                </div>
 
                 {/* View Options & Category Filter Section */}
                 <hr className="border-slate-700" />
@@ -792,6 +799,26 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                     </div>
                   )}
                 </div>
+                
+                {/* Sort Section - moved below tools */}
+                <hr className="border-slate-700" />
+                <div className="pt-2">
+                  <div className="flex items-center space-x-2">
+                    <label htmlFor="sort-order" className="text-sm text-slate-400">Sort:</label>
+                    <select
+                      id="sort-order"
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value)}
+                      className="flex-1 bg-slate-700 border-slate-600 rounded-md px-2 py-1 text-sm focus:ring-sky-500 focus:border-sky-500"
+                    >
+                      <option value="default">Default (A-Z)</option>
+                      <option value="pos-top-bottom">Position (Top → Bottom)</option>
+                      <option value="pos-left-right">Position (Left → Right)</option>
+                      <option value="length-asc">Length (Short → Long)</option>
+                      <option value="length-desc">Length (Long → Short)</option>
+                    </select>
+                  </div>
+                </div>
             </div>
             
             {selectedTagIds.length > 1 && (
@@ -840,14 +867,14 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
             </div>
           </div>
           <div ref={descriptionListRef} className="flex-grow overflow-y-auto p-3 space-y-2">
-            {descriptions.length === 0 ? (
+            {filteredDescriptions.length === 0 ? (
               <div className="text-center text-slate-500 mt-8">
                 <div className="text-lg mb-2">📝</div>
-                <div className="text-sm">No descriptions yet</div>
+                <div className="text-sm">{showCurrentPageOnly && descriptions.length > 0 ? `No descriptions on page ${currentPage}` : 'No descriptions yet'}</div>
                 <div className="text-xs mt-1">Select items and press 'N' to create</div>
               </div>
             ) : (
-              descriptions.map((description) => {
+              filteredDescriptions.map((description) => {
                 const isSelected = selectedDescriptionIds.includes(description.id);
                 return (
                 <div 
@@ -934,7 +961,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
         </div>
       )}
       
-      {activeTab === 'relationships' && <RelationshipViewer />}
+      {activeTab === 'relationships' && <RelationshipViewer relationships={filteredRelationships} />}
 
       <div className="p-4 border-t border-slate-700 flex-shrink-0">
         <button onClick={handleExport} className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded transition-colors">

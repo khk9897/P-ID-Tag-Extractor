@@ -708,7 +708,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
     );
   };
 
-  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber, Category.NotesAndHolds];
+  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.NotesAndHolds, Category.DrawingNumber];
   
   const totalTagCount = useMemo(() => {
     return tags.filter(tag => !showCurrentPageOnly || tag.page === currentPage).length;
@@ -778,55 +778,56 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                             <span>Show list details</span>
                         </label>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {filterCategories.map(cat => {
-                          const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage);
-                          const count = cat === 'All' ? baseTags.length : baseTags.filter(t => t.category === cat).length;
-                          const isActive = filterCategory === cat;
-                          const colors = cat !== 'All' ? CATEGORY_COLORS[cat] : null;
-
-                          let buttonClasses = 'px-2.5 py-1 text-xs font-semibold rounded-full transition-colors flex items-center';
-
-                          if (isActive) {
-                            if (cat === 'All') {
-                                buttonClasses += ' bg-sky-500 text-white';
-                            } else {
-                                buttonClasses += ` ${colors.bg} ${colors.text} ring-1 ${colors.border}`;
-                            }
-                          } else {
-                              buttonClasses += ' bg-slate-700 text-slate-300 hover:bg-slate-600';
-                          }
-
-                          return (
-                            <button key={cat} onClick={() => setFilterCategory(cat)} className={buttonClasses} disabled={count === 0 && cat !== 'All'}>
-                              {cat}
-                              <span className={`ml-1.5 px-1.5 text-xs rounded-full ${isActive ? 'bg-black/20' : 'bg-slate-600/80 text-slate-400'}`}>{count}</span>
-                            </button>
-                          )
-                        })}
+                      <div className="flex items-center space-x-2">
+                        <label htmlFor="sort-order" className="text-sm text-slate-400">Sort:</label>
+                        <select
+                          id="sort-order"
+                          value={sortOrder}
+                          onChange={(e) => setSortOrder(e.target.value)}
+                          className="flex-1 bg-slate-700 border-slate-600 rounded-md px-2 py-1 text-sm focus:ring-sky-500 focus:border-sky-500"
+                        >
+                          <option value="default">Default (A-Z)</option>
+                          <option value="pos-top-bottom">Position (Top → Bottom)</option>
+                          <option value="pos-left-right">Position (Left → Right)</option>
+                          <option value="length-asc">Length (Short → Long)</option>
+                          <option value="length-desc">Length (Long → Short)</option>
+                        </select>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Sort Section */}
+                {/* Category Filter */}
                 <hr className="border-slate-700" />
-                <div className="pt-2">
-                  <div className="flex items-center space-x-2">
-                    <label htmlFor="sort-order" className="text-sm text-slate-400">Sort:</label>
-                    <select
-                      id="sort-order"
-                      value={sortOrder}
-                      onChange={(e) => setSortOrder(e.target.value)}
-                      className="flex-1 bg-slate-700 border-slate-600 rounded-md px-2 py-1 text-sm focus:ring-sky-500 focus:border-sky-500"
-                    >
-                      <option value="default">Default (A-Z)</option>
-                      <option value="pos-top-bottom">Position (Top → Bottom)</option>
-                      <option value="pos-left-right">Position (Left → Right)</option>
-                      <option value="length-asc">Length (Short → Long)</option>
-                      <option value="length-desc">Length (Long → Short)</option>
-                    </select>
-                  </div>
+                <div className="border-b border-slate-700 flex text-xs">
+                  {filterCategories.map((cat, index) => {
+                    const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage);
+                    const count = cat === 'All' ? baseTags.length : baseTags.filter(t => t.category === cat).length;
+                    const isActive = filterCategory === cat;
+                    
+                    // Shorten category names
+                    const shortName = cat === 'Equipment' ? 'Equip' 
+                      : cat === 'Instrument' ? 'Instr'
+                      : cat === 'DrawingNumber' ? 'PID NO'
+                      : cat === 'NotesAndHolds' ? 'Notes'
+                      : cat;
+                    
+                    return (
+                      <button 
+                        key={cat} 
+                        onClick={() => setFilterCategory(cat)} 
+                        className={`flex-1 py-1.5 px-1 font-semibold text-center border-r border-slate-600 last:border-r-0 ${
+                          isActive ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'
+                        }`} 
+                        disabled={count === 0 && cat !== 'All'}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs leading-tight">{shortName}</span>
+                          <span className="text-xs text-slate-400 leading-tight">({count})</span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
             </div>
             

@@ -15,7 +15,7 @@ export const DEFAULT_TOLERANCES = {
     [Category.Instrument]: {
         vertical: 15, // px for combining parts
         horizontal: 20, // px for combining parts
-        autoLinkDistance: 50, // px for auto-linking notes
+        autoLinkDistance: 30, // px for auto-linking notes
     },
 };
 

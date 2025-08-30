@@ -10,10 +10,15 @@ export const Workspace = ({
   relationships,
   setRelationships,
   rawTextItems,
+  descriptions,
+  setDescriptions,
   onCreateTag,
   onCreateManualTag,
+  onCreateDescription,
   onDeleteTags,
   onUpdateTagText,
+  onDeleteDescriptions,
+  onUpdateDescription,
   onDeleteRawTextItems,
   onUpdateRawTextItemText,
   onAutoLinkDescriptions,
@@ -33,8 +38,10 @@ export const Workspace = ({
 }) => {
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
+  const [selectedDescriptionIds, setSelectedDescriptionIds] = useState([]);
   const [manualCreationData, setManualCreationData] = useState(null); // {bbox, page}
   const [pingedTagId, setPingedTagId] = useState(null);
+  const [pingedDescriptionId, setPingedDescriptionId] = useState(null);
 
   const handleDeselectTag = (tagId) => {
     setSelectedTagIds(prev => prev.filter(id => id !== tagId));
@@ -44,9 +51,14 @@ export const Workspace = ({
     setSelectedRawTextItemIds(prev => prev.filter(id => id !== itemId));
   };
 
+  const handleDeselectDescription = (descriptionId) => {
+    setSelectedDescriptionIds(prev => prev.filter(id => id !== descriptionId));
+  };
+
   const handleClearSelection = () => {
     setSelectedTagIds([]);
     setSelectedRawTextItemIds([]);
+    setSelectedDescriptionIds([]);
   };
   
   const handleManualAreaSelect = (bbox, page) => {
@@ -74,25 +86,37 @@ export const Workspace = ({
     setTimeout(() => setPingedTagId(null), 2000);
   }, []);
 
+  const handlePingDescription = useCallback((descriptionId) => {
+    setPingedDescriptionId(descriptionId);
+    // Clear after animation is over
+    setTimeout(() => setPingedDescriptionId(null), 2000);
+  }, []);
+
   return (
     <div className="flex h-full bg-slate-900 relative">
       {isSidePanelVisible && <SidePanel 
         tags={tags} 
         setTags={setTags}
         rawTextItems={rawTextItems}
+        descriptions={descriptions}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         selectedTagIds={selectedTagIds}
         setSelectedTagIds={setSelectedTagIds}
+        selectedDescriptionIds={selectedDescriptionIds}
+        setSelectedDescriptionIds={setSelectedDescriptionIds}
         relationships={relationships}
         setRelationships={setRelationships}
         onDeleteTags={onDeleteTags}
         onUpdateTagText={onUpdateTagText}
+        onDeleteDescriptions={onDeleteDescriptions}
+        onUpdateDescription={onUpdateDescription}
         onDeleteRawTextItems={onDeleteRawTextItems}
         onUpdateRawTextItemText={onUpdateRawTextItemText}
         onAutoLinkDescriptions={onAutoLinkDescriptions}
         showConfirmation={showConfirmation}
         onPingTag={handlePingTag}
+        onPingDescription={handlePingDescription}
         showRelationships={showRelationships}
         setShowRelationships={setShowRelationships}
       />}
@@ -107,8 +131,12 @@ export const Workspace = ({
           setCurrentPage={setCurrentPage}
           selectedTagIds={selectedTagIds}
           setSelectedTagIds={setSelectedTagIds}
+          selectedDescriptionIds={selectedDescriptionIds}
+          setSelectedDescriptionIds={setSelectedDescriptionIds}
           rawTextItems={rawTextItems}
+          descriptions={descriptions}
           onCreateTag={onCreateTag}
+          onCreateDescription={onCreateDescription}
           selectedRawTextItemIds={selectedRawTextItemIds}
           setSelectedRawTextItemIds={setSelectedRawTextItemIds}
           onDeleteTags={onDeleteTags}
@@ -122,6 +150,7 @@ export const Workspace = ({
           setRelationshipStartTag={setRelationshipStartTag}
           showRelationships={showRelationships}
           pingedTagId={pingedTagId}
+          pingedDescriptionId={pingedDescriptionId}
         />
       </div>
       <SelectionPanel

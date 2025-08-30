@@ -1,7 +1,7 @@
 import { Category, RelationshipType } from '../types.ts';
 import * as XLSX from 'xlsx';
 
-export const exportToExcel = (tags, relationships, rawTextItems) => {
+export const exportToExcel = (tags, relationships, rawTextItems, descriptions = []) => {
   const equipment = tags.filter(t => t.category === Category.Equipment);
   const lines = tags.filter(t => t.category === Category.Line);
   const instruments = tags.filter(t => t.category === Category.Instrument);
@@ -109,6 +109,18 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
       'Note & Hold': noteAndHold,
     };
   });
+
+  // 4. Description Data
+  const descriptionData = descriptions.map(desc => {
+    return {
+      'Type': desc.metadata.type,
+      'Number': desc.metadata.number,
+      'Scope': desc.metadata.scope,
+      'Text': desc.text,
+      'Page': desc.page,
+      'Source Items Count': desc.sourceItems.length,
+    };
+  });
   
   const wb = XLSX.utils.book_new();
   
@@ -120,6 +132,9 @@ export const exportToExcel = (tags, relationships, rawTextItems) => {
 
   const wsInstruments = XLSX.utils.json_to_sheet(instrumentData);
   XLSX.utils.book_append_sheet(wb, wsInstruments, 'Instrument List');
+
+  const wsDescriptions = XLSX.utils.json_to_sheet(descriptionData);
+  XLSX.utils.book_append_sheet(wb, wsDescriptions, 'Descriptions');
   
   XLSX.writeFile(wb, 'P&ID_Tag_Export.xlsx');
 };

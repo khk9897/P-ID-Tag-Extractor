@@ -15,6 +15,7 @@ import {
   Tag,
   RawTextItem,
   Relationship,
+  Description,
   ConfirmModalProps,
   ProcessingProgress,
   ProjectData,
@@ -70,6 +71,7 @@ const App: React.FC = () => {
   const [tags, setTags] = useState<Tag[]>([]);
   const [rawTextItems, setRawTextItems] = useState<RawTextItem[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [descriptions, setDescriptions] = useState<Description[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [progress, setProgress] = useState<ProcessingProgress>({ current: 0, total: 0 });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -263,6 +265,7 @@ const App: React.FC = () => {
     setTags([]);
     setRawTextItems([]);
     setRelationships([]);
+    setDescriptions([]);
     setIsLoading(false);
     setProgress({ current: 0, total: 0 });
     setCurrentPage(1);
@@ -376,6 +379,75 @@ const App: React.FC = () => {
     ));
   }, []);
 
+  const handleCreateDescription = useCallback((selectedItems: (Tag | RawTextItem)[]): void => {
+    if (!selectedItems || selectedItems.length === 0) return;
+
+    // Sort by Y coordinate (top to bottom)
+    const sortedItems = [...selectedItems].sort((a, b) => a.bbox.y1 - b.bbox.y1);
+    
+    // Merge text content
+    const text = sortedItems.map(item => item.text).join(' ');
+    
+    // Calculate merged bounding box
+    const mergedBbox = {
+      x1: Math.min(...sortedItems.map(item => item.bbox.x1)),
+      y1: Math.min(...sortedItems.map(item => item.bbox.y1)),
+      x2: Math.max(...sortedItems.map(item => item.bbox.x2)),
+      y2: Math.max(...sortedItems.map(item => item.bbox.y2)),
+    };
+
+    // Find next available number
+    const existingNumbers = descriptions
+      .filter(desc => desc.metadata.type === 'Note')
+      .map(desc => desc.metadata.number);
+    const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+
+    const newDescription: Description = {
+      id: uuidv4(),
+      text,
+      page: sortedItems[0].page,
+      bbox: mergedBbox,
+      sourceItems: sortedItems,
+      metadata: {
+        type: 'Note',
+        scope: 'Specific',
+        number: nextNumber,
+      },
+    };
+
+    setDescriptions(prev => [...prev, newDescription]);
+
+    // Remove tags that were converted to description
+    const tagIdsToRemove = selectedItems
+      .filter(item => 'category' in item) // Only tags have category
+      .map(tag => tag.id);
+    
+    if (tagIdsToRemove.length > 0) {
+      setTags(prev => prev.filter(tag => !tagIdsToRemove.includes(tag.id)));
+    }
+
+    // Remove raw text items that were converted to description  
+    const rawItemIdsToRemove = selectedItems
+      .filter(item => !('category' in item)) // Raw items don't have category
+      .map(item => item.id);
+    
+    if (rawItemIdsToRemove.length > 0) {
+      setRawTextItems(prev => prev.filter(item => !rawItemIdsToRemove.includes(item.id)));
+    }
+  }, [descriptions]);
+
+  const handleDeleteDescriptions = useCallback((descriptionIds: string[]): void => {
+    const idsToDelete = new Set(descriptionIds);
+    setDescriptions(prev => prev.filter(desc => !idsToDelete.has(desc.id)));
+    setRelationships(prev => prev.filter(rel => !idsToDelete.has(rel.from) && !idsToDelete.has(rel.to)));
+  }, []);
+
+  const handleUpdateDescription = useCallback((id: string, text: string, metadata: Description['metadata']): void => {
+    setDescriptions(prev => prev.map(desc => 
+      desc.id === id ? { ...desc, text, metadata } : desc
+    ));
+  }, []);
+
   const validateProjectData = (data: any): data is ProjectData => {
     // Basic structure validation
     if (!data || typeof data !== 'object') return false;
@@ -388,6 +460,11 @@ const App: React.FC = () => {
     
     // Type validation for arrays
     if (!Array.isArray(data.tags) || !Array.isArray(data.relationships) || !Array.isArray(data.rawTextItems)) {
+      return false;
+    }
+    
+    // Optional descriptions field validation
+    if (data.descriptions && !Array.isArray(data.descriptions)) {
       return false;
     }
     
@@ -440,6 +517,10 @@ const App: React.FC = () => {
       rawTextItems: data.rawTextItems.map(item => ({
         ...item,
         text: sanitizeString(item.text)
+      })),
+      descriptions: (data.descriptions || []).map(desc => ({
+        ...desc,
+        text: sanitizeString(desc.text)
       }))
     };
   };
@@ -455,6 +536,7 @@ const App: React.FC = () => {
     setTags(sanitizedData.tags);
     setRelationships(sanitizedData.relationships);
     setRawTextItems(sanitizedData.rawTextItems);
+    setDescriptions(sanitizedData.descriptions || []);
     
     if (sanitizedData.settings?.patterns) {
         setPatterns(sanitizedData.settings.patterns);
@@ -541,6 +623,7 @@ const App: React.FC = () => {
         tags,
         relationships,
         rawTextItems,
+        descriptions,
         settings: {
             patterns,
             tolerances,
@@ -668,10 +751,15 @@ const App: React.FC = () => {
             relationships={relationships}
             setRelationships={setRelationships}
             rawTextItems={rawTextItems}
+            descriptions={descriptions}
+            setDescriptions={setDescriptions}
             onCreateTag={handleCreateTag}
             onCreateManualTag={handleCreateManualTag}
+            onCreateDescription={handleCreateDescription}
             onDeleteTags={handleDeleteTags}
             onUpdateTagText={handleUpdateTagText}
+            onDeleteDescriptions={handleDeleteDescriptions}
+            onUpdateDescription={handleUpdateDescription}
             onDeleteRawTextItems={handleDeleteRawTextItems}
             onUpdateRawTextItemText={handleUpdateRawTextItemText}
             onAutoLinkDescriptions={handleAutoLinkDescriptions}

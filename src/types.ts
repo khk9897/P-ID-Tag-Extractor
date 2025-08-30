@@ -14,6 +14,7 @@ export const RelationshipType = {
   Installation: 'Installation', // A is on B
   Annotation: 'Annotation', // Tag -> Raw Text Item
   Note: 'Note', // Equipment/Line/Instrument -> NotesAndHolds Tag
+  Description: 'Description', // NotesAndHolds Tag -> Description
 } as const;
 
 export type RelationshipTypeValue = typeof RelationshipType[keyof typeof RelationshipType];
@@ -40,6 +41,19 @@ export interface Tag {
   bbox: BoundingBox;
   category: CategoryType;
   sourceItems: RawTextItem[];
+}
+
+export interface Description {
+  id: string;
+  text: string;
+  page: number;
+  bbox: BoundingBox;
+  sourceItems: (Tag | RawTextItem)[];
+  metadata: {
+    type: 'Note' | 'Hold';
+    scope: 'General' | 'Specific';
+    number: number;
+  };
 }
 
 export interface Relationship {
@@ -85,10 +99,15 @@ export interface WorkspaceProps {
   relationships: Relationship[];
   setRelationships: React.Dispatch<React.SetStateAction<Relationship[]>>;
   rawTextItems: RawTextItem[];
+  descriptions: Description[];
+  setDescriptions: React.Dispatch<React.SetStateAction<Description[]>>;
   onCreateTag: (itemsToConvert: RawTextItem[], category: CategoryType) => void;
   onCreateManualTag: (tagData: ManualTagData) => void;
+  onCreateDescription: (selectedItems: (Tag | RawTextItem)[]) => void;
   onDeleteTags: (tagIds: string[]) => void;
   onUpdateTagText: (tagId: string, newText: string) => void;
+  onDeleteDescriptions: (descriptionIds: string[]) => void;
+  onUpdateDescription: (id: string, text: string, metadata: Description['metadata']) => void;
   onDeleteRawTextItems: (itemIds: string[]) => void;
   onUpdateRawTextItemText: (itemId: string, newText: string) => void;
   onAutoLinkDescriptions: () => void;
@@ -149,6 +168,7 @@ export interface ProjectData {
   tags: Tag[];
   relationships: Relationship[];
   rawTextItems: RawTextItem[];
+  descriptions: Description[];
   settings: {
     patterns: PatternConfig;
     tolerances: ToleranceConfig;

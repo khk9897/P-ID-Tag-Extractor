@@ -13,8 +13,12 @@ export const PdfViewer = ({
   setCurrentPage,
   selectedTagIds,
   setSelectedTagIds,
+  selectedDescriptionIds,
+  setSelectedDescriptionIds,
   rawTextItems,
+  descriptions,
   onCreateTag,
+  onCreateDescription,
   selectedRawTextItemIds,
   setSelectedRawTextItemIds,
   onDeleteTags,
@@ -28,6 +32,7 @@ export const PdfViewer = ({
   setRelationshipStartTag,
   showRelationships,
   pingedTagId,
+  pingedDescriptionId,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -155,11 +160,23 @@ export const PdfViewer = ({
         if (selectedRawItems.length === 2) {
           // Sort to ensure consistent naming, e.g., "PIC-101" instead of "101-PIC"
           // Assume vertical alignment means top part comes first.
-          selectedRawItems.sort((a, b) => b.bbox.y1 - a.bbox.y1);
+          selectedRawItems.sort((a, b) => a.bbox.y1 - b.bbox.y1);
           onCreateTag(selectedRawItems, Category.Instrument);
           setSelectedRawTextItemIds([]);
         } else {
             alert("The 'M' hotkey creates an Instrument tag from exactly TWO selected text items. For other cases, use the action panel at the bottom.");
+        }
+      } else if (e.key.toLowerCase() === 'n') {
+        const selectedTags = tags.filter(tag => selectedTagIds.includes(tag.id));
+        const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
+        const allSelectedItems = [...selectedTags, ...selectedRawItems];
+        
+        if (allSelectedItems.length > 0) {
+          onCreateDescription(allSelectedItems);
+          setSelectedTagIds([]);
+          setSelectedRawTextItemIds([]);
+        } else {
+          alert("Select tags or text items first, then press 'N' to create a description.");
         }
       } else if (e.key.toLowerCase() === 'r' && mode === 'select' && (selectedTagIds.length > 0 || selectedRawTextItemIds.length > 0)) {
         const newRelationships = [];
@@ -666,6 +683,72 @@ export const PdfViewer = ({
                                     width={rectWidth + padding * 2}
                                     height={rectHeight + padding * 2}
                                     className="fill-none stroke-red-500 ping-highlight-box"
+                                    rx="4"
+                                />
+                            ))}
+                        </g>
+                      );
+                    })()}
+
+                    {/* Descriptions */}
+                    {descriptions.filter(desc => desc.page === currentPage).map(desc => {
+                      const { x1, y1, x2, y2 } = desc.bbox;
+                      const rectX = x1 * scale;
+                      const rectY = viewport.height - (y2 * scale);
+                      const rectWidth = (x2 - x1) * scale;
+                      const rectHeight = (y2 - y1) * scale;
+                      const isSelected = selectedDescriptionIds.includes(desc.id);
+
+                      return (
+                        <g key={desc.id}>
+                          <rect
+                            x={rectX}
+                            y={rectY}
+                            width={rectWidth}
+                            height={rectHeight}
+                            className={`cursor-pointer stroke-2 ${isSelected ? 'fill-purple-500/30 stroke-purple-400' : 'fill-purple-500/15 stroke-purple-500'} hover:fill-purple-500/25`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const isMultiSelect = e.ctrlKey || e.metaKey;
+                              if (isMultiSelect) {
+                                if (isSelected) {
+                                  setSelectedDescriptionIds(prev => prev.filter(id => id !== desc.id));
+                                } else {
+                                  setSelectedDescriptionIds(prev => [...prev, desc.id]);
+                                }
+                              } else {
+                                setSelectedDescriptionIds([desc.id]);
+                              }
+                            }}
+                            rx="3"
+                          />
+                        </g>
+                      );
+                    })}
+
+                    {/* Pinged Description highlight */}
+                    {pingedDescriptionId && (() => {
+                      const descToPing = descriptions.find(d => d.id === pingedDescriptionId);
+                      if (!descToPing || descToPing.page !== currentPage) return null;
+
+                      const { x1, y1, x2, y2 } = descToPing.bbox;
+                      const rectX = x1 * scale;
+                      const rectY = viewport.height - (y2 * scale);
+                      const rectWidth = (x2 - x1) * scale;
+                      const rectHeight = (y2 - y1) * scale;
+                      
+                      const paddings = [10, 20, 30];
+
+                      return (
+                        <g style={{ pointerEvents: 'none' }}>
+                            {paddings.map((padding, index) => (
+                                <rect
+                                    key={index}
+                                    x={rectX - padding}
+                                    y={rectY - padding}
+                                    width={rectWidth + padding * 2}
+                                    height={rectHeight + padding * 2}
+                                    className="fill-none stroke-purple-500 ping-highlight-box"
                                     rx="4"
                                 />
                             ))}

@@ -334,7 +334,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   );
 };
 
-export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, onDeleteTags, onUpdateTagText, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, showConfirmation, onPingTag, showRelationships, setShowRelationships }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, showConfirmation, onPingTag, onPingDescription, showRelationships, setShowRelationships }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -474,7 +474,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
   
 
   const handleExport = () => {
-    exportToExcel(tags, relationships, rawTextItems);
+    exportToExcel(tags, relationships, rawTextItems, descriptions);
   };
 
   const RelationshipViewer = () => {
@@ -559,6 +559,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
     <aside className="w-80 h-full bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0">
       <div className="border-b border-slate-700 flex">
         <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({totalTagCount})</button>
+        <button onClick={() => setActiveTab('descriptions')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'descriptions' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Descriptions ({descriptions.length})</button>
         <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relationships ({relationships.length})</button>
       </div>
 
@@ -733,6 +734,107 @@ export const SidePanel = ({ tags, setTags, rawTextItems, relationships, setRelat
                     />
                 ))}
             </ul>
+        </div>
+      )}
+
+      {activeTab === 'descriptions' && (
+        <div className="flex-grow flex flex-col overflow-hidden">
+          <div className="p-3 border-b border-slate-700">
+            <div className="text-xs text-slate-400 mb-2">
+              Press 'N' to create descriptions from selected items
+            </div>
+          </div>
+          <div className="flex-grow overflow-y-auto p-3 space-y-2">
+            {descriptions.length === 0 ? (
+              <div className="text-center text-slate-500 mt-8">
+                <div className="text-lg mb-2">📝</div>
+                <div className="text-sm">No descriptions yet</div>
+                <div className="text-xs mt-1">Select items and press 'N' to create</div>
+              </div>
+            ) : (
+              descriptions.map((description) => {
+                const isSelected = selectedDescriptionIds.includes(description.id);
+                return (
+                <div 
+                  key={description.id} 
+                  className={`group border rounded-lg p-3 hover:bg-slate-700/50 transition-colors cursor-pointer ${
+                    isSelected ? 'bg-purple-600/30 border-purple-400' : 'bg-slate-700/30 border-slate-600'
+                  }`}
+                  onClick={() => {
+                    setSelectedDescriptionIds([description.id]);
+                    setCurrentPage(description.page);
+                    onPingDescription(description.id);
+                  }}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="text-xs text-slate-400">
+                      {description.metadata.type} {description.metadata.number} - {description.metadata.scope}
+                    </div>
+                    <button
+                      onClick={() => onDeleteDescriptions([description.id])}
+                      className="p-1 rounded-full text-slate-500 hover:bg-red-500/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Delete description"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <textarea
+                      value={description.text}
+                      onChange={(e) => onUpdateDescription(description.id, e.target.value, description.metadata)}
+                      className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white resize-none"
+                      rows={3}
+                    />
+                    
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <select
+                        value={description.metadata.type}
+                        onChange={(e) => onUpdateDescription(description.id, description.text, {
+                          ...description.metadata,
+                          type: e.target.value as 'Note' | 'Hold'
+                        })}
+                        className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white"
+                      >
+                        <option value="Note">Note</option>
+                        <option value="Hold">Hold</option>
+                      </select>
+                      
+                      <select
+                        value={description.metadata.scope}
+                        onChange={(e) => onUpdateDescription(description.id, description.text, {
+                          ...description.metadata,
+                          scope: e.target.value as 'General' | 'Specific'
+                        })}
+                        className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white"
+                      >
+                        <option value="General">General</option>
+                        <option value="Specific">Specific</option>
+                      </select>
+                      
+                      <input
+                        type="number"
+                        min="1"
+                        value={description.metadata.number}
+                        onChange={(e) => onUpdateDescription(description.id, description.text, {
+                          ...description.metadata,
+                          number: parseInt(e.target.value) || 1
+                        })}
+                        className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white"
+                      />
+                    </div>
+                    
+                    <div className="text-xs text-slate-500">
+                      Page {description.page} • {description.sourceItems.length} source items
+                    </div>
+                  </div>
+                </div>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
       

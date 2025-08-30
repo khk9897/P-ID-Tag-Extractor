@@ -1,7 +1,7 @@
 import { Category, RelationshipType } from '../types.ts';
 import * as XLSX from 'xlsx';
 
-export const exportToExcel = (tags, relationships, rawTextItems, descriptions = []) => {
+export const exportToExcel = (tags, relationships, rawTextItems, descriptions = [], equipmentShortSpecs = []) => {
   const equipment = tags.filter(t => t.category === Category.Equipment);
   const lines = tags.filter(t => t.category === Category.Line);
   const instruments = tags.filter(t => t.category === Category.Instrument);
@@ -123,6 +123,18 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
       'Drawing Number': drawingNumber,
     };
   });
+
+  // 5. Equipment Short Spec Data
+  const equipmentShortSpecData = equipmentShortSpecs.map(spec => {
+    const drawingNumber = pageToDrawingNumberMap.get(spec.page) || '';
+    
+    return {
+      'Equipment Tag': spec.metadata.originalEquipmentTag.text,
+      'Short Spec': spec.text,
+      'Page': spec.page,
+      'Drawing Number': drawingNumber,
+    };
+  });
   
   const wb = XLSX.utils.book_new();
   
@@ -137,6 +149,9 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
 
   const wsDescriptions = XLSX.utils.json_to_sheet(descriptionData);
   XLSX.utils.book_append_sheet(wb, wsDescriptions, 'Descriptions');
+
+  const wsEquipmentShortSpecs = XLSX.utils.json_to_sheet(equipmentShortSpecData);
+  XLSX.utils.book_append_sheet(wb, wsEquipmentShortSpecs, 'Equipment Short Specs');
   
   XLSX.writeFile(wb, 'P&ID_Tag_Export.xlsx');
 };

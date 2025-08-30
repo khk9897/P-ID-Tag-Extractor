@@ -12,13 +12,18 @@ export const Workspace = ({
   rawTextItems,
   descriptions,
   setDescriptions,
+  equipmentShortSpecs,
+  setEquipmentShortSpecs,
   onCreateTag,
   onCreateManualTag,
   onCreateDescription,
+  onCreateEquipmentShortSpec,
   onDeleteTags,
   onUpdateTagText,
   onDeleteDescriptions,
   onUpdateDescription,
+  onDeleteEquipmentShortSpecs,
+  onUpdateEquipmentShortSpec,
   onDeleteRawTextItems,
   onUpdateRawTextItemText,
   onAutoLinkDescriptions,
@@ -40,6 +45,7 @@ export const Workspace = ({
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
   const [selectedDescriptionIds, setSelectedDescriptionIds] = useState([]);
+  const [selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds] = useState([]);
   const [manualCreationData, setManualCreationData] = useState(null); // {bbox, page}
   const [pingedTagId, setPingedTagId] = useState(null);
   const [pingedDescriptionId, setPingedDescriptionId] = useState(null);
@@ -106,18 +112,24 @@ export const Workspace = ({
         setTags={setTags}
         rawTextItems={rawTextItems}
         descriptions={descriptions}
+        equipmentShortSpecs={equipmentShortSpecs}
+        setEquipmentShortSpecs={setEquipmentShortSpecs}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         selectedTagIds={selectedTagIds}
         setSelectedTagIds={setSelectedTagIds}
         selectedDescriptionIds={selectedDescriptionIds}
         setSelectedDescriptionIds={setSelectedDescriptionIds}
+        selectedEquipmentShortSpecIds={selectedEquipmentShortSpecIds}
+        setSelectedEquipmentShortSpecIds={setSelectedEquipmentShortSpecIds}
         relationships={relationships}
         setRelationships={setRelationships}
         onDeleteTags={onDeleteTags}
         onUpdateTagText={onUpdateTagText}
         onDeleteDescriptions={onDeleteDescriptions}
         onUpdateDescription={onUpdateDescription}
+        onDeleteEquipmentShortSpecs={onDeleteEquipmentShortSpecs}
+        onUpdateEquipmentShortSpec={onUpdateEquipmentShortSpec}
         onDeleteRawTextItems={onDeleteRawTextItems}
         onUpdateRawTextItemText={onUpdateRawTextItemText}
         onAutoLinkDescriptions={onAutoLinkDescriptions}
@@ -141,10 +153,14 @@ export const Workspace = ({
           setSelectedTagIds={setSelectedTagIds}
           selectedDescriptionIds={selectedDescriptionIds}
           setSelectedDescriptionIds={setSelectedDescriptionIds}
+          selectedEquipmentShortSpecIds={selectedEquipmentShortSpecIds}
+          setSelectedEquipmentShortSpecIds={setSelectedEquipmentShortSpecIds}
           rawTextItems={rawTextItems}
           descriptions={descriptions}
+          equipmentShortSpecs={equipmentShortSpecs}
           onCreateTag={onCreateTag}
           onCreateDescription={onCreateDescription}
+          onCreateEquipmentShortSpec={onCreateEquipmentShortSpec}
           selectedRawTextItemIds={selectedRawTextItemIds}
           setSelectedRawTextItemIds={setSelectedRawTextItemIds}
           onDeleteTags={onDeleteTags}

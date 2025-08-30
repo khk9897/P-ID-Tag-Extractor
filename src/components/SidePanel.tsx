@@ -406,7 +406,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   );
 };
 
-export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, showConfirmation, onPingTag, onPingDescription, showRelationships, setShowRelationships }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, showConfirmation, onPingTag, onPingDescription, showRelationships, setShowRelationships }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -414,6 +414,11 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
   const [filterCategory, setFilterCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('default');
   const [editingDescriptionId, setEditingDescriptionId] = useState(null);
+  const [editingEquipmentShortSpecId, setEditingEquipmentShortSpecId] = useState(null);
+  const [tempEquipmentShortSpecText, setTempEquipmentShortSpecText] = useState('');
+  const [tempEquipmentShortSpecMetadata, setTempEquipmentShortSpecMetadata] = useState({});
+  const [tempDescriptionText, setTempDescriptionText] = useState('');
+  const [tempDescriptionMetadata, setTempDescriptionMetadata] = useState({});
   const [sections, setSections] = useState({
     viewOptions: true,
     tools: true,
@@ -494,6 +499,10 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
   const filteredDescriptions = useMemo(() => {
     return descriptions.filter(desc => !showCurrentPageOnly || desc.page === currentPage);
   }, [descriptions, showCurrentPageOnly, currentPage]);
+
+  const filteredEquipmentShortSpecs = useMemo(() => {
+    return equipmentShortSpecs.filter(spec => !showCurrentPageOnly || spec.page === currentPage);
+  }, [equipmentShortSpecs, showCurrentPageOnly, currentPage]);
 
   const filteredRelationships = useMemo(() => {
     if (!showCurrentPageOnly) return relationships;
@@ -581,7 +590,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
   
 
   const handleExport = () => {
-    exportToExcel(tags, relationships, rawTextItems, descriptions);
+    exportToExcel(tags, relationships, rawTextItems, descriptions, equipmentShortSpecs);
   };
 
   const RelationshipViewer = ({ relationships: inputRelationships }) => {
@@ -677,10 +686,11 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
         </label>
       </div>
       
-      <div className="border-b border-slate-700 flex">
-        <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({totalTagCount})</button>
-        <button onClick={() => setActiveTab('descriptions')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'descriptions' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Descriptions ({filteredDescriptions.length})</button>
-        <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 text-sm font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relationships ({filteredRelationships.length})</button>
+      <div className="border-b border-slate-700 flex text-xs">
+        <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({totalTagCount})</button>
+        <button onClick={() => setActiveTab('descriptions')} className={`flex-1 py-2 font-semibold ${activeTab === 'descriptions' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Descriptions ({filteredDescriptions.length})</button>
+        <button onClick={() => setActiveTab('equipmentShortSpecs')} className={`flex-1 py-2 font-semibold ${activeTab === 'equipmentShortSpecs' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Equipment Specs ({filteredEquipmentShortSpecs.length})</button>
+        <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relationships ({filteredRelationships.length})</button>
       </div>
 
       {activeTab === 'tags' && (
@@ -896,20 +906,18 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setEditingDescriptionId(isEditing ? null : description.id);
+                          if (!isEditing) {
+                            setEditingDescriptionId(description.id);
+                            setTempDescriptionText(description.text);
+                            setTempDescriptionMetadata(description.metadata);
+                          }
                         }}
                         className="p-1 rounded-full text-slate-500 hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
-                        title={isEditing ? "Cancel edit" : "Edit description"}
+                        title="Edit description"
                       >
-                        {isEditing ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        )}
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
                       </button>
                       <button
                         onClick={(e) => {
@@ -931,18 +939,19 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                     /* Edit mode */
                     <div className="space-y-2">
                       <textarea
-                        value={description.text}
-                        onChange={(e) => onUpdateDescription(description.id, e.target.value, description.metadata)}
+                        value={tempDescriptionText}
+                        onChange={(e) => setTempDescriptionText(e.target.value)}
                         className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-white resize-none"
                         rows={3}
                         placeholder="Enter description text..."
+                        autoFocus
                       />
                       
                       <div className="grid grid-cols-3 gap-2 text-xs">
                         <select
-                          value={description.metadata.type}
-                          onChange={(e) => onUpdateDescription(description.id, description.text, {
-                            ...description.metadata,
+                          value={tempDescriptionMetadata.type}
+                          onChange={(e) => setTempDescriptionMetadata({
+                            ...tempDescriptionMetadata,
                             type: e.target.value as 'Note' | 'Hold'
                           })}
                           className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white"
@@ -952,9 +961,9 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                         </select>
                         
                         <select
-                          value={description.metadata.scope}
-                          onChange={(e) => onUpdateDescription(description.id, description.text, {
-                            ...description.metadata,
+                          value={tempDescriptionMetadata.scope}
+                          onChange={(e) => setTempDescriptionMetadata({
+                            ...tempDescriptionMetadata,
                             scope: e.target.value as 'General' | 'Specific'
                           })}
                           className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white"
@@ -966,9 +975,9 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                         <input
                           type="number"
                           min="1"
-                          value={description.metadata.number}
-                          onChange={(e) => onUpdateDescription(description.id, description.text, {
-                            ...description.metadata,
+                          value={tempDescriptionMetadata.number}
+                          onChange={(e) => setTempDescriptionMetadata({
+                            ...tempDescriptionMetadata,
                             number: parseInt(e.target.value) || 1
                           })}
                           className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white"
@@ -977,6 +986,32 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                       
                       <div className="text-xs text-slate-500">
                         Page {description.page} • {description.sourceItems.length} source items
+                      </div>
+                      
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingDescriptionId(null);
+                            setTempDescriptionText('');
+                            setTempDescriptionMetadata({});
+                          }}
+                          className="px-3 py-1 bg-slate-600 hover:bg-slate-500 text-white rounded text-xs transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateDescription(description.id, tempDescriptionText, tempDescriptionMetadata);
+                            setEditingDescriptionId(null);
+                            setTempDescriptionText('');
+                            setTempDescriptionMetadata({});
+                          }}
+                          className="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs transition-colors"
+                        >
+                          Save
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -997,6 +1032,164 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                       </div>
                     </div>
                   )}
+                </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'equipmentShortSpecs' && (
+        <div className="flex-grow flex flex-col overflow-hidden">
+          <div className="p-3 border-b border-slate-700">
+            <div className="text-xs text-slate-400 mb-2">
+              Press 'P' to create Equipment Short Specs from selected Equipment tag and text items
+            </div>
+          </div>
+          <div className="flex-grow overflow-y-auto p-3 space-y-2">
+            {filteredEquipmentShortSpecs.length === 0 ? (
+              <div className="text-center text-slate-500 mt-8">
+                <div className="text-lg mb-2">⚙️</div>
+                <div className="text-sm">{showCurrentPageOnly && equipmentShortSpecs.length > 0 ? `No Equipment Short Specs on page ${currentPage}` : 'No Equipment Short Specs yet'}</div>
+                <div className="text-xs mt-1">Select Equipment tag and text items, then press 'P' to create</div>
+              </div>
+            ) : (
+              filteredEquipmentShortSpecs.map((spec) => {
+                const isSelected = selectedEquipmentShortSpecIds.includes(spec.id);
+                const isEditing = editingEquipmentShortSpecId === spec.id;
+                
+                return (
+                <div 
+                  key={spec.id} 
+                  className={`group border rounded-lg p-3 hover:bg-slate-700/50 transition-colors ${
+                    isSelected ? 'bg-orange-600/30 border-orange-400' : 'bg-slate-700/30 border-slate-600'
+                  }`}
+                  onClick={() => {
+                    if (selectedEquipmentShortSpecIds.includes(spec.id)) {
+                      setSelectedEquipmentShortSpecIds(prev => prev.filter(id => id !== spec.id));
+                    } else {
+                      setSelectedEquipmentShortSpecIds([spec.id]);
+                    }
+                  }}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-grow">
+                      <div className="flex items-center gap-2">
+                        <span 
+                          className={`inline-block px-2 py-1 rounded text-xs font-semibold ${CATEGORY_COLORS.Equipment.bg} ${CATEGORY_COLORS.Equipment.text}`}
+                        >
+                          {spec.metadata.originalEquipmentTag.text}
+                        </span>
+                        <span className="text-xs text-slate-400">Page {spec.page}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isEditing) {
+                            setEditingEquipmentShortSpecId(spec.id);
+                            setTempEquipmentShortSpecText(spec.text);
+                            setTempEquipmentShortSpecMetadata(spec.metadata);
+                          }
+                        }}
+                        className="p-1 rounded-full text-slate-500 hover:bg-sky-500/20 hover:text-sky-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Edit Equipment Short Spec"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                          <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteEquipmentShortSpecs([spec.id]);
+                        }}
+                        className="p-1 rounded-full text-slate-500 hover:bg-red-500/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Delete Equipment Short Spec"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="text-sm text-slate-300 break-words leading-relaxed">
+                    {isEditing ? (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Original Equipment Tag</label>
+                            <input
+                              type="text"
+                              value={tempEquipmentShortSpecMetadata.originalEquipmentTag?.text || ''}
+                              onChange={(e) => setTempEquipmentShortSpecMetadata({
+                                ...tempEquipmentShortSpecMetadata,
+                                originalEquipmentTag: {
+                                  ...tempEquipmentShortSpecMetadata.originalEquipmentTag,
+                                  text: e.target.value
+                                }
+                              })}
+                              className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-300 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                              placeholder="Equipment tag name..."
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Short Specification</label>
+                            <textarea
+                              value={tempEquipmentShortSpecText}
+                              onChange={(e) => setTempEquipmentShortSpecText(e.target.value)}
+                              className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-slate-300 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                              style={{ minHeight: '80px' }}
+                              placeholder="Equipment short spec..."
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-end space-x-2 mt-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingEquipmentShortSpecId(null);
+                              setTempEquipmentShortSpecText('');
+                              setTempEquipmentShortSpecMetadata({});
+                            }}
+                            className="px-3 py-1 bg-slate-600 hover:bg-slate-500 text-white rounded text-xs transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Update both text and metadata
+                              const updatedSpec = {
+                                ...spec,
+                                text: tempEquipmentShortSpecText,
+                                metadata: tempEquipmentShortSpecMetadata
+                              };
+                              // We need to create a new update function that handles metadata
+                              onUpdateEquipmentShortSpec(spec.id, tempEquipmentShortSpecText, tempEquipmentShortSpecMetadata);
+                              setEditingEquipmentShortSpecId(null);
+                              setTempEquipmentShortSpecText('');
+                              setTempEquipmentShortSpecMetadata({});
+                            }}
+                            className="px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white rounded text-xs transition-colors"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="whitespace-pre-wrap">
+                        {spec.text || 'No specification entered yet'}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 );
               })

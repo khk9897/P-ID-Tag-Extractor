@@ -15,10 +15,14 @@ export const PdfViewer = ({
   setSelectedTagIds,
   selectedDescriptionIds,
   setSelectedDescriptionIds,
+  selectedEquipmentShortSpecIds,
+  setSelectedEquipmentShortSpecIds,
   rawTextItems,
   descriptions,
+  equipmentShortSpecs,
   onCreateTag,
   onCreateDescription,
+  onCreateEquipmentShortSpec,
   selectedRawTextItemIds,
   setSelectedRawTextItemIds,
   onDeleteTags,
@@ -58,11 +62,19 @@ export const PdfViewer = ({
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ scrollX: 0, scrollY: 0, clientX: 0, clientY: 0 });
 
+  const renderTaskRef = useRef(null);
+
   const renderPage = useCallback(async (pageNumber) => {
     if (!pdfDoc) return;
+
+    // Cancel any existing render task
+    if (renderTaskRef.current) {
+      renderTaskRef.current.cancel();
+      renderTaskRef.current = null;
+    }
+
     const page = await pdfDoc.getPage(pageNumber);
     const vp = page.getViewport({ scale });
-    setViewport(vp);
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -76,11 +88,30 @@ export const PdfViewer = ({
       canvasContext: context,
       viewport: vp,
     };
-    await page.render(renderContext).promise;
+    
+    try {
+      renderTaskRef.current = page.render(renderContext);
+      await renderTaskRef.current.promise;
+      renderTaskRef.current = null;
+      // Only set viewport after successful rendering
+      setViewport(vp);
+    } catch (error) {
+      if (error.name !== 'RenderingCancelledException') {
+        console.error('PDF rendering error:', error);
+      }
+    }
   }, [pdfDoc, scale]);
 
   useLayoutEffect(() => {
     renderPage(currentPage);
+    
+    // Cleanup function to cancel render task on unmount or dependency change
+    return () => {
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+        renderTaskRef.current = null;
+      }
+    };
   }, [currentPage, renderPage, scale]); // Rerender on scale change
 
   useEffect(() => {
@@ -177,6 +208,25 @@ export const PdfViewer = ({
           setSelectedRawTextItemIds([]);
         } else {
           alert("Select tags or text items first, then press 'N' to create a description.");
+        }
+      } else if (e.key.toLowerCase() === 'p') {
+        const selectedTags = tags.filter(tag => selectedTagIds.includes(tag.id));
+        const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
+        const allSelectedItems = [...selectedTags, ...selectedRawItems];
+        
+        // Check if exactly one Equipment tag is selected
+        const equipmentTags = selectedTags.filter(tag => tag.category === Category.Equipment);
+        
+        if (equipmentTags.length === 1 && allSelectedItems.length > 1) {
+          onCreateEquipmentShortSpec(allSelectedItems);
+          setSelectedTagIds([]);
+          setSelectedRawTextItemIds([]);
+        } else if (equipmentTags.length === 0) {
+          alert("Select exactly one Equipment tag and some text items, then press 'P' to create an Equipment Short Spec.");
+        } else if (equipmentTags.length > 1) {
+          alert("Select only one Equipment tag to create an Equipment Short Spec.");
+        } else {
+          alert("Select an Equipment tag and some text items, then press 'P' to create an Equipment Short Spec.");
         }
       } else if (e.key.toLowerCase() === 'r' && mode === 'select' && (selectedTagIds.length > 0 || selectedRawTextItemIds.length > 0)) {
         const newRelationships = [];
@@ -350,7 +400,8 @@ export const PdfViewer = ({
  const handleViewerMouseDown = (e) => {
     if (
       (e.target as Element).closest('[data-tag-id]') ||
-      (e.target as Element).closest('[data-raw-text-id]')
+      (e.target as Element).closest('[data-raw-text-id]') ||
+      (e.target as Element).closest('[data-equipment-short-spec-id]')
     ) {
       // The item's own onMouseDown will fire and set the isClickOnItem ref.
       return;
@@ -768,6 +819,43 @@ export const PdfViewer = ({
                         </g>
                       );
                     })()}
+
+                    {/* Equipment Short Specs */}
+                    {equipmentShortSpecs.filter(spec => spec.page === currentPage).map(spec => {
+                      const { x1, y1, x2, y2 } = spec.bbox;
+                      const rectX = x1 * scale;
+                      const rectY = viewport.height - (y2 * scale);
+                      const rectWidth = (x2 - x1) * scale;
+                      const rectHeight = (y2 - y1) * scale;
+                      const isSelected = selectedEquipmentShortSpecIds.includes(spec.id);
+
+                      return (
+                        <g key={spec.id}>
+                          <rect
+                            data-equipment-short-spec-id={spec.id}
+                            x={rectX}
+                            y={rectY}
+                            width={rectWidth}
+                            height={rectHeight}
+                            className={`cursor-pointer stroke-2 ${isSelected ? 'fill-orange-500/30 stroke-orange-400' : 'fill-orange-500/15 stroke-orange-500'} hover:fill-orange-500/25`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const isMultiSelect = e.ctrlKey || e.metaKey;
+                              if (isMultiSelect) {
+                                if (isSelected) {
+                                  setSelectedEquipmentShortSpecIds(prev => prev.filter(id => id !== spec.id));
+                                } else {
+                                  setSelectedEquipmentShortSpecIds(prev => [...prev, spec.id]);
+                                }
+                              } else {
+                                setSelectedEquipmentShortSpecIds([spec.id]);
+                              }
+                            }}
+                            rx="3"
+                          />
+                        </g>
+                      );
+                    })}
 
                     {selectionRect && <rect x={selectionRect.x} y={selectionRect.y} width={selectionRect.width} height={selectionRect.height} className={`stroke-2 ${mode === 'manualCreate' ? 'fill-green-400/20 stroke-green-400' : 'fill-sky-400/20 stroke-sky-400'}`} />}
                 </svg>

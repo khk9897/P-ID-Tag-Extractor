@@ -15,6 +15,7 @@ export const RelationshipType = {
   Annotation: 'Annotation', // Tag -> Raw Text Item
   Note: 'Note', // Equipment/Line/Instrument -> NotesAndHolds Tag
   Description: 'Description', // NotesAndHolds Tag -> Description
+  EquipmentShortSpec: 'EquipmentShortSpec', // Equipment Tag -> Equipment Short Spec
 } as const;
 
 export type RelationshipTypeValue = typeof RelationshipType[keyof typeof RelationshipType];
@@ -53,6 +54,17 @@ export interface Description {
     type: 'Note' | 'Hold';
     scope: 'General' | 'Specific';
     number: number;
+  };
+}
+
+export interface EquipmentShortSpec {
+  id: string;
+  text: string;
+  page: number;
+  bbox: BoundingBox;
+  sourceItems: (Tag | RawTextItem)[];
+  metadata: {
+    originalEquipmentTag: Tag;
   };
 }
 
@@ -101,13 +113,18 @@ export interface WorkspaceProps {
   rawTextItems: RawTextItem[];
   descriptions: Description[];
   setDescriptions: React.Dispatch<React.SetStateAction<Description[]>>;
+  equipmentShortSpecs: EquipmentShortSpec[];
+  setEquipmentShortSpecs: React.Dispatch<React.SetStateAction<EquipmentShortSpec[]>>;
   onCreateTag: (itemsToConvert: RawTextItem[], category: CategoryType) => void;
   onCreateManualTag: (tagData: ManualTagData) => void;
   onCreateDescription: (selectedItems: (Tag | RawTextItem)[]) => void;
+  onCreateEquipmentShortSpec: (selectedItems: (Tag | RawTextItem)[]) => void;
   onDeleteTags: (tagIds: string[]) => void;
   onUpdateTagText: (tagId: string, newText: string) => void;
   onDeleteDescriptions: (descriptionIds: string[]) => void;
   onUpdateDescription: (id: string, text: string, metadata: Description['metadata']) => void;
+  onDeleteEquipmentShortSpecs: (equipmentShortSpecIds: string[]) => void;
+  onUpdateEquipmentShortSpec: (id: string, text: string, metadata?: EquipmentShortSpec['metadata']) => void;
   onDeleteRawTextItems: (itemIds: string[]) => void;
   onUpdateRawTextItemText: (itemId: string, newText: string) => void;
   onAutoLinkDescriptions: () => void;
@@ -170,6 +187,7 @@ export interface ProjectData {
   relationships: Relationship[];
   rawTextItems: RawTextItem[];
   descriptions: Description[];
+  equipmentShortSpecs: EquipmentShortSpec[];
   settings: {
     patterns: PatternConfig;
     tolerances: ToleranceConfig;

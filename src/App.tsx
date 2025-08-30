@@ -16,6 +16,7 @@ import {
   RawTextItem,
   Relationship,
   Description,
+  EquipmentShortSpec,
   ConfirmModalProps,
   ProcessingProgress,
   ProjectData,
@@ -72,6 +73,7 @@ const App: React.FC = () => {
   const [rawTextItems, setRawTextItems] = useState<RawTextItem[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [descriptions, setDescriptions] = useState<Description[]>([]);
+  const [equipmentShortSpecs, setEquipmentShortSpecs] = useState<EquipmentShortSpec[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [progress, setProgress] = useState<ProcessingProgress>({ current: 0, total: 0 });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -266,6 +268,7 @@ const App: React.FC = () => {
     setRawTextItems([]);
     setRelationships([]);
     setDescriptions([]);
+    setEquipmentShortSpecs([]);
     setIsLoading(false);
     setProgress({ current: 0, total: 0 });
     setCurrentPage(1);
@@ -430,13 +433,107 @@ const App: React.FC = () => {
 
     // Remove raw text items that were converted to description  
     const rawItemIdsToRemove = selectedItems
-      .filter(item => !('category' in item)) // Raw items don't have category
+      .filter(item => !('category' in item)) // Only raw items don't have category
       .map(item => item.id);
     
     if (rawItemIdsToRemove.length > 0) {
       setRawTextItems(prev => prev.filter(item => !rawItemIdsToRemove.includes(item.id)));
     }
   }, [descriptions]);
+
+  const handleCreateEquipmentShortSpec = useCallback((selectedItems: (Tag | RawTextItem)[]): void => {
+    if (!selectedItems || selectedItems.length === 0) return;
+
+    // Find exactly one Equipment tag
+    const equipmentTags = selectedItems.filter(item => 'category' in item && item.category === Category.Equipment) as Tag[];
+    
+    if (equipmentTags.length !== 1) {
+      console.error('Must select exactly one Equipment tag');
+      return;
+    }
+
+    const equipmentTag = equipmentTags[0];
+    const nonTagItems = selectedItems.filter(item => !('category' in item) || item !== equipmentTag);
+
+    if (nonTagItems.length === 0) {
+      console.error('Must select at least one non-tag item');
+      return;
+    }
+
+    // Sort all items by Y coordinate (top to bottom)
+    const sortedItems = [...selectedItems].sort((a, b) => b.bbox.y1 - a.bbox.y1);
+    
+    // Sort non-tag items by Y coordinate (top to bottom)
+    const sortedNonTagItems = nonTagItems.sort((a, b) => b.bbox.y1 - a.bbox.y1);
+    
+    // Merge text content from non-tag items with line breaks for different Y positions
+    let text = '';
+    let previousY = null;
+    const yTolerance = 5; // Y coordinate tolerance for considering items on the same line
+    
+    for (let i = 0; i < sortedNonTagItems.length; i++) {
+      const item = sortedNonTagItems[i];
+      const currentY = item.bbox.y1;
+      
+      // Add line break if this item is on a significantly different Y coordinate
+      if (previousY !== null && Math.abs(currentY - previousY) > yTolerance) {
+        text += '\n';
+      } else if (text.length > 0 && !text.endsWith('\n')) {
+        // Add space if on same line and not first item
+        text += ' ';
+      }
+      
+      text += item.text;
+      previousY = currentY;
+    }
+    
+    // Calculate merged bounding box from all items
+    const mergedBbox = {
+      x1: Math.min(...sortedItems.map(item => item.bbox.x1)),
+      y1: Math.min(...sortedItems.map(item => item.bbox.y1)),
+      x2: Math.max(...sortedItems.map(item => item.bbox.x2)),
+      y2: Math.max(...sortedItems.map(item => item.bbox.y2)),
+    };
+
+    const newEquipmentShortSpec: EquipmentShortSpec = {
+      id: uuidv4(),
+      text,
+      page: sortedItems[0].page,
+      bbox: mergedBbox,
+      sourceItems: sortedItems,
+      metadata: {
+        originalEquipmentTag: equipmentTag,
+      },
+    };
+
+    setEquipmentShortSpecs(prev => [...prev, newEquipmentShortSpec]);
+
+    // Remove the Equipment tag from tags
+    setTags(prev => prev.filter(tag => tag.id !== equipmentTag.id));
+
+    // Remove raw text items that were converted
+    const rawItemIdsToRemove = nonTagItems
+      .filter(item => !('category' in item))
+      .map(item => item.id);
+    
+    if (rawItemIdsToRemove.length > 0) {
+      setRawTextItems(prev => prev.filter(item => !rawItemIdsToRemove.includes(item.id)));
+    }
+  }, []);
+
+  const handleDeleteEquipmentShortSpecs = useCallback((equipmentShortSpecIds: string[]): void => {
+    setEquipmentShortSpecs(prev => prev.filter(spec => !equipmentShortSpecIds.includes(spec.id)));
+  }, []);
+
+  const handleUpdateEquipmentShortSpec = useCallback((id: string, text: string, metadata?: any): void => {
+    setEquipmentShortSpecs(prev => prev.map(spec =>
+      spec.id === id ? { 
+        ...spec, 
+        text,
+        ...(metadata && { metadata })
+      } : spec
+    ));
+  }, []);
 
   const handleDeleteDescriptions = useCallback((descriptionIds: string[]): void => {
     const idsToDelete = new Set(descriptionIds);
@@ -594,6 +691,7 @@ const App: React.FC = () => {
     setRelationships(sanitizedData.relationships);
     setRawTextItems(sanitizedData.rawTextItems);
     setDescriptions(sanitizedData.descriptions || []);
+    setEquipmentShortSpecs(sanitizedData.equipmentShortSpecs || []);
     
     if (sanitizedData.settings?.patterns) {
         setPatterns(sanitizedData.settings.patterns);
@@ -681,6 +779,7 @@ const App: React.FC = () => {
         relationships,
         rawTextItems,
         descriptions,
+        equipmentShortSpecs,
         settings: {
             patterns,
             tolerances,
@@ -887,13 +986,18 @@ const App: React.FC = () => {
             rawTextItems={rawTextItems}
             descriptions={descriptions}
             setDescriptions={setDescriptions}
+            equipmentShortSpecs={equipmentShortSpecs}
+            setEquipmentShortSpecs={setEquipmentShortSpecs}
             onCreateTag={handleCreateTag}
             onCreateManualTag={handleCreateManualTag}
             onCreateDescription={handleCreateDescription}
+            onCreateEquipmentShortSpec={handleCreateEquipmentShortSpec}
             onDeleteTags={handleDeleteTags}
             onUpdateTagText={handleUpdateTagText}
             onDeleteDescriptions={handleDeleteDescriptions}
             onUpdateDescription={handleUpdateDescription}
+            onDeleteEquipmentShortSpecs={handleDeleteEquipmentShortSpecs}
+            onUpdateEquipmentShortSpec={handleUpdateEquipmentShortSpec}
             onDeleteRawTextItems={handleDeleteRawTextItems}
             onUpdateRawTextItemText={handleUpdateRawTextItemText}
             onAutoLinkDescriptions={handleAutoLinkDescriptions}

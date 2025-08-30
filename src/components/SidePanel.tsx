@@ -126,6 +126,7 @@ interface TagListItemProps {
   allTags: any[];
   allRawTextItems: any[];
   descriptions: any[];
+  equipmentShortSpecs: any[];
   onDeleteRelationship: (relId: any) => void;
   onDeleteTag: (tagId: string) => void;
   onUpdateTagText: (tagId: string, newText: string) => void;
@@ -134,10 +135,11 @@ interface TagListItemProps {
   showDetails: boolean;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, showDetails }) => {
+const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, showDetails }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
+  const [expandedEquipmentShortSpecs, setExpandedEquipmentShortSpecs] = useState(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
   
   const colors = CATEGORY_COLORS[tag.category];
@@ -205,8 +207,9 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   const notedByRelationships = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Note);
   const descriptionRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Description);
   const describedByRelationships = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Description);
+  const equipmentShortSpecRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.EquipmentShortSpec);
   
-  const hasRelationships = outgoingConnections.length > 0 || incomingConnections.length > 0 || installationTarget || installedInstruments.length > 0 || annotationRelationships.length > 0 || noteRelationships.length > 0 || notedByRelationships.length > 0 || descriptionRelationships.length > 0 || describedByRelationships.length > 0;
+  const hasRelationships = outgoingConnections.length > 0 || incomingConnections.length > 0 || installationTarget || installedInstruments.length > 0 || annotationRelationships.length > 0 || noteRelationships.length > 0 || notedByRelationships.length > 0 || descriptionRelationships.length > 0 || describedByRelationships.length > 0 || equipmentShortSpecRelationships.length > 0;
 
   return (
     <li
@@ -400,13 +403,66 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
               </div>
             </div>
           )}
+
+          {/* Equipment Short Spec relationships (Equipment tag -> Equipment Short Spec) */}
+          {equipmentShortSpecRelationships.length > 0 && (
+            <div>
+              <span className="text-slate-400 font-semibold">Equipment Short Specs:</span>
+              <div className="pl-3 space-y-1 mt-1">
+                {equipmentShortSpecRelationships.map(rel => {
+                  const equipmentShortSpec = equipmentShortSpecs.find(spec => spec.id === rel.to);
+                  const isExpanded = expandedEquipmentShortSpecs.has(equipmentShortSpec?.id);
+                  
+                  return equipmentShortSpec ? (
+                    <div key={rel.id} className="border border-slate-600 rounded-md bg-slate-700/30">
+                      {/* Header - always visible */}
+                      <div className="flex items-center justify-between p-2">
+                        <button
+                          onClick={() => {
+                            const newExpanded = new Set(expandedEquipmentShortSpecs);
+                            if (isExpanded) {
+                              newExpanded.delete(equipmentShortSpec.id);
+                            } else {
+                              newExpanded.add(equipmentShortSpec.id);
+                            }
+                            setExpandedEquipmentShortSpecs(newExpanded);
+                          }}
+                          className="flex items-center space-x-2 text-left flex-grow text-orange-300 hover:text-orange-200"
+                        >
+                          <span className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+                            ▶
+                          </span>
+                          <span className="font-medium text-xs">
+                            {equipmentShortSpec.metadata.originalEquipmentTag.text}
+                          </span>
+                        </button>
+                        <DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} />
+                      </div>
+                      
+                      {/* Content - only visible when expanded */}
+                      {isExpanded && (
+                        <div className="p-2 pt-0 border-t border-slate-600">
+                          <div className="text-xs text-slate-400 mb-2">
+                            Page {equipmentShortSpec.page} • {equipmentShortSpec.sourceItems.length} source items
+                          </div>
+                          <div className="text-sm bg-slate-800/50 rounded p-2 whitespace-pre-wrap">
+                            {equipmentShortSpec.text}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </li>
   );
 };
 
-export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, showConfirmation, onPingTag, onPingDescription, showRelationships, setShowRelationships }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, showConfirmation, onPingTag, onPingDescription, showRelationships, setShowRelationships }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -807,6 +863,17 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                         </svg>
                         <span>Auto-link N&H</span>
                       </button>
+                      <button
+                        onClick={onAutoLinkEquipmentShortSpecs}
+                        className="w-full flex items-center justify-center space-x-2 bg-orange-700 hover:bg-orange-600 text-orange-100 font-semibold py-1.5 px-2 rounded-md transition-colors text-xs"
+                        title="Automatically link Equipment tags to their corresponding Equipment Short Specs, including A/B pattern matching."
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>Auto-link Equip</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -858,6 +925,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                       allTags={tags}
                       allRawTextItems={rawTextItems}
                       descriptions={descriptions}
+                      equipmentShortSpecs={equipmentShortSpecs}
                       onDeleteRelationship={handleDeleteRelationship}
                       onDeleteTag={handleDeleteTag}
                       onUpdateTagText={onUpdateTagText}
@@ -1075,13 +1143,47 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-grow">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span 
                           className={`inline-block px-2 py-1 rounded text-xs font-semibold ${CATEGORY_COLORS.Equipment.bg} ${CATEGORY_COLORS.Equipment.text}`}
                         >
                           {spec.metadata.originalEquipmentTag.text}
                         </span>
                         <span className="text-xs text-slate-400">Page {spec.page}</span>
+                        
+                        {/* Show connected Equipment tags */}
+                        {(() => {
+                          const connectedTagIds = relationships
+                            .filter(rel => rel.type === RelationshipType.EquipmentShortSpec && rel.to === spec.id)
+                            .map(rel => rel.from);
+                          
+                          const connectedTags = tags.filter(tag => connectedTagIds.includes(tag.id));
+                          
+                          if (connectedTags.length > 0) {
+                            return (
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-slate-500">🔗</span>
+                                <div className="flex gap-1 flex-wrap">
+                                  {connectedTags.map(tag => (
+                                    <span
+                                      key={tag.id}
+                                      className="inline-block px-1.5 py-0.5 bg-green-600/30 text-green-300 rounded text-xs border border-green-600/50"
+                                      title={`Connected Equipment: ${tag.text}`}
+                                    >
+                                      {tag.text}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <span className="text-xs text-slate-500" title="No Equipment tags connected">
+                                ⚠️ Unlinked
+                              </span>
+                            );
+                          }
+                        })()}
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">

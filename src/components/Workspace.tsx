@@ -28,6 +28,7 @@ export const Workspace = ({
   onUpdateRawTextItemText,
   onAutoLinkDescriptions,
   onAutoLinkNotesAndHolds,
+  onAutoLinkEquipmentShortSpecs,
   showConfirmation,
   // Viewer state from App
   currentPage,
@@ -134,6 +135,7 @@ export const Workspace = ({
         onUpdateRawTextItemText={onUpdateRawTextItemText}
         onAutoLinkDescriptions={onAutoLinkDescriptions}
         onAutoLinkNotesAndHolds={onAutoLinkNotesAndHolds}
+        onAutoLinkEquipmentShortSpecs={onAutoLinkEquipmentShortSpecs}
         showConfirmation={showConfirmation}
         onPingTag={handlePingTag}
         onPingDescription={handlePingDescription}

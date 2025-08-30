@@ -946,6 +946,107 @@ const App: React.FC = () => {
     );
   }, [tags, descriptions, relationships, showConfirmation]);
 
+  const handleAutoLinkEquipmentShortSpecs = useCallback(() => {
+    const extractBasePattern = (tagText: string): { base: string; suffix?: string } => {
+      // Extract base pattern and suffix (A, B, C, etc.)
+      // Handle cases like "D44-G-7201A/B" and "D44-G-7201A"
+      const abPattern = tagText.match(/^(.+?)([A-Z]\/[A-Z]|[A-Z])$/);
+      if (abPattern) {
+        const base = abPattern[1];
+        const suffix = abPattern[2];
+        return { base, suffix };
+      }
+      return { base: tagText };
+    };
+
+    const findMatchingEquipmentTags = (shortSpec: EquipmentShortSpec, equipmentTags: Tag[]): Tag[] => {
+      const originalTag = shortSpec.metadata.originalEquipmentTag;
+      const { base: originalBase, suffix: originalSuffix } = extractBasePattern(originalTag.text);
+      
+      // Look for A/B patterns in both the original tag and short spec text
+      const originalHasABPattern = originalSuffix && originalSuffix.includes('/');
+      const textHasABPattern = /[A-Z]\/[A-Z]|[A-Z],[A-Z]|[A-Z]\s*&\s*[A-Z]/.test(shortSpec.text);
+      const hasABPattern = originalHasABPattern || textHasABPattern;
+      
+      const matchingTags = [];
+      
+      for (const tag of equipmentTags) {
+        const { base: tagBase, suffix: tagSuffix } = extractBasePattern(tag.text);
+        
+        // Exact match
+        if (tag.text === originalTag.text) {
+          matchingTags.push(tag);
+          continue;
+        }
+        
+        // Base pattern match
+        if (tagBase === originalBase) {
+          // If original tag or short spec has A/B pattern, include all tags with the same base
+          if (hasABPattern) {
+            matchingTags.push(tag);
+          } else if (!tagSuffix) {
+            // If no suffix in tag, and no A/B pattern, it's a match
+            matchingTags.push(tag);
+          }
+        }
+      }
+      return matchingTags;
+    };
+
+    const performLinking = () => {
+      const equipmentTags = tags.filter(t => t.category === Category.Equipment);
+      
+      // Track existing relationships to avoid duplicates
+      const existingRelationshipKeys = new Set(
+        relationships
+          .filter(r => r.type === RelationshipType.EquipmentShortSpec)
+          .map(r => `${r.from}-${r.to}`)
+      );
+      
+      const newRelationships = [];
+      
+      for (const shortSpec of equipmentShortSpecs) {
+        const matchingTags = findMatchingEquipmentTags(shortSpec, equipmentTags);
+        
+        for (const tag of matchingTags) {
+          const relationshipKey = `${tag.id}-${shortSpec.id}`;
+          
+          // Only create relationship if it doesn't already exist
+          if (!existingRelationshipKeys.has(relationshipKey)) {
+            newRelationships.push({
+              id: uuidv4(),
+              from: tag.id,
+              to: shortSpec.id,
+              type: RelationshipType.EquipmentShortSpec,
+            });
+          }
+        }
+      }
+      
+      if (newRelationships.length > 0) {
+        setRelationships(prev => [...prev, ...newRelationships]);
+        alert(`Successfully linked ${newRelationships.length} Equipment tag(s) to Equipment Short Spec(s).`);
+      } else {
+        alert("No new Equipment-Short Spec relationships found to create.");
+      }
+    };
+
+    if (equipmentShortSpecs.length === 0) {
+      alert("No Equipment Short Specs available to link.");
+      return;
+    }
+
+    if (tags.filter(t => t.category === Category.Equipment).length === 0) {
+      alert("No Equipment tags available to link.");
+      return;
+    }
+
+    showConfirmation(
+      `This will automatically create relationships between Equipment tags and Equipment Short Specs. Continue?`,
+      performLinking
+    );
+  }, [tags, equipmentShortSpecs, relationships, showConfirmation]);
+
   const mainContent = () => {
     if (isLoading) {
       return (
@@ -1002,6 +1103,7 @@ const App: React.FC = () => {
             onUpdateRawTextItemText={handleUpdateRawTextItemText}
             onAutoLinkDescriptions={handleAutoLinkDescriptions}
             onAutoLinkNotesAndHolds={handleAutoLinkNotesAndHolds}
+            onAutoLinkEquipmentShortSpecs={handleAutoLinkEquipmentShortSpecs}
             showConfirmation={showConfirmation}
             // Pass down viewer state
             currentPage={currentPage}

@@ -19,7 +19,7 @@ The application follows a component-based architecture:
 - **App.tsx**: Main application state management and orchestration
 - **Workspace.tsx**: Central workspace containing PDF viewer and side panel
 - **Header.tsx**: Top navigation with PDF controls and project management
-- **SidePanel.tsx**: Tag list management and Excel export functionality
+- **SidePanel.tsx**: Tag list management with page filtering, description editing, and Excel export functionality
 - **PdfViewer.tsx**: Core PDF rendering and tag visualization
 - **SelectionPanel.tsx**: Bottom panel for creating tags from selected text
 
@@ -32,15 +32,17 @@ The application follows a component-based architecture:
    - Final: Raw text collection for annotations
 
 2. **excelExporter.ts**: Structured Excel report generation
-   - Creates Equipment, Line, and Instrument worksheets
+   - Creates Equipment, Line, Instrument, and Description worksheets
    - Processes relationships (Connection, Installation, Annotation, Note)
    - Aggregates related data with proper formatting
+   - Supports Note & Hold data with page-specific numbering
 
 ### State Management
 
 The app uses React state with lifting patterns:
-- Global state in App.tsx (tags, relationships, rawTextItems, patterns, tolerances)
+- Global state in App.tsx (tags, relationships, descriptions, rawTextItems, patterns, tolerances)
 - Viewer state passed down (currentPage, scale, mode, selection)
+- UI state management (page filtering, edit modes, selections)
 - Local storage for user preferences (patterns, tolerances)
 
 ### Data Model
@@ -48,6 +50,7 @@ The app uses React state with lifting patterns:
 Core entities:
 - **Tags**: Extracted entities with category, bbox, page, and source items
 - **Relationships**: Connections between tags (4 types: Connection, Installation, Annotation, Note)
+- **Descriptions**: Note & Hold entities with metadata (type, scope, number) and page-specific numbering
 - **RawTextItems**: Unprocessed text fragments for manual tag creation
 - **Categories**: Equipment, Line, Instrument, DrawingNumber, NotesAndHolds
 
@@ -56,8 +59,10 @@ Core entities:
 1. **Tag Recognition**: Regex-based pattern matching with customizable patterns
 2. **Spatial Analysis**: Tolerance-based component combination and proximity detection
 3. **Relationship Management**: Visual connection tools with keyboard shortcuts
-4. **Project Management**: JSON export/import for work continuity
-5. **Excel Export**: Structured reports with relationship mapping
+4. **Description Management**: Note & Hold auto-linking with page-specific numbering
+5. **Advanced UI Controls**: Page filtering, read/edit mode toggles, and improved layouts
+6. **Project Management**: JSON export/import for work continuity
+7. **Excel Export**: Structured reports with relationship mapping and Description sheet
 
 ### Configuration
 

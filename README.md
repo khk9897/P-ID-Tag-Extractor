@@ -30,6 +30,8 @@
 - **Visual Tag Management**: Color-coded tag highlighting with category-based organization
 - **Relationship Mapping**: Intuitive connection, installation, and annotation relationship creation
 - **Multi-selection Tools**: Advanced selection capabilities with area and multi-tag selection
+- **Page Filtering**: Smart page-only view for focused editing across all entity types
+- **Description Management**: Clean read/edit mode toggle for Note & Hold annotations
 
 ### 🔐 Privacy-First Design
 - **100% Client-Side Processing**: All data stays in your browser - no server uploads
@@ -37,9 +39,10 @@
 - **Offline Capable**: Works entirely without internet connectivity
 
 ### 📊 Professional Export
-- **Structured Excel Output**: Organized sheets for Equipment, Line, and Instrument lists
-- **Complete Data Export**: Includes relationships, annotations, and drawing references
+- **Structured Excel Output**: Organized sheets for Equipment, Line, Instrument, and Description lists
+- **Complete Data Export**: Includes relationships, annotations, Note & Hold data, and drawing references
 - **Project Continuity**: Save/load projects for iterative work sessions
+- **Auto-linking**: Intelligent Note & Hold association with page-specific numbering
 
 ---
 
@@ -101,7 +104,7 @@ graph TB
 | **Line** | Piping and pipeline tags | `P-101-A-6"-CS` | 🔴 Rose |
 | **Instrument** | Control & measurement devices | `FT-101`, `PIC-203A` | 🟡 Amber |
 | **Drawing Number** | Document references | `P&ID-001-REV-A` | 🟣 Indigo |
-| **Notes & Holds** | Special annotations | `NOTE: See spec` | 🟢 Teal |
+| **Notes & Holds** | Special annotations with auto-linking | `NOTE: See spec` | 🟢 Teal |
 
 ### ⌨️ Keyboard Shortcuts
 
@@ -262,6 +265,16 @@ The generated Excel file contains organized sheets:
 | Installed On | Host equipment/line |
 | Description | Associated annotations |
 | Notes | Special notes/holds |
+
+#### Description List
+| Column | Description |
+|--------|-------------|
+| Number | Auto-generated page-specific numbering |
+| Type | Note or Hold classification |
+| Scope | General or Specific scope |
+| Page | Source drawing page |
+| Content | Description text content |
+| Related Tags | Associated equipment/line/instrument tags |
 
 ---
 

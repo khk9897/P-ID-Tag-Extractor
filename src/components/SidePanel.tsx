@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Category, RelationshipType } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
 import { exportToExcel } from '../services/excelExporter.ts';
 
-const DeleteRelationshipButton = ({ onClick }) => (
+const DeleteRelationshipButton = React.memo(({ onClick }) => (
   <button
     onClick={(e) => {
       e.stopPropagation();
@@ -16,9 +16,9 @@ const DeleteRelationshipButton = ({ onClick }) => (
       <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
     </svg>
   </button>
-);
+));
 
-const DeleteTagButton = ({ onClick }) => (
+const DeleteTagButton = React.memo(({ onClick }) => (
   <button
     onClick={(e) => {
       e.stopPropagation();
@@ -31,9 +31,9 @@ const DeleteTagButton = ({ onClick }) => (
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
   </button>
-);
+));
 
-const EditTagButton = ({ onClick }) => (
+const EditTagButton = React.memo(({ onClick }) => (
   <button
     onClick={(e) => {
       e.stopPropagation();
@@ -47,7 +47,7 @@ const EditTagButton = ({ onClick }) => (
       <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
     </svg>
   </button>
-);
+));
 
 const RelatedTextItem: React.FC<{
   item: any;
@@ -55,7 +55,7 @@ const RelatedTextItem: React.FC<{
   onDeleteRelationship: (relId: string) => void;
   onDeleteItem: (itemId: string) => void;
   onUpdateItemText: (itemId: string, newText: string) => void;
-}> = ({ item, relId, onDeleteRelationship, onDeleteItem, onUpdateItemText }) => {
+}> = React.memo(({ item, relId, onDeleteRelationship, onDeleteItem, onUpdateItemText }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(item.text);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -114,7 +114,7 @@ const RelatedTextItem: React.FC<{
       </div>
     </div>
   );
-};
+});
 
 
 interface TagListItemProps {
@@ -135,7 +135,7 @@ interface TagListItemProps {
   showDetails: boolean;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, showDetails }) => {
+const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, showDetails }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
@@ -460,7 +460,7 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
       )}
     </li>
   );
-};
+});
 
 export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, showConfirmation, onPingTag, onPingDescription, showRelationships, setShowRelationships }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
@@ -478,25 +478,26 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   const [sections, setSections] = useState({
     viewOptions: true,
   });
+  const [virtualizedRange, setVirtualizedRange] = useState({ start: 0, end: 50 });
   const listRef = useRef(null);
   const descriptionListRef = useRef(null);
   const lastClickedIndex = useRef(-1);
   
-  const toggleSection = (sectionName) => {
+  const toggleSection = useCallback((sectionName) => {
     setSections(prev => ({ ...prev, [sectionName]: !prev[sectionName] }));
-  };
+  }, []);
 
-  const handleDeleteRelationship = (relId) => {
+  const handleDeleteRelationship = useCallback((relId) => {
     setRelationships(prev => prev.filter(r => r.id !== relId));
-  };
+  }, [setRelationships]);
 
-  const handleDeleteTag = (tagId) => {
+  const handleDeleteTag = useCallback((tagId) => {
     onDeleteTags([tagId]);
-  };
+  }, [onDeleteTags]);
   
-  const handleDeleteItem = (itemId) => {
+  const handleDeleteItem = useCallback((itemId) => {
     onDeleteRawTextItems([itemId]);
-  };
+  }, [onDeleteRawTextItems]);
   
   
   const sortedAndFilteredTags = useMemo(() => {
@@ -538,6 +539,14 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
         });
     }
   }, [tags, showCurrentPageOnly, currentPage, filterCategory, searchQuery, sortOrder]);
+
+  // Virtualized tags for performance
+  const virtualizedTags = useMemo(() => {
+    if (sortedAndFilteredTags.length <= 100) {
+      return sortedAndFilteredTags; // Don't virtualize small lists
+    }
+    return sortedAndFilteredTags.slice(virtualizedRange.start, virtualizedRange.end);
+  }, [sortedAndFilteredTags, virtualizedRange]);
 
   const filteredDescriptions = useMemo(() => {
     return descriptions.filter(desc => !showCurrentPageOnly || desc.page === currentPage);
@@ -587,7 +596,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
     }
   }, [selectedDescriptionIds, activeTab, filteredDescriptions]);
 
-  const handleTagClick = (tag, index, e) => {
+  const handleTagClick = useCallback((tag, index, e) => {
     const isMultiSelect = e.ctrlKey || e.metaKey;
     const isShiftSelect = e.shiftKey;
 
@@ -616,27 +625,41 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
       setSelectedTagIds([tag.id]);
       lastClickedIndex.current = index;
     }
-  };
+  }, [sortedAndFilteredTags, selectedTagIds, setSelectedTagIds, setCurrentPage, onPingTag]);
   
-  const goToTag = (tag) => {
+  const goToTag = useCallback((tag) => {
     setCurrentPage(tag.page);
     setSelectedTagIds([tag.id]);
-  }
+  }, [setCurrentPage, setSelectedTagIds]);
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = useCallback(() => {
     if (selectedTagIds.length > 0) {
       onDeleteTags(selectedTagIds);
       setSelectedTagIds([]);
       lastClickedIndex.current = -1;
     }
-  };
+  }, [selectedTagIds, onDeleteTags, setSelectedTagIds]);
   
-
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     exportToExcel(tags, relationships, rawTextItems, descriptions, equipmentShortSpecs);
-  };
+  }, [tags, relationships, rawTextItems, descriptions, equipmentShortSpecs]);
 
-  const RelationshipViewer = ({ relationships: inputRelationships }) => {
+  // Virtualization scroll handler
+  const handleScroll = useCallback((e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    const itemHeight = 80; // Approximate height of each tag item
+    const visibleStart = Math.floor(scrollTop / itemHeight);
+    const visibleEnd = Math.min(
+      sortedAndFilteredTags.length,
+      visibleStart + Math.ceil(clientHeight / itemHeight) + 10 // Buffer of 10 items
+    );
+    
+    if (sortedAndFilteredTags.length > 100) {
+      setVirtualizedRange({ start: Math.max(0, visibleStart - 5), end: visibleEnd });
+    }
+  }, [sortedAndFilteredTags.length]);
+
+  const RelationshipViewer = useCallback(({ relationships: inputRelationships }) => {
     const [relSearchQuery, setRelSearchQuery] = useState('');
     const tagMap = useMemo(() => new Map(tags.map(t => [t.id, t])), [tags]);
 
@@ -706,7 +729,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
             </ul>
         </div>
     );
-  };
+  }, [tags]);
 
   const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.NotesAndHolds, Category.DrawingNumber];
   
@@ -731,9 +754,9 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
       
       <div className="border-b border-slate-700 flex text-xs">
         <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({totalTagCount})</button>
-        <button onClick={() => setActiveTab('descriptions')} className={`flex-1 py-2 font-semibold ${activeTab === 'descriptions' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Descriptions ({filteredDescriptions.length})</button>
+        <button onClick={() => setActiveTab('descriptions')} className={`flex-1 py-2 font-semibold ${activeTab === 'descriptions' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Notes ({filteredDescriptions.length})</button>
         <button onClick={() => setActiveTab('equipmentShortSpecs')} className={`flex-1 py-2 font-semibold ${activeTab === 'equipmentShortSpecs' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Equipment Specs ({filteredEquipmentShortSpecs.length})</button>
-        <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relationships ({filteredRelationships.length})</button>
+        <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relations ({filteredRelationships.length})</button>
       </div>
 
       {activeTab === 'tags' && (
@@ -845,13 +868,24 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
               </div>
             )}
             
-            <ul ref={listRef} className="flex-grow overflow-y-auto p-2 divide-y divide-slate-700/80">
-                {sortedAndFilteredTags.map((tag, index) => (
+            <ul 
+              ref={listRef} 
+              className="flex-grow overflow-y-auto p-2 divide-y divide-slate-700/80"
+              onScroll={handleScroll}
+            >
+                {sortedAndFilteredTags.length > 100 && (
+                  <div style={{ height: `${virtualizedRange.start * 80}px` }} />
+                )}
+                {virtualizedTags.map((tag, virtualIndex) => {
+                  const actualIndex = sortedAndFilteredTags.length > 100 ? 
+                    virtualizedRange.start + virtualIndex : 
+                    virtualIndex;
+                  return (
                     <TagListItem 
                       key={tag.id} 
                       tag={tag} 
                       isSelected={selectedTagIds.includes(tag.id)}
-                      onItemClick={(e) => handleTagClick(tag, index, e)}
+                      onItemClick={(e) => handleTagClick(tag, actualIndex, e)}
                       onGoToTag={goToTag}
                       relationships={relationships}
                       allTags={tags}
@@ -865,7 +899,11 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                       onUpdateItemText={onUpdateRawTextItemText}
                       showDetails={showRelationshipDetails}
                     />
-                ))}
+                  );
+                })}
+                {sortedAndFilteredTags.length > 100 && (
+                  <div style={{ height: `${(sortedAndFilteredTags.length - virtualizedRange.end) * 80}px` }} />
+                )}
             </ul>
         </div>
       )}

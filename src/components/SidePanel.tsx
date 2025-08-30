@@ -477,7 +477,6 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   const [tempDescriptionMetadata, setTempDescriptionMetadata] = useState({});
   const [sections, setSections] = useState({
     viewOptions: true,
-    tools: true,
   });
   const listRef = useRef(null);
   const descriptionListRef = useRef(null);
@@ -810,23 +809,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                   )}
                 </div>
 
-                {/* Toolbox Section */}
-                <hr className="border-slate-700" />
-                <div>
-                   <button onClick={() => toggleSection('tools')} className="w-full flex justify-between items-center text-left py-1">
-                    <h4 className="text-sm font-semibold text-slate-400">Tools</h4>
-                     <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-slate-400 transition-transform ${sections.tools ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                  {sections.tools && (
-                    <div className="text-xs text-slate-500 mt-2 text-center animate-fade-in-up" style={{animationDuration: '0.2s'}}>
-                      Tools moved to header for easier access
-                    </div>
-                  )}
-                </div>
-                
-                {/* Sort Section - moved below tools */}
+                {/* Sort Section */}
                 <hr className="border-slate-700" />
                 <div className="pt-2">
                   <div className="flex items-center space-x-2">

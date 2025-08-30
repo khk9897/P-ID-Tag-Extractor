@@ -382,8 +382,8 @@ const App: React.FC = () => {
   const handleCreateDescription = useCallback((selectedItems: (Tag | RawTextItem)[]): void => {
     if (!selectedItems || selectedItems.length === 0) return;
 
-    // Sort by Y coordinate (top to bottom)
-    const sortedItems = [...selectedItems].sort((a, b) => a.bbox.y1 - b.bbox.y1);
+    // Sort by Y coordinate (top to bottom) - in PDF coordinate system, higher Y values are at the top
+    const sortedItems = [...selectedItems].sort((a, b) => b.bbox.y1 - a.bbox.y1);
     
     // Merge text content
     const text = sortedItems.map(item => item.text).join(' ');
@@ -396,9 +396,11 @@ const App: React.FC = () => {
       y2: Math.max(...sortedItems.map(item => item.bbox.y2)),
     };
 
-    // Find next available number
+    // Find next available number for this page and type
+    const currentPage = sortedItems[0].page;
+    const descriptionType = 'Note'; // Default type, can be changed later in UI
     const existingNumbers = descriptions
-      .filter(desc => desc.metadata.type === 'Note')
+      .filter(desc => desc.metadata.type === descriptionType && desc.page === currentPage)
       .map(desc => desc.metadata.number);
     const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
 
@@ -409,7 +411,7 @@ const App: React.FC = () => {
       bbox: mergedBbox,
       sourceItems: sortedItems,
       metadata: {
-        type: 'Note',
+        type: descriptionType,
         scope: 'Specific',
         number: nextNumber,
       },
@@ -438,14 +440,69 @@ const App: React.FC = () => {
 
   const handleDeleteDescriptions = useCallback((descriptionIds: string[]): void => {
     const idsToDelete = new Set(descriptionIds);
+    
+    // Get descriptions to be deleted to restore their source items
+    const descriptionsToDelete = descriptions.filter(desc => idsToDelete.has(desc.id));
+    
+    // Restore source items
+    descriptionsToDelete.forEach(desc => {
+      desc.sourceItems.forEach(sourceItem => {
+        if ('category' in sourceItem) {
+          // This is a Tag, restore it
+          setTags(prev => {
+            // Check if tag already exists to avoid duplicates
+            const exists = prev.some(tag => tag.id === sourceItem.id);
+            if (!exists) {
+              return [...prev, sourceItem as Tag];
+            }
+            return prev;
+          });
+        } else {
+          // This is a RawTextItem, restore it
+          setRawTextItems(prev => {
+            // Check if raw text item already exists to avoid duplicates
+            const exists = prev.some(item => item.id === sourceItem.id);
+            if (!exists) {
+              return [...prev, sourceItem as RawTextItem];
+            }
+            return prev;
+          });
+        }
+      });
+    });
+    
+    // Remove the descriptions
     setDescriptions(prev => prev.filter(desc => !idsToDelete.has(desc.id)));
+    
+    // Clean up relationships
     setRelationships(prev => prev.filter(rel => !idsToDelete.has(rel.from) && !idsToDelete.has(rel.to)));
-  }, []);
+  }, [descriptions]);
 
   const handleUpdateDescription = useCallback((id: string, text: string, metadata: Description['metadata']): void => {
-    setDescriptions(prev => prev.map(desc => 
-      desc.id === id ? { ...desc, text, metadata } : desc
-    ));
+    setDescriptions(prev => {
+      const currentDesc = prev.find(desc => desc.id === id);
+      if (!currentDesc) return prev;
+
+      let updatedMetadata = metadata;
+
+      // If type changed, recalculate number for the new type on the same page
+      if (currentDesc.metadata.type !== metadata.type) {
+        const existingNumbers = prev
+          .filter(desc => 
+            desc.id !== id && // Exclude current description
+            desc.metadata.type === metadata.type && 
+            desc.page === currentDesc.page
+          )
+          .map(desc => desc.metadata.number);
+        
+        const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+        updatedMetadata = { ...metadata, number: nextNumber };
+      }
+
+      return prev.map(desc => 
+        desc.id === id ? { ...desc, text, metadata: updatedMetadata } : desc
+      );
+    });
   }, []);
 
   const validateProjectData = (data: any): data is ProjectData => {
@@ -713,6 +770,83 @@ const App: React.FC = () => {
     );
   }, [tags, rawTextItems, relationships, tolerances, showConfirmation]);
 
+  const handleAutoLinkNotesAndHolds = useCallback(() => {
+    const detectNoteHoldType = (tagText: string): 'Note' | 'Hold' | null => {
+      const lowerText = tagText.toLowerCase();
+      if (lowerText.includes('note')) return 'Note';
+      if (lowerText.includes('hold')) return 'Hold';
+      return null;
+    };
+
+    const extractNumbers = (tagText: string): number[] => {
+      // Extract numbers from text (handles comma-separated values)
+      const numberMatches = tagText.match(/\d+/g);
+      return numberMatches ? numberMatches.map(num => parseInt(num, 10)) : [];
+    };
+
+    const performLinking = () => {
+      const noteHoldTags = tags.filter(t => t.category === Category.NotesAndHolds);
+      // Track existing relationships to avoid duplicates
+      const existingRelationshipKeys = new Set(
+        relationships
+          .filter(r => r.type === RelationshipType.Description)
+          .map(r => `${r.from}-${r.to}`)
+      );
+      const newRelationships = [];
+
+      for (const tag of noteHoldTags) {
+        const type = detectNoteHoldType(tag.text);
+        if (!type) continue;
+
+        const numbers = extractNumbers(tag.text);
+        if (numbers.length === 0) continue;
+
+        // Find matching descriptions (same page only)
+        for (const number of numbers) {
+          const matchingDescriptions = descriptions.filter(desc => 
+            desc.metadata.type === type && 
+            desc.metadata.number === number &&
+            desc.metadata.scope === 'Specific' &&
+            desc.page === tag.page
+          );
+
+          for (const desc of matchingDescriptions) {
+            const relationshipKey = `${tag.id}-${desc.id}`;
+            // Only create relationship if it doesn't already exist
+            if (!existingRelationshipKeys.has(relationshipKey)) {
+              newRelationships.push({
+                id: uuidv4(),
+                from: tag.id,
+                to: desc.id,
+                type: RelationshipType.Description
+              });
+              existingRelationshipKeys.add(relationshipKey);
+            }
+          }
+        }
+      }
+
+      if (newRelationships.length > 0) {
+        const existingRelsSet = new Set(relationships.map(r => `${r.from}-${r.to}-${r.type}`));
+        const uniqueNewRels = newRelationships.filter(r => !existingRelsSet.has(`${r.from}-${r.to}-${r.type}`));
+        
+        if (uniqueNewRels.length > 0) {
+          setRelationships(prev => [...prev, ...uniqueNewRels]);
+          alert(`${uniqueNewRels.length} new Note & Hold link(s) created.`);
+        } else {
+          alert('No new Note & Hold links could be found. They may already exist.');
+        }
+      } else {
+        alert('No new Note & Hold links could be found with the current data.');
+      }
+    };
+
+    showConfirmation(
+      'This will automatically create links between Note & Hold tags and their corresponding descriptions based on type and number matching. Do you want to proceed?',
+      performLinking
+    );
+  }, [tags, descriptions, relationships, showConfirmation]);
+
   const mainContent = () => {
     if (isLoading) {
       return (
@@ -763,6 +897,7 @@ const App: React.FC = () => {
             onDeleteRawTextItems={handleDeleteRawTextItems}
             onUpdateRawTextItemText={handleUpdateRawTextItemText}
             onAutoLinkDescriptions={handleAutoLinkDescriptions}
+            onAutoLinkNotesAndHolds={handleAutoLinkNotesAndHolds}
             showConfirmation={showConfirmation}
             // Pass down viewer state
             currentPage={currentPage}

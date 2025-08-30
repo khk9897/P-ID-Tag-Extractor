@@ -111,6 +111,7 @@ export interface WorkspaceProps {
   onDeleteRawTextItems: (itemIds: string[]) => void;
   onUpdateRawTextItemText: (itemId: string, newText: string) => void;
   onAutoLinkDescriptions: () => void;
+  onAutoLinkNotesAndHolds: () => void;
   showConfirmation: (message: string, onConfirm: () => void) => void;
   currentPage: number;
   setCurrentPage: (page: number) => void;

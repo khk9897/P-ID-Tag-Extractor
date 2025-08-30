@@ -22,6 +22,7 @@ export const Workspace = ({
   onDeleteRawTextItems,
   onUpdateRawTextItemText,
   onAutoLinkDescriptions,
+  onAutoLinkNotesAndHolds,
   showConfirmation,
   // Viewer state from App
   currentPage,
@@ -87,10 +88,16 @@ export const Workspace = ({
   }, []);
 
   const handlePingDescription = useCallback((descriptionId) => {
+    // Find the description to get its page
+    const description = descriptions.find(d => d.id === descriptionId);
+    if (description && description.page !== currentPage) {
+      setCurrentPage(description.page);
+    }
+    
     setPingedDescriptionId(descriptionId);
     // Clear after animation is over
     setTimeout(() => setPingedDescriptionId(null), 2000);
-  }, []);
+  }, [descriptions, currentPage, setCurrentPage]);
 
   return (
     <div className="flex h-full bg-slate-900 relative">
@@ -114,6 +121,7 @@ export const Workspace = ({
         onDeleteRawTextItems={onDeleteRawTextItems}
         onUpdateRawTextItemText={onUpdateRawTextItemText}
         onAutoLinkDescriptions={onAutoLinkDescriptions}
+        onAutoLinkNotesAndHolds={onAutoLinkNotesAndHolds}
         showConfirmation={showConfirmation}
         onPingTag={handlePingTag}
         onPingDescription={handlePingDescription}

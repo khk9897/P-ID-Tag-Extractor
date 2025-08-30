@@ -125,6 +125,7 @@ interface TagListItemProps {
   relationships: any[];
   allTags: any[];
   allRawTextItems: any[];
+  descriptions: any[];
   onDeleteRelationship: (relId: any) => void;
   onDeleteTag: (tagId: string) => void;
   onUpdateTagText: (tagId: string, newText: string) => void;
@@ -133,9 +134,10 @@ interface TagListItemProps {
   showDetails: boolean;
 }
 
-const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, showDetails }) => {
+const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, showDetails }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
+  const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
   
   const colors = CATEGORY_COLORS[tag.category];
@@ -201,8 +203,10 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
   const annotationRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Annotation);
   const noteRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Note);
   const notedByRelationships = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Note);
+  const descriptionRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Description);
+  const describedByRelationships = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Description);
   
-  const hasRelationships = outgoingConnections.length > 0 || incomingConnections.length > 0 || installationTarget || installedInstruments.length > 0 || annotationRelationships.length > 0 || noteRelationships.length > 0 || notedByRelationships.length > 0;
+  const hasRelationships = outgoingConnections.length > 0 || incomingConnections.length > 0 || installationTarget || installedInstruments.length > 0 || annotationRelationships.length > 0 || noteRelationships.length > 0 || notedByRelationships.length > 0 || descriptionRelationships.length > 0 || describedByRelationships.length > 0;
 
   return (
     <li
@@ -328,13 +332,81 @@ const TagListItem: React.FC<TagListItemProps> = ({ tag, isSelected, onItemClick,
               </div>
             </div>
           )}
+          
+          {/* Description relationships (tag -> description) */}
+          {descriptionRelationships.length > 0 && (
+            <div>
+              <span className="text-slate-400 font-semibold">Descriptions:</span>
+              <div className="pl-3 space-y-1 mt-1">
+                {descriptionRelationships.map(rel => {
+                  const description = descriptions.find(d => d.id === rel.to);
+                  const isExpanded = expandedDescriptions.has(description?.id);
+                  
+                  return description ? (
+                    <div key={rel.id} className="border border-slate-600 rounded-md bg-slate-700/30">
+                      {/* Header - always visible */}
+                      <div className="flex items-center justify-between p-2">
+                        <button
+                          onClick={() => {
+                            const newExpanded = new Set(expandedDescriptions);
+                            if (isExpanded) {
+                              newExpanded.delete(description.id);
+                            } else {
+                              newExpanded.add(description.id);
+                            }
+                            setExpandedDescriptions(newExpanded);
+                          }}
+                          className="flex items-center space-x-1.5 text-purple-300 hover:text-purple-100 text-xs cursor-pointer bg-transparent border-none"
+                        >
+                          <span>{isExpanded ? '📖' : '📄'}</span>
+                          <span>{description.metadata.type} {description.metadata.number}</span>
+                          <span className="text-slate-400">{isExpanded ? '▼' : '▶'}</span>
+                        </button>
+                        <DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} />
+                      </div>
+                      
+                      {/* Content - expandable */}
+                      {isExpanded && (
+                        <div className="px-3 pb-3 border-t border-slate-600">
+                          <div className="text-xs text-slate-300 mt-2 leading-relaxed">
+                            {description.text}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-1">
+                            Page {description.page} • {description.metadata.scope}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* Described by relationships (description -> this tag) */}
+          {describedByRelationships.length > 0 && (
+            <div>
+              <span className="text-slate-400 font-semibold">Described by:</span>
+              <div className="pl-3 space-y-0.5 mt-1">
+                {describedByRelationships.map(rel => {
+                  const sourceTag = tagMap.get(rel.from);
+                  return sourceTag ? (
+                    <div key={rel.id} className="flex items-center justify-between">
+                      <div>{renderRelationship(sourceTag.id, sourceTag.text)}</div>
+                      <DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} />
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </li>
   );
 };
 
-export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, showConfirmation, onPingTag, onPingDescription, showRelationships, setShowRelationships }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, showConfirmation, onPingTag, onPingDescription, showRelationships, setShowRelationships }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -346,6 +418,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
     tools: true,
   });
   const listRef = useRef(null);
+  const descriptionListRef = useRef(null);
   const lastClickedIndex = useRef(-1);
   
   const toggleSection = (sectionName) => {
@@ -427,6 +500,17 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
       }
     }
   }, [selectedTagIds, activeTab, sortedAndFilteredTags]); // Also run when list changes
+
+  // Focus on selected description in side panel when selected from PDF viewer
+  useEffect(() => {
+    if (activeTab === 'descriptions' && selectedDescriptionIds.length === 1 && descriptionListRef.current) {
+      const selectedId = selectedDescriptionIds[0];
+      const element = descriptionListRef.current.querySelector(`[data-description-id='${selectedId}']`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [selectedDescriptionIds, activeTab, descriptions]);
 
   const handleTagClick = (tag, index, e) => {
     const isMultiSelect = e.ctrlKey || e.metaKey;
@@ -695,6 +779,16 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                         </svg>
                         <span>Auto-link</span>
                       </button>
+                      <button
+                        onClick={onAutoLinkNotesAndHolds}
+                        className="w-full flex items-center justify-center space-x-2 bg-purple-700 hover:bg-purple-600 text-purple-100 font-semibold py-1.5 px-2 rounded-md transition-colors text-xs"
+                        title="Automatically link Note & Hold tags to their corresponding descriptions based on type and number matching."
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Auto-link N&H</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -725,6 +819,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                       relationships={relationships}
                       allTags={tags}
                       allRawTextItems={rawTextItems}
+                      descriptions={descriptions}
                       onDeleteRelationship={handleDeleteRelationship}
                       onDeleteTag={handleDeleteTag}
                       onUpdateTagText={onUpdateTagText}
@@ -744,7 +839,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
               Press 'N' to create descriptions from selected items
             </div>
           </div>
-          <div className="flex-grow overflow-y-auto p-3 space-y-2">
+          <div ref={descriptionListRef} className="flex-grow overflow-y-auto p-3 space-y-2">
             {descriptions.length === 0 ? (
               <div className="text-center text-slate-500 mt-8">
                 <div className="text-lg mb-2">📝</div>
@@ -757,6 +852,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, relations
                 return (
                 <div 
                   key={description.id} 
+                  data-description-id={description.id}
                   className={`group border rounded-lg p-3 hover:bg-slate-700/50 transition-colors cursor-pointer ${
                     isSelected ? 'bg-purple-600/30 border-purple-400' : 'bg-slate-700/30 border-slate-600'
                   }`}

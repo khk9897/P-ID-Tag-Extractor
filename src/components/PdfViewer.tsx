@@ -159,8 +159,8 @@ export const PdfViewer = ({
         const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
         if (selectedRawItems.length === 2) {
           // Sort to ensure consistent naming, e.g., "PIC-101" instead of "101-PIC"
-          // Assume vertical alignment means top part comes first.
-          selectedRawItems.sort((a, b) => a.bbox.y1 - b.bbox.y1);
+          // Assume vertical alignment means top part comes first (higher Y values are at the top in PDF coordinates).
+          selectedRawItems.sort((a, b) => b.bbox.y1 - a.bbox.y1);
           onCreateTag(selectedRawItems, Category.Instrument);
           setSelectedRawTextItemIds([]);
         } else {
@@ -729,7 +729,9 @@ export const PdfViewer = ({
                     {/* Pinged Description highlight */}
                     {pingedDescriptionId && (() => {
                       const descToPing = descriptions.find(d => d.id === pingedDescriptionId);
-                      if (!descToPing || descToPing.page !== currentPage) return null;
+                      if (!descToPing || descToPing.page !== currentPage) {
+                        return null;
+                      }
 
                       const { x1, y1, x2, y2 } = descToPing.bbox;
                       const rectX = x1 * scale;
@@ -741,6 +743,16 @@ export const PdfViewer = ({
 
                       return (
                         <g style={{ pointerEvents: 'none' }}>
+                            {/* Background highlight */}
+                            <rect
+                                x={rectX - 5}
+                                y={rectY - 5}
+                                width={rectWidth + 10}
+                                height={rectHeight + 10}
+                                className="fill-purple-300 opacity-20"
+                                rx="4"
+                            />
+                            {/* Animated rings */}
                             {paddings.map((padding, index) => (
                                 <rect
                                     key={index}
@@ -748,7 +760,8 @@ export const PdfViewer = ({
                                     y={rectY - padding}
                                     width={rectWidth + padding * 2}
                                     height={rectHeight + padding * 2}
-                                    className="fill-none stroke-purple-500 ping-highlight-box"
+                                    className="fill-none stroke-purple-400 ping-highlight-box"
+                                    strokeWidth="3"
                                     rx="4"
                                 />
                             ))}

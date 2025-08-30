@@ -112,13 +112,15 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
 
   // 4. Description Data
   const descriptionData = descriptions.map(desc => {
+    const drawingNumber = pageToDrawingNumberMap.get(desc.page) || '';
+    
     return {
       'Type': desc.metadata.type,
       'Number': desc.metadata.number,
       'Scope': desc.metadata.scope,
       'Text': desc.text,
       'Page': desc.page,
-      'Source Items Count': desc.sourceItems.length,
+      'Drawing Number': drawingNumber,
     };
   });
   

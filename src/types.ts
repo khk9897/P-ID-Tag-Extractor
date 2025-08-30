@@ -96,6 +96,11 @@ export interface HeaderProps {
   setScale: (scale: number) => void;
   mode: ViewMode;
   onToggleSidePanel: () => void;
+  onAutoLinkDescriptions: () => void;
+  onAutoLinkNotesAndHolds: () => void;
+  onAutoLinkEquipmentShortSpecs: () => void;
+  onAutoLinkAll: () => void;
+  onRemoveWhitespace: () => void;
 }
 
 export type ViewMode = 'select' | 'connect' | 'manualCreate';

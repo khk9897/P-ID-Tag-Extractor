@@ -25,7 +25,12 @@
       "Bash(git checkout:*)",
       "Bash(surge:*)",
       "Bash(gh repo view:*)",
-      "Bash(timeout 10 npm run preview)"
+      "Bash(timeout 10 npm run preview)",
+      "Bash(git branch:*)",
+      "Bash(git stash:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

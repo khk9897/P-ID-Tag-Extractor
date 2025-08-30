@@ -499,18 +499,6 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
     onDeleteRawTextItems([itemId]);
   };
   
-  const handleRemoveWhitespace = () => {
-    showConfirmation(
-      'Are you sure you want to remove all whitespace from every tag? This action cannot be undone.',
-      () => {
-        const updatedTags = tags.map(tag => ({
-          ...tag,
-          text: tag.text.replace(/\s/g, '')
-        }));
-        setTags(updatedTags);
-      }
-    );
-  };
   
   const sortedAndFilteredTags = useMemo(() => {
     let baseTags = tags;
@@ -729,7 +717,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   
   return (
     <aside className="w-80 h-full bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0">
-      {/* Show page only checkbox - above tabs */}
+      {/* Show page only checkbox */}
       <div className="p-2 border-b border-slate-700">
         <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
           <input
@@ -832,48 +820,8 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                     </svg>
                   </button>
                   {sections.tools && (
-                    <div className="grid grid-cols-2 gap-2 mt-2 animate-fade-in-up" style={{animationDuration: '0.2s'}}>
-                      <button
-                        onClick={handleRemoveWhitespace}
-                        className="w-full flex items-center justify-center space-x-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-1.5 px-2 rounded-md transition-colors text-xs"
-                        title="Remove all spaces from all tag names. This action cannot be undone."
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" />
-                        </svg>
-                        <span>Strip Whitespace</span>
-                      </button>
-                       <button
-                        onClick={onAutoLinkDescriptions}
-                        className="w-full flex items-center justify-center space-x-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-1.5 px-2 rounded-md transition-colors text-xs"
-                        title="Automatically link nearby text as descriptions to Instrument tags."
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                        </svg>
-                        <span>Auto-link</span>
-                      </button>
-                      <button
-                        onClick={onAutoLinkNotesAndHolds}
-                        className="w-full flex items-center justify-center space-x-2 bg-purple-700 hover:bg-purple-600 text-purple-100 font-semibold py-1.5 px-2 rounded-md transition-colors text-xs"
-                        title="Automatically link Note & Hold tags to their corresponding descriptions based on type and number matching."
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span>Auto-link N&H</span>
-                      </button>
-                      <button
-                        onClick={onAutoLinkEquipmentShortSpecs}
-                        className="w-full flex items-center justify-center space-x-2 bg-orange-700 hover:bg-orange-600 text-orange-100 font-semibold py-1.5 px-2 rounded-md transition-colors text-xs"
-                        title="Automatically link Equipment tags to their corresponding Equipment Short Specs, including A/B pattern matching."
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span>Auto-link Equip</span>
-                      </button>
+                    <div className="text-xs text-slate-500 mt-2 text-center animate-fade-in-up" style={{animationDuration: '0.2s'}}>
+                      Tools moved to header for easier access
                     </div>
                   )}
                 </div>

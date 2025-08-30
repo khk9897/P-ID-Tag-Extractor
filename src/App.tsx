@@ -1047,6 +1047,192 @@ const App: React.FC = () => {
     );
   }, [tags, equipmentShortSpecs, relationships, showConfirmation]);
 
+  const handleAutoLinkAll = useCallback(async () => {
+    showConfirmation(
+      'This will run all auto-linking functions in sequence: Descriptions, Notes & Holds, and Equipment Short Specs. Continue?',
+      async () => {
+        try {
+          // Run all auto-link functions sequentially
+          await new Promise<void>((resolve) => {
+            const performDescriptions = () => {
+              const instrumentTags = tags.filter(t => t.category === Category.Instrument);
+              const autoLinkDistance = tolerances[Category.Instrument]?.autoLinkDistance;
+              
+              if (typeof autoLinkDistance !== 'number' || instrumentTags.length === 0) {
+                resolve();
+                return;
+              }
+              
+              const existingAnnotationTargets = new Set(
+                relationships
+                  .filter(r => r.type === RelationshipType.Annotation)
+                  .map(r => r.to)
+              );
+              
+              const newRelationships = [];
+              for (const tag of instrumentTags) {
+                const nearbyItems = rawTextItems
+                  .filter(item => 
+                    item.page === tag.page && 
+                    !existingAnnotationTargets.has(item.id) &&
+                    Math.abs(item.bbox.x1 - tag.bbox.x2) <= autoLinkDistance &&
+                    Math.abs((item.bbox.y1 + item.bbox.y2) / 2 - (tag.bbox.y1 + tag.bbox.y2) / 2) <= autoLinkDistance
+                  );
+                
+                nearbyItems.forEach(item => {
+                  newRelationships.push({
+                    id: uuidv4(),
+                    from: tag.id,
+                    to: item.id,
+                    type: RelationshipType.Annotation,
+                  });
+                });
+              }
+              
+              if (newRelationships.length > 0) {
+                setRelationships(prev => [...prev, ...newRelationships]);
+              }
+              resolve();
+            };
+            
+            performDescriptions();
+          });
+          
+          await new Promise<void>((resolve) => {
+            const performNotesAndHolds = () => {
+              const noteHoldTags = tags.filter(t => t.category === Category.NotesAndHolds);
+              const existingRelationshipKeys = new Set(
+                relationships
+                  .filter(r => r.type === RelationshipType.Description)
+                  .map(r => `${r.from}-${r.to}`)
+              );
+              const newRelationships = [];
+              
+              for (const tag of noteHoldTags) {
+                const lowerText = tag.text.toLowerCase();
+                const type = lowerText.includes('note') ? 'Note' : lowerText.includes('hold') ? 'Hold' : null;
+                if (!type) continue;
+                
+                const numberMatches = tag.text.match(/\d+/g);
+                const numbers = numberMatches ? numberMatches.map(num => parseInt(num, 10)) : [];
+                if (numbers.length === 0) continue;
+                
+                for (const number of numbers) {
+                  const matchingDescriptions = descriptions.filter(desc => 
+                    desc.metadata.type === type && 
+                    desc.metadata.number === number &&
+                    desc.metadata.scope === 'Specific' &&
+                    desc.page === tag.page
+                  );
+                  
+                  for (const desc of matchingDescriptions) {
+                    const relationshipKey = `${tag.id}-${desc.id}`;
+                    if (!existingRelationshipKeys.has(relationshipKey)) {
+                      newRelationships.push({
+                        id: uuidv4(),
+                        from: tag.id,
+                        to: desc.id,
+                        type: RelationshipType.Description,
+                      });
+                    }
+                  }
+                }
+              }
+              
+              if (newRelationships.length > 0) {
+                setRelationships(prev => [...prev, ...newRelationships]);
+              }
+              resolve();
+            };
+            
+            performNotesAndHolds();
+          });
+          
+          await new Promise<void>((resolve) => {
+            const performEquipmentShortSpecs = () => {
+              const equipmentTags = tags.filter(t => t.category === Category.Equipment);
+              const existingRelationshipKeys = new Set(
+                relationships
+                  .filter(r => r.type === RelationshipType.EquipmentShortSpec)
+                  .map(r => `${r.from}-${r.to}`)
+              );
+              const newRelationships = [];
+              
+              for (const shortSpec of equipmentShortSpecs) {
+                const originalTag = shortSpec.metadata.originalEquipmentTag;
+                const originalBase = originalTag.text.match(/^(.+?)([A-Z]\/[A-Z]|[A-Z])?$/)?.[1] || originalTag.text;
+                const originalSuffix = originalTag.text.match(/^(.+?)([A-Z]\/[A-Z]|[A-Z])?$/)?.[2];
+                
+                const originalHasABPattern = originalSuffix && originalSuffix.includes('/');
+                const textHasABPattern = /[A-Z]\/[A-Z]|[A-Z],[A-Z]|[A-Z]\s*&\s*[A-Z]/.test(shortSpec.text);
+                const hasABPattern = originalHasABPattern || textHasABPattern;
+                
+                for (const tag of equipmentTags) {
+                  const tagBase = tag.text.match(/^(.+?)([A-Z]\/[A-Z]|[A-Z])?$/)?.[1] || tag.text;
+                  const tagSuffix = tag.text.match(/^(.+?)([A-Z]\/[A-Z]|[A-Z])?$/)?.[2];
+                  
+                  if (tag.text === originalTag.text || (tagBase === originalBase && (hasABPattern || !tagSuffix))) {
+                    const relationshipKey = `${tag.id}-${shortSpec.id}`;
+                    if (!existingRelationshipKeys.has(relationshipKey)) {
+                      newRelationships.push({
+                        id: uuidv4(),
+                        from: tag.id,
+                        to: shortSpec.id,
+                        type: RelationshipType.EquipmentShortSpec,
+                      });
+                    }
+                  }
+                }
+              }
+              
+              if (newRelationships.length > 0) {
+                setRelationships(prev => [...prev, ...newRelationships]);
+              }
+              resolve();
+            };
+            
+            performEquipmentShortSpecs();
+          });
+          
+          alert('All auto-linking completed successfully!');
+        } catch (error) {
+          alert('Error during auto-linking: ' + error.message);
+        }
+      }
+    );
+  }, [tags, rawTextItems, descriptions, equipmentShortSpecs, relationships, tolerances, showConfirmation]);
+
+  const handleRemoveWhitespace = useCallback(() => {
+    showConfirmation(
+      'Are you sure you want to remove all whitespace from Equipment, Line, and Instrument tags? This action cannot be undone.',
+      () => {
+        const updatedTags = tags.map(tag => {
+          // Only apply to Equipment, Line, and Instrument categories
+          if (tag.category === Category.Equipment || 
+              tag.category === Category.Line || 
+              tag.category === Category.Instrument) {
+            return {
+              ...tag,
+              text: tag.text.replace(/\s/g, '')
+            };
+          }
+          return tag;
+        });
+        setTags(updatedTags);
+        
+        // Count affected tags for feedback
+        const affectedCount = tags.filter(tag => 
+          (tag.category === Category.Equipment || 
+           tag.category === Category.Line || 
+           tag.category === Category.Instrument) && 
+          tag.text.includes(' ')
+        ).length;
+        
+        alert(`Removed whitespace from ${affectedCount} Equipment, Line, and Instrument tags.`);
+      }
+    );
+  }, [tags, showConfirmation]);
+
   const mainContent = () => {
     if (isLoading) {
       return (
@@ -1165,6 +1351,11 @@ const App: React.FC = () => {
           setScale={setScale}
           mode={mode}
           onToggleSidePanel={() => setIsSidePanelVisible(p => !p)}
+          onAutoLinkDescriptions={handleAutoLinkDescriptions}
+          onAutoLinkNotesAndHolds={handleAutoLinkNotesAndHolds}
+          onAutoLinkEquipmentShortSpecs={handleAutoLinkEquipmentShortSpecs}
+          onAutoLinkAll={handleAutoLinkAll}
+          onRemoveWhitespace={handleRemoveWhitespace}
         />
       </ErrorBoundary>
       <main className="flex-grow overflow-hidden">

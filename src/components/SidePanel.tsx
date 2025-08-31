@@ -649,7 +649,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   const [sections, setSections] = useState({
     viewOptions: true,
   });
-  const [virtualizedRange, setVirtualizedRange] = useState({ start: 0, end: 50 });
+  const [virtualizedRange, setVirtualizedRange] = useState({ start: 0, end: 100 });
   const listRef = useRef(null);
   const descriptionListRef = useRef(null);
   const lastClickedIndex = useRef(-1);
@@ -808,10 +808,11 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
       }
     }
     
-    // Ensure we don't exceed array bounds
-    const safeStart = Math.max(0, Math.min(virtualizedRange.start, sortedAndFilteredTags.length - 1));
-    const safeEnd = Math.min(virtualizedRange.end, sortedAndFilteredTags.length);
+    // Ensure we don't exceed array bounds and handle edge cases
+    const safeStart = Math.max(0, Math.min(virtualizedRange.start, sortedAndFilteredTags.length));
+    const safeEnd = Math.max(safeStart, Math.min(virtualizedRange.end, sortedAndFilteredTags.length));
     
+    // Return a safe slice that won't cause rendering issues
     return sortedAndFilteredTags.slice(safeStart, safeEnd);
   }, [sortedAndFilteredTags, virtualizedRange, selectedTagIds]);
 
@@ -829,7 +830,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
     pendingUpdateRef.current = false;
     lastScrollUpdateRef.current = 0;
     
-    setVirtualizedRange({ start: 0, end: 50 });
+    setVirtualizedRange({ start: 0, end: 100 });
   }, [showCurrentPageOnly, filterCategory, searchQuery]);
 
   // Cleanup on unmount
@@ -1019,61 +1020,39 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   const lastScrollUpdateRef = useRef(0);
   const pendingUpdateRef = useRef(false);
 
-  // Virtualization scroll handler with throttling
+  // Simple and stable virtualization scroll handler
   const handleScroll = useCallback((e) => {
     // Skip virtualization updates during bulk operations
     if (selectedTagIds.length > 1) return;
     if (sortedAndFilteredTags.length <= 100) return;
     
-    const now = Date.now();
-    const timeSinceLastUpdate = now - lastScrollUpdateRef.current;
-    
-    // Throttle updates to maximum 60fps (16.67ms)
-    if (timeSinceLastUpdate < 16) {
-      if (!pendingUpdateRef.current) {
-        pendingUpdateRef.current = true;
-        setTimeout(() => {
-          pendingUpdateRef.current = false;
-          handleScroll(e); // Retry the scroll handling
-        }, 16 - timeSinceLastUpdate);
-      }
-      return;
+    // Clear any existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
     }
     
-    const { scrollTop, clientHeight } = e.target;
-    const itemHeight = 90;
-    const buffer = 25; // Slightly larger buffer for smoother experience
-    
-    const visibleStart = Math.floor(scrollTop / itemHeight);
-    const visibleCount = Math.ceil(clientHeight / itemHeight);
-    const visibleEnd = Math.min(
-      sortedAndFilteredTags.length,
-      visibleStart + visibleCount + buffer
-    );
-    
-    const newStart = Math.max(0, visibleStart - buffer/2);
-    const newEnd = visibleEnd;
-    
-    // Only update if there's a significant change (at least 5 items difference)
-    const significantChange = 
-      Math.abs(newStart - virtualizedRange.start) >= 5 || 
-      Math.abs(newEnd - virtualizedRange.end) >= 5;
-    
-    if (significantChange) {
-      lastScrollUpdateRef.current = now;
+    // Debounce scroll updates for stability
+    scrollTimeoutRef.current = setTimeout(() => {
+      const { scrollTop, clientHeight } = e.target;
+      const itemHeight = 90;
+      const overscan = 30; // Large overscan to prevent gaps
       
-      // Clear any pending timeout
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
+      const visibleStart = Math.floor(scrollTop / itemHeight);
+      const visibleCount = Math.ceil(clientHeight / itemHeight);
       
-      // Debounce rapid updates
-      scrollTimeoutRef.current = setTimeout(() => {
-        setVirtualizedRange({ start: newStart, end: newEnd });
-        scrollTimeoutRef.current = null;
-      }, 10); // Small delay for debouncing
-    }
-  }, [sortedAndFilteredTags.length, selectedTagIds.length, virtualizedRange.start, virtualizedRange.end]);
+      const newStart = Math.max(0, visibleStart - overscan);
+      const newEnd = Math.min(
+        sortedAndFilteredTags.length, 
+        visibleStart + visibleCount + overscan
+      );
+      
+      // Always update - no threshold checking to ensure consistency
+      setVirtualizedRange({ start: newStart, end: newEnd });
+      
+      scrollTimeoutRef.current = null;
+    }, 50); // Longer debounce for stability
+    
+  }, [sortedAndFilteredTags.length, selectedTagIds.length]);
 
   const RelationshipViewer = useCallback(({ relationships: inputRelationships }) => {
     const [relSearchQuery, setRelSearchQuery] = useState('');

@@ -7,7 +7,7 @@ import { Header } from './components/Header.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import { extractTags } from './services/taggingService.ts';
-import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES } from './constants.ts';
+import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES, DEFAULT_SETTINGS } from './constants.ts';
 import { 
   Category, 
   RelationshipType, 
@@ -23,6 +23,7 @@ import {
   ProjectData,
   PatternConfig,
   ToleranceConfig,
+  AppSettings,
   ViewMode,
   ManualTagData
 } from './types.ts';
@@ -160,6 +161,16 @@ const App: React.FC = () => {
         }
     });
 
+  const [appSettings, setAppSettings] = useState<AppSettings>(() => {
+    try {
+      const saved = localStorage.getItem('pid-tagger-app-settings');
+      return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    } catch (error) {
+      console.error("Failed to load app settings from localStorage", error);
+      return DEFAULT_SETTINGS;
+    }
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem('pid-tagger-patterns', JSON.stringify(patterns));
@@ -176,6 +187,14 @@ const App: React.FC = () => {
             console.error("Failed to save tolerances to localStorage", error);
         }
     }, [tolerances]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pid-tagger-app-settings', JSON.stringify(appSettings));
+    } catch (error) {
+      console.error("Failed to save app settings to localStorage", error);
+    }
+  }, [appSettings]);
   
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -205,7 +224,7 @@ const App: React.FC = () => {
     handleCloseConfirmation();
   };
 
-  const processPdf = useCallback(async (doc: any, patternsToUse: PatternConfig, tolerancesToUse: ToleranceConfig): Promise<void> => {
+  const processPdf = useCallback(async (doc: any, patternsToUse: PatternConfig, tolerancesToUse: ToleranceConfig, appSettingsToUse?: AppSettings): Promise<void> => {
     setIsLoading(true);
     setTags([]);
     setRawTextItems([]);
@@ -224,13 +243,20 @@ const App: React.FC = () => {
       }
       setTags(allTags);
       setRawTextItems(allRawTextItems);
+      
+      // Auto-generate loops if enabled
+      if (appSettingsToUse?.autoGenerateLoops || appSettings.autoGenerateLoops) {
+        setTimeout(() => {
+          autoGenerateLoops(allTags);
+        }, 100); // Small delay to ensure tags are set
+      }
     } catch (error) {
       console.error("Error processing PDF:", error);
       console.error("Failed to process PDF file. It might be corrupted or in an unsupported format.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [appSettings]);
 
   const handleFileSelect = useCallback(async (file: File): Promise<void> => {
     setPdfFile(file);
@@ -246,20 +272,21 @@ const App: React.FC = () => {
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const doc = await loadingTask.promise;
       setPdfDoc(doc);
-      await processPdf(doc, patterns, tolerances);
+      await processPdf(doc, patterns, tolerances, appSettings);
     } catch (error) {
       console.error("Error loading PDF:", error);
       console.error("Failed to load PDF file. It might be corrupted or in an unsupported format.");
       setIsLoading(false);
     }
-  }, [patterns, tolerances, processPdf]);
+  }, [patterns, tolerances, appSettings, processPdf]);
 
-  const handleSaveSettings = async (newPatterns: PatternConfig, newTolerances: ToleranceConfig): Promise<void> => {
+  const handleSaveSettings = async (newPatterns: PatternConfig, newTolerances: ToleranceConfig, newAppSettings: AppSettings): Promise<void> => {
     setPatterns(newPatterns);
     setTolerances(newTolerances);
+    setAppSettings(newAppSettings);
     setIsSettingsOpen(false);
     if (pdfDoc) {
-      await processPdf(pdfDoc, newPatterns, newTolerances);
+      await processPdf(pdfDoc, newPatterns, newTolerances, newAppSettings);
     }
   };
 
@@ -751,6 +778,9 @@ const App: React.FC = () => {
     if (sanitizedData.settings?.tolerances) {
         setTolerances(sanitizedData.settings.tolerances);
     }
+    if (sanitizedData.settings?.appSettings) {
+        setAppSettings(sanitizedData.settings.appSettings);
+    }
     
     console.log("Project loaded successfully.");
   }, []);
@@ -836,6 +866,7 @@ const App: React.FC = () => {
         settings: {
             patterns,
             tolerances,
+            appSettings,
         },
     };
 
@@ -1313,6 +1344,49 @@ const App: React.FC = () => {
     return null;
   }, []);
 
+  const autoGenerateLoops = useCallback((allTags: Tag[]) => {
+    const instrumentTags = allTags.filter(t => t.category === Category.Instrument);
+    
+    if (instrumentTags.length === 0) {
+      return;
+    }
+
+    // Group by 1-letter prefix and number
+    const oneLetterGroups = new Map<string, Tag[]>();
+    
+    for (const tag of instrumentTags) {
+      const parsed = parseInstrumentTag(tag.text);
+      if (!parsed) continue;
+      
+      const oneLetterKey = `${parsed.function.charAt(0)}-${parsed.number}`;
+      if (!oneLetterGroups.has(oneLetterKey)) {
+        oneLetterGroups.set(oneLetterKey, []);
+      }
+      oneLetterGroups.get(oneLetterKey)!.push(tag);
+    }
+    
+    // Create loops from groups with multiple tags
+    const newLoops: Loop[] = [];
+    oneLetterGroups.forEach((groupTags) => {
+      if (groupTags.length > 1) {
+        const loopId = generateLoopId(groupTags);
+        if (loopId) {
+          const newLoop: Loop = {
+            id: loopId,
+            tagIds: groupTags.map(t => t.id),
+            createdAt: new Date().toISOString(),
+            isAutoGenerated: true
+          };
+          newLoops.push(newLoop);
+        }
+      }
+    });
+    
+    if (newLoops.length > 0) {
+      setLoops(prev => [...prev, ...newLoops]);
+    }
+  }, [parseInstrumentTag, generateLoopId]);
+
   const generateLoopId = useCallback((instrumentTags: Tag[]) => {
     if (instrumentTags.length === 0) return null;
     
@@ -1606,6 +1680,7 @@ const App: React.FC = () => {
           <SettingsModal 
             patterns={patterns}
             tolerances={tolerances}
+            appSettings={appSettings}
             onSave={handleSaveSettings}
             onClose={() => setIsSettingsOpen(false)}
           />

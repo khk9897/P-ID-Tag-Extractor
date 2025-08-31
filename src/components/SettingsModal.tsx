@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Category } from '../types.ts';
-import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES } from '../constants.ts';
+import { Category, AppSettings } from '../types.ts';
+import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES, DEFAULT_SETTINGS } from '../constants.ts';
 
 const RegexHelp = () => {
   const cheatSheet = [
@@ -37,9 +37,10 @@ const RegexHelp = () => {
   );
 };
 
-export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
+export const SettingsModal = ({ patterns, tolerances, appSettings, onSave, onClose }) => {
   const [localPatterns, setLocalPatterns] = useState(patterns);
   const [localTolerances, setLocalTolerances] = useState(tolerances);
+  const [localAppSettings, setLocalAppSettings] = useState(appSettings);
   const [showRegexHelp, setShowRegexHelp] = useState(false);
 
   useEffect(() => {
@@ -53,12 +54,13 @@ export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
   }, [onClose]);
 
   const handleSave = () => {
-    onSave(localPatterns, localTolerances);
+    onSave(localPatterns, localTolerances, localAppSettings);
   };
   
   const handleReset = () => {
     setLocalPatterns(DEFAULT_PATTERNS);
     setLocalTolerances(DEFAULT_TOLERANCES);
+    setLocalAppSettings(DEFAULT_SETTINGS);
   }
 
   const handlePatternChange = (category, value) => {
@@ -263,6 +265,31 @@ export const SettingsModal = ({ patterns, tolerances, onSave, onClose }) => {
                     </div>
                 )
             })}
+            
+            {/* App Settings Section */}
+            <div className="pt-4 mt-4 border-t border-slate-700">
+              <h3 className="text-sm font-semibold mb-3 text-slate-200">Application Settings</h3>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <input
+                    id="auto-generate-loops"
+                    type="checkbox"
+                    checked={localAppSettings.autoGenerateLoops}
+                    onChange={(e) => setLocalAppSettings(prev => ({
+                      ...prev,
+                      autoGenerateLoops: e.target.checked
+                    }))}
+                    className="w-4 h-4 text-sky-600 bg-slate-900 border-slate-600 rounded focus:ring-sky-500 focus:ring-2"
+                  />
+                  <label htmlFor="auto-generate-loops" className="text-sm text-slate-200">
+                    Auto-generate loops after tag extraction
+                  </label>
+                </div>
+                <div className="text-xs text-slate-400 pl-7">
+                  Automatically create loops from instrument tags based on function prefix and number matching after PDF processing completes.
+                </div>
+              </div>
+            </div>
         </div>
         <div className="p-4 border-t border-slate-700 flex justify-between items-center">
             <button

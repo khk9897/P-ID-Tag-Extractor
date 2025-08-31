@@ -19,6 +19,10 @@ export const DEFAULT_TOLERANCES = {
     },
 };
 
+export const DEFAULT_SETTINGS = {
+    autoGenerateLoops: true, // Auto-generate loops after tag extraction
+};
+
 export const CATEGORY_COLORS = {
   [Category.Equipment]: {
     border: 'border-sky-400',

@@ -187,10 +187,15 @@ export interface ToleranceConfig {
   };
 }
 
+export interface AppSettings {
+  autoGenerateLoops: boolean;
+}
+
 export interface SettingsModalProps {
   patterns: PatternConfig;
   tolerances: ToleranceConfig;
-  onSave: (patterns: PatternConfig, tolerances: ToleranceConfig) => void;
+  appSettings: AppSettings;
+  onSave: (patterns: PatternConfig, tolerances: ToleranceConfig, appSettings: AppSettings) => void;
   onClose: () => void;
 }
 
@@ -206,6 +211,7 @@ export interface ProjectData {
   settings: {
     patterns: PatternConfig;
     tolerances: ToleranceConfig;
+    appSettings: AppSettings;
   };
 }
 

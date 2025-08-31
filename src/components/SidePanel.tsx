@@ -1803,13 +1803,6 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
             <div className="text-xs text-slate-400">
               Press 'L' to create loops from selected instrument tags
             </div>
-            <button 
-              onClick={() => onAutoGenerateLoops(showCurrentPageOnly ? currentPage : undefined)}
-              className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-md transition-colors text-sm"
-            >
-              <span>🔄</span>
-              <span>Auto Generate Loops</span>
-            </button>
           </div>
           
           <div className="flex-grow overflow-y-auto p-3 space-y-2">

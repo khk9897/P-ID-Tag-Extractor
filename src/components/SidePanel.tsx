@@ -291,19 +291,18 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                   DWG: {drawingNumberTag.text}
               </div>
           )}
-          {tag.category === Category.Instrument && (() => {
+          {tag.category === Category.Instrument && showDetails && (() => {
             const tagLoops = loops.filter(loop => loop.tagIds.includes(tag.id));
             return tagLoops.length > 0 && (
-              showDetails ? (
-                <div className="mt-1">
-                  {tagLoops.map(loop => {
+              <div className="mt-1">
+                {tagLoops.map(loop => {
                   const isExpanded = expandedLoops.has(loop.id);
                   const loopTags = loop.tagIds.map(id => allTags.find(t => t.id === id)).filter(Boolean);
                   
                   return (
-                    <div key={loop.id} className="border border-slate-600/50 rounded-md mb-1 bg-slate-800/30">
+                    <div key={loop.id} className="mb-1">
                       <div 
-                        className="flex items-center justify-between p-2 cursor-pointer hover:bg-slate-700/30 transition-colors"
+                        className="flex items-center justify-between cursor-pointer hover:bg-slate-700/20 rounded px-1 py-0.5 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           setExpandedLoops(prev => {
@@ -317,13 +316,9 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                           });
                         }}
                       >
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs text-blue-400 font-mono font-semibold">{loop.name || loop.id}</span>
-                          <span className="text-xs text-slate-400">
-                            ({loopTags.length} tags)
-                            {loopTags.length > 0 && ` P. ${loopTags.map(t => t.page).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).join(', ')}`}
-                          </span>
-                        </div>
+                        <span className="text-xs text-blue-400 font-mono">
+                          Loop: {loop.name || loop.id}
+                        </span>
                         <svg 
                           xmlns="http://www.w3.org/2000/svg" 
                           className={`h-3 w-3 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
@@ -335,8 +330,14 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                       </div>
                       
                       {isExpanded && (
-                        <div className="px-2 pb-2 border-t border-slate-600/50">
-                          <div className="flex flex-wrap gap-1 mt-2">
+                        <div className="mt-1 ml-2 p-2 border border-slate-600/50 rounded-md bg-slate-800/30">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="text-xs text-slate-400">
+                              ({loopTags.length} tags)
+                              {loopTags.length > 0 && ` P. ${loopTags.map(t => t.page).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).join(', ')}`}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
                             {loopTags.map(loopTag => (
                               <div
                                 key={loopTag.id}
@@ -375,12 +376,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                     </div>
                   );
                 })}
-                </div>
-              ) : (
-                <div className="text-xs text-blue-400 mt-0.5 font-mono">
-                  Loop: {tagLoops.map(loop => loop.id).join(', ')}
-                </div>
-              )
+              </div>
             );
           })()}
         </div>

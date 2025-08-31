@@ -111,19 +111,38 @@ graph TB
 <details>
 <summary><strong>View All Shortcuts</strong></summary>
 
-| Shortcut | Function | Mode |
-|----------|----------|------|
-| `S` | Toggle side panel | Global |
-| `1` / `2` | Zoom in / Zoom out | Global |
-| `C` | Connect mode toggle | Selection |
-| `K` | Manual create mode | Selection |
-| `M` | Merge selected text to Instrument | Selection |
-| `I` | Create installation relationship | Selection |
-| `R` | Create annotation/note relationship | Selection |
-| `Esc` | Exit current mode | All modes |
-| `Delete` | Delete selected items | Selection |
-| `Ctrl+Click` | Multi-select | Selection |
-| `Ctrl+Drag` | Area select | Selection |
+#### Navigation & Control
+| Shortcut | Function |
+|----------|----------|
+| `S` | Toggle **S**ide panel |
+| `Q` | Previous page |
+| `W` | Next page |
+| `V` | Toggle relationship **V**iew |
+
+#### View & Mode
+| Shortcut | Function |
+|----------|----------|
+| `1` / `2` | Zoom in / Zoom out |
+| `C` | **C**onnect mode toggle |
+| `K` | Manual **C**reate mode (Ma**K**e) |
+
+#### Creation & Actions
+| Shortcut | Function |
+|----------|----------|
+| `M` | **M**erge selected text to Instrument |
+| `N` | Create **N**ote description |
+| `H` | Create **H**old description |
+| `P` | Create Equipment Short **S**pec (**P**rocessEquipment) |
+| `I` | Create **I**nstallation relationship |
+| `R` | Create annotation/**R**elationship |
+
+#### Selection & Control
+| Shortcut | Function |
+|----------|----------|
+| `Esc` | Exit current mode |
+| `Delete` | Delete selected items |
+| `Ctrl+Click` | Multi-select |
+| `Ctrl+Drag` | Area select |
 
 </details>
 
@@ -239,6 +258,7 @@ The generated Excel file contains organized sheets:
 | Column | Description |
 |--------|-------------|
 | Tag | Equipment identifier |
+| Loop No | Associated control loop |
 | Page | Source drawing page |
 | Connected From | Input connections |
 | Connected To | Output connections |
@@ -250,6 +270,7 @@ The generated Excel file contains organized sheets:
 | Column | Description |
 |--------|-------------|
 | Tag | Line identifier |
+| Loop No | Associated control loop |
 | Page | Source drawing page |
 | Connected From | Origin equipment |
 | Connected To | Destination equipment |
@@ -260,11 +281,20 @@ The generated Excel file contains organized sheets:
 #### Instrument List
 | Column | Description |
 |--------|-------------|
-| Tag | Instrument identifier |  
+| Tag | Instrument identifier |
+| Loop No | Associated control loop |
 | Page | Source drawing page |
 | Installed On | Host equipment/line |
 | Description | Associated annotations |
 | Notes | Special notes/holds |
+
+#### Equipment Short Spec List
+| Column | Description |
+|--------|-------------|
+| Equipment Tag | Associated equipment identifier |
+| Service | Service description |
+| Short Spec | Equipment specification details |
+| Page | Source drawing page |
 
 #### Description List
 | Column | Description |

@@ -33,14 +33,14 @@ const DeleteTagButton = React.memo(({ onClick }) => (
   </button>
 ));
 
-const EditTagButton = React.memo(({ onClick }) => (
+const EditButton = React.memo(({ onClick, title = "Edit" }) => (
   <button
     onClick={(e) => {
       e.stopPropagation();
       onClick();
     }}
     className="p-1 rounded-full text-slate-500 hover:bg-sky-500/20 hover:text-sky-400 transition-colors opacity-0 group-hover:opacity-100"
-    title="Edit tag text"
+    title={title}
   >
     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
       <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
@@ -48,6 +48,39 @@ const EditTagButton = React.memo(({ onClick }) => (
     </svg>
   </button>
 ));
+
+const SaveButton = React.memo(({ onClick, title = "Save" }) => (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick();
+    }}
+    className="p-1 rounded-full text-green-400 hover:text-green-300 transition-colors"
+    title={title}
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+    </svg>
+  </button>
+));
+
+const CancelButton = React.memo(({ onClick, title = "Cancel" }) => (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick();
+    }}
+    className="p-1 rounded-full text-slate-400 hover:text-slate-300 transition-colors"
+    title={title}
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+    </svg>
+  </button>
+));
+
+// Backwards compatibility
+const EditTagButton = EditButton;
 
 const RelatedTextItem: React.FC<{
   item: any;
@@ -226,16 +259,22 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
       <div className="flex justify-between items-start">
         <div className="flex-grow mr-2">
           {isEditing ? (
-            <input
-              ref={inputRef}
-              type="text"
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              onBlur={handleSave}
-              onKeyDown={handleKeyDown}
-              onClick={(e) => e.stopPropagation()}
-              className="font-mono text-sm text-white bg-slate-600 border border-sky-500 rounded px-1 w-full"
-            />
+            <div className="flex items-center space-x-1">
+              <input
+                ref={inputRef}
+                type="text"
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onClick={(e) => e.stopPropagation()}
+                className="font-mono text-sm text-white bg-slate-600 border border-sky-500 rounded px-1 flex-grow"
+              />
+              <SaveButton onClick={handleSave} />
+              <CancelButton onClick={() => {
+                setEditText(tag.text);
+                setIsEditing(false);
+              }} />
+            </div>
           ) : (
             <span 
               className="font-mono text-sm text-white block"
@@ -1270,34 +1309,17 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                       )}
                     </div>
                     <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
+                      <EditButton
+                        onClick={() => {
                           if (!isEditing) {
                             setEditingDescriptionId(description.id);
                             setTempDescriptionText(description.text);
                             setTempDescriptionMetadata(description.metadata);
                           }
                         }}
-                        className="p-1 rounded-full text-slate-500 hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
                         title="Edit description"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteDescriptions([description.id]);
-                        }}
-                        className="p-1 rounded-full text-slate-500 hover:bg-red-500/20 hover:text-red-400 transition-colors"
-                        title="Delete description"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      />
+                      <DeleteTagButton onClick={() => onDeleteDescriptions([description.id])} />
                     </div>
                   </div>
                   
@@ -1356,29 +1378,21 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                       </div>
                       
                       <div className="flex justify-end space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
+                        <CancelButton
+                          onClick={() => {
                             setEditingDescriptionId(null);
                             setTempDescriptionText('');
                             setTempDescriptionMetadata({});
                           }}
-                          className="px-3 py-1 bg-slate-600 hover:bg-slate-500 text-white rounded text-xs transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
+                        />
+                        <SaveButton
+                          onClick={() => {
                             onUpdateDescription(description.id, tempDescriptionText, tempDescriptionMetadata);
                             setEditingDescriptionId(null);
                             setTempDescriptionText('');
                             setTempDescriptionMetadata({});
                           }}
-                          className="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs transition-colors"
-                        >
-                          Save
-                        </button>
+                        />
                       </div>
                     </div>
                   ) : (
@@ -1480,35 +1494,17 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
+                      <EditButton
+                        onClick={() => {
                           if (!isEditing) {
                             setEditingEquipmentShortSpecId(spec.id);
                             setTempEquipmentShortSpecText(spec.text);
                             setTempEquipmentShortSpecMetadata(spec.metadata);
                           }
                         }}
-                        className="p-1 rounded-full text-slate-500 hover:bg-sky-500/20 hover:text-sky-400 transition-colors opacity-0 group-hover:opacity-100"
                         title="Edit Equipment Short Spec"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-                          <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteEquipmentShortSpecs([spec.id]);
-                        }}
-                        className="p-1 rounded-full text-slate-500 hover:bg-red-500/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                        title="Delete Equipment Short Spec"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      />
+                      <DeleteTagButton onClick={() => onDeleteEquipmentShortSpecs([spec.id])} />
                     </div>
                   </div>
                   
@@ -1547,36 +1543,21 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                         </div>
                         
                         <div className="flex justify-end space-x-2 mt-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
+                          <CancelButton
+                            onClick={() => {
                               setEditingEquipmentShortSpecId(null);
                               setTempEquipmentShortSpecText('');
                               setTempEquipmentShortSpecMetadata({});
                             }}
-                            className="px-3 py-1 bg-slate-600 hover:bg-slate-500 text-white rounded text-xs transition-colors"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Update both text and metadata
-                              const updatedSpec = {
-                                ...spec,
-                                text: tempEquipmentShortSpecText,
-                                metadata: tempEquipmentShortSpecMetadata
-                              };
-                              // We need to create a new update function that handles metadata
+                          />
+                          <SaveButton
+                            onClick={() => {
                               onUpdateEquipmentShortSpec(spec.id, tempEquipmentShortSpecText, tempEquipmentShortSpecMetadata);
                               setEditingEquipmentShortSpecId(null);
                               setTempEquipmentShortSpecText('');
                               setTempEquipmentShortSpecMetadata({});
                             }}
-                            className="px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white rounded text-xs transition-colors"
-                          >
-                            Save
-                          </button>
+                          />
                         </div>
                       </div>
                     ) : (
@@ -1673,26 +1654,8 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                                 autoFocus
                                 onClick={(e) => e.stopPropagation()}
                               />
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleLoopSave();
-                                }}
-                                className="text-green-400 hover:text-green-300 p-1"
-                                title="Save"
-                              >
-                                ✓
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleLoopCancel();
-                                }}
-                                className="text-slate-400 hover:text-slate-300 p-1"
-                                title="Cancel"
-                              >
-                                ✕
-                              </button>
+                              <SaveButton onClick={handleLoopSave} />
+                              <CancelButton onClick={handleLoopCancel} />
                             </div>
                           ) : (
                             <>
@@ -1700,16 +1663,10 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                               <span className="text-xs text-slate-400">
                                 ({loopTags.length} tags) {loop.isAutoGenerated ? '🔄' : '✋'}
                               </span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleLoopEdit(loop.id);
-                                }}
-                                className="text-slate-500 hover:text-sky-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              <EditButton 
+                                onClick={() => handleLoopEdit(loop.id)}
                                 title="Edit loop name"
-                              >
-                                ✏️
-                              </button>
+                              />
                             </>
                           )}
                         </div>

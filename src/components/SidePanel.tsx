@@ -998,75 +998,200 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
 
   const RelationshipViewer = useCallback(({ relationships: inputRelationships }) => {
     const [relSearchQuery, setRelSearchQuery] = useState('');
-    const tagMap = useMemo(() => new Map(tags.map(t => [t.id, t])), [tags]);
+    const [relationshipTypeFilter, setRelationshipTypeFilter] = useState('All');
+    
+    // Create maps for all entity types
+    const entityMaps = useMemo(() => ({
+      tags: new Map(tags.map(t => [t.id, t])),
+      descriptions: new Map(descriptions.map(d => [d.id, d])),
+      rawTextItems: new Map(rawTextItems.map(r => [r.id, r])),
+      equipmentShortSpecs: new Map(equipmentShortSpecs.map(e => [e.id, e]))
+    }), [tags, descriptions, rawTextItems, equipmentShortSpecs]);
+
+    // Get entity by ID from any type
+    const getEntity = useCallback((id) => {
+      return entityMaps.tags.get(id) || 
+             entityMaps.descriptions.get(id) || 
+             entityMaps.rawTextItems.get(id) || 
+             entityMaps.equipmentShortSpecs.get(id);
+    }, [entityMaps]);
+
+    // Get entity text for display
+    const getEntityText = useCallback((entity) => {
+      if (!entity) return 'Unknown';
+      if (entity.text) return entity.text;
+      if (entity.equipmentTag) return entity.equipmentTag;
+      return 'Unknown';
+    }, []);
+
+    const typeFilteredRelationships = useMemo(() => {
+      if (relationshipTypeFilter === 'All') return inputRelationships;
+      return inputRelationships.filter(rel => rel.type === relationshipTypeFilter);
+    }, [inputRelationships, relationshipTypeFilter]);
 
     const searchFilteredRelationships = useMemo(() => {
-        if (!relSearchQuery) return inputRelationships;
+        if (!relSearchQuery) return typeFilteredRelationships;
         const lowerCaseQuery = relSearchQuery.toLowerCase();
-        return inputRelationships.filter(rel => {
-            const fromTag = tagMap.get(rel.from);
-            const toTag = tagMap.get(rel.to);
-            return (
-                (fromTag as any)?.text?.toLowerCase().includes(lowerCaseQuery) ||
-                (toTag as any)?.text?.toLowerCase().includes(lowerCaseQuery)
-            );
+        return typeFilteredRelationships.filter(rel => {
+            const fromEntity = getEntity(rel.from);
+            const toEntity = getEntity(rel.to);
+            const fromText = getEntityText(fromEntity).toLowerCase();
+            const toText = getEntityText(toEntity).toLowerCase();
+            return fromText.includes(lowerCaseQuery) || toText.includes(lowerCaseQuery);
         });
-    }, [relSearchQuery, inputRelationships, tagMap]);
+    }, [relSearchQuery, typeFilteredRelationships, getEntity, getEntityText]);
+
+    // Get relationship type counts
+    const relationshipTypeCounts = useMemo(() => {
+      const counts = {};
+      Object.values(RelationshipType).forEach(type => {
+        counts[type] = inputRelationships.filter(rel => rel.type === type).length;
+      });
+      counts['All'] = inputRelationships.length;
+      return counts;
+    }, [inputRelationships]);
+
+    // Handle relationship click to highlight in PDF
+    const handleRelationshipClick = useCallback((relationship) => {
+      const fromEntity = getEntity(relationship.from);
+      const toEntity = getEntity(relationship.to);
+      
+      if (fromEntity && toEntity) {
+        // Navigate to the page if different
+        const targetPage = fromEntity.page || toEntity.page;
+        if (targetPage && targetPage !== currentPage) {
+          setCurrentPage(targetPage);
+        }
+        
+        // Ping both entities
+        if (entityMaps.tags.has(relationship.from)) {
+          onPingTag(relationship.from);
+        }
+        if (entityMaps.tags.has(relationship.to)) {
+          onPingTag(relationship.to);
+        }
+        if (entityMaps.descriptions.has(relationship.from)) {
+          onPingDescription(relationship.from);
+        }
+        if (entityMaps.descriptions.has(relationship.to)) {
+          onPingDescription(relationship.to);
+        }
+        if (entityMaps.equipmentShortSpecs.has(relationship.from)) {
+          onPingEquipmentShortSpec(relationship.from);
+        }
+        if (entityMaps.equipmentShortSpecs.has(relationship.to)) {
+          onPingEquipmentShortSpec(relationship.to);
+        }
+      }
+    }, [getEntity, currentPage, setCurrentPage, entityMaps, onPingTag, onPingDescription, onPingEquipmentShortSpec]);
 
     return (
         <div className="flex-grow flex flex-col overflow-hidden">
-            <div className="p-2 border-b border-slate-700 flex-shrink-0">
+            <div className="p-2 border-b border-slate-700 flex-shrink-0 space-y-2">
                 <input
                     type="text"
-                    placeholder="Search by tag name..."
+                    placeholder="Search relationships..."
                     value={relSearchQuery}
                     onChange={(e) => setRelSearchQuery(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 text-sm focus:ring-sky-500 focus:border-sky-500"
                 />
+                
+                {/* Relationship type filter tabs */}
+                <div className="flex flex-wrap gap-1 text-xs">
+                  {['All', ...Object.values(RelationshipType)].map(type => (
+                    <button
+                      key={type}
+                      onClick={() => setRelationshipTypeFilter(type)}
+                      className={`px-2 py-1 rounded font-medium ${
+                        relationshipTypeFilter === type 
+                          ? 'bg-sky-600 text-white' 
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      {type} ({relationshipTypeCounts[type] || 0})
+                    </button>
+                  ))}
+                </div>
             </div>
             <ul className="flex-grow overflow-y-auto p-2 space-y-2">
                 {searchFilteredRelationships.length === 0 && (
                     <li className="text-center text-slate-400 py-4">No relationships found.</li>
                 )}
                 {searchFilteredRelationships.map(rel => {
-                    const fromTag = tagMap.get(rel.from);
-                    const toTag = tagMap.get(rel.to);
-                    if (!fromTag || !toTag) return null;
+                    const fromEntity = getEntity(rel.from);
+                    const toEntity = getEntity(rel.to);
+                    if (!fromEntity || !toEntity) return null;
 
-                    const renderTag = (tag) => (
+                    const renderEntity = (entity) => {
+                      const text = getEntityText(entity);
+                      const handleClick = () => {
+                        if (entityMaps.tags.has(entity.id)) {
+                          goToTag(entity);
+                        } else if (entityMaps.descriptions.has(entity.id)) {
+                          onPingDescription(entity.id);
+                          setCurrentPage(entity.page);
+                        } else if (entityMaps.equipmentShortSpecs.has(entity.id)) {
+                          onPingEquipmentShortSpec(entity.id);
+                          setCurrentPage(entity.page);
+                        }
+                      };
+
+                      return (
                         <span
-                            onClick={() => goToTag(tag)}
-                            className="font-mono text-sky-400 hover:underline cursor-pointer"
+                          onClick={handleClick}
+                          className="font-mono text-sky-400 hover:underline cursor-pointer"
                         >
-                            {tag.text}
+                          {text}
                         </span>
-                    );
+                      );
+                    };
+
+                    // Get relationship type icon and description
+                    const getRelationshipDisplay = (type) => {
+                      switch (type) {
+                        case RelationshipType.Connection:
+                          return { icon: '→', title: 'Connection' };
+                        case RelationshipType.Installation:
+                          return { icon: '📌', title: 'Installation' };
+                        case RelationshipType.Annotation:
+                          return { icon: '📝', title: 'Annotation' };
+                        case RelationshipType.Note:
+                          return { icon: '🏷️', title: 'Note' };
+                        case RelationshipType.Description:
+                          return { icon: '📄', title: 'Description' };
+                        case RelationshipType.EquipmentShortSpec:
+                          return { icon: '⚙️', title: 'Equipment Spec' };
+                        default:
+                          return { icon: '🔗', title: 'Unknown' };
+                      }
+                    };
+
+                    const { icon, title } = getRelationshipDisplay(rel.type);
 
                     return (
-                        <li key={rel.id} className="p-2 bg-slate-700/30 rounded-md text-sm text-slate-300 flex items-center justify-between">
+                        <li 
+                          key={rel.id} 
+                          className="p-2 bg-slate-700/30 rounded-md text-sm text-slate-300 flex items-center justify-between hover:bg-slate-700/50 cursor-pointer transition-colors"
+                          onClick={() => handleRelationshipClick(rel)}
+                          title={`Click to highlight in PDF: ${title}`}
+                        >
                             <div className="flex items-center space-x-2">
-                                {rel.type === RelationshipType.Connection ? (
-                                    <>
-                                        {renderTag(fromTag)}
-                                        <span className="text-slate-400">→</span>
-                                        {renderTag(toTag)}
-                                    </>
-                                ) : (
-                                    <>
-                                        {renderTag(fromTag)}
-                                        <span title="Installed on" className="cursor-default">📌</span>
-                                        {renderTag(toTag)}
-                                    </>
-                                )}
+                                <span className="text-xs text-slate-500 font-medium">{rel.type}</span>
+                                {renderEntity(fromEntity)}
+                                <span className="text-slate-400" title={title}>{icon}</span>
+                                {renderEntity(toEntity)}
                             </div>
-                            <DeleteRelationshipButton onClick={() => handleDeleteRelationship(rel.id)} />
+                            <DeleteRelationshipButton onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRelationship(rel.id);
+                            }} />
                         </li>
                     );
                 })}
             </ul>
         </div>
     );
-  }, [tags]);
+  }, [tags, descriptions, rawTextItems, equipmentShortSpecs, currentPage, setCurrentPage, onPingTag, onPingDescription, onPingEquipmentShortSpec, goToTag, handleDeleteRelationship]);
 
   const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.NotesAndHolds, Category.DrawingNumber];
   

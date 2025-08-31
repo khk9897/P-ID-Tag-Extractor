@@ -65,6 +65,7 @@ export interface EquipmentShortSpec {
   sourceItems: (Tag | RawTextItem)[];
   metadata: {
     originalEquipmentTag: Tag;
+    service: string;
   };
 }
 

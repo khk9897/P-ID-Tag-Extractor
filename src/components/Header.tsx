@@ -28,6 +28,7 @@ const HotkeyHelp = ({ onClose }) => {
     { key: 'S', desc: <>Toggle <span className="text-sky-300 font-bold">S</span>ide Panel</> },
     { key: 'C', desc: <>Toggle <span className="text-sky-300 font-bold">C</span>onnect Mode</> },
     { key: 'K', desc: <>Toggle Manual Ma<span className="text-sky-300 font-bold">k</span>e Mode</> },
+    { key: 'V', desc: <>Toggle Relationship <span className="text-sky-300 font-bold">V</span>isibility</> },
     { key: 'Esc', desc: <><span className="text-sky-300 font-bold">Esc</span> Mode / Clear Selection</> },
   ];
   const actions = [
@@ -51,6 +52,8 @@ const HotkeyHelp = ({ onClose }) => {
                 <div className="flex justify-between items-center"><dt>Pan View</dt><dd><Key text="Drag" /></dd></div>
                 <div className="flex justify-between items-center"><dt>Zoom In</dt><dd><Key text="1" /></dd></div>
                 <div className="flex justify-between items-center"><dt>Zoom Out</dt><dd><Key text="2" /></dd></div>
+                <div className="flex justify-between items-center"><dt>Previous Page</dt><dd><Key text="Q" /></dd></div>
+                <div className="flex justify-between items-center"><dt>Next Page</dt><dd><Key text="W" /></dd></div>
                 <div className="flex justify-between items-center"><dt>Area Select</dt><dd><Key text="Ctrl" /> + <Key text="Drag" /></dd></div>
             </dl>
         </div>
@@ -90,6 +93,8 @@ export const Header = ({
   onAutoLinkEquipmentShortSpecs,
   onAutoLinkAll,
   onRemoveWhitespace,
+  showRelationships,
+  setShowRelationships,
 }) => {
   const importInputRef = useRef(null);
   const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
@@ -143,6 +148,25 @@ export const Header = ({
                     <button onClick={() => setScale(s => Math.max(0.25, s - 0.25))} className="px-2 py-0.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors">-</button>
                     <span className="w-12 text-center text-sm font-semibold text-white">{(scale * 100).toFixed(0)}%</span>
                     <button onClick={() => setScale(s => s + 0.25)} className="px-2 py-0.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors">+</button>
+                    
+                    {/* Relationship lines toggle */}
+                    <button
+                        onClick={() => setShowRelationships(!showRelationships)}
+                        className={`px-2 py-0.5 rounded transition-colors ${
+                            showRelationships 
+                                ? 'bg-sky-600 text-white hover:bg-sky-500' 
+                                : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
+                        }`}
+                        title="Toggle relationship lines visibility (V)"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            {showRelationships ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                            )}
+                        </svg>
+                    </button>
                 </div>
                 <div className="h-6 w-px bg-slate-600"></div>
                 <div className="flex items-center space-x-2">

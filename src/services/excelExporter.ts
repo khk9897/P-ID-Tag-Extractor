@@ -141,6 +141,7 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
     
     return {
       'Equipment Tag': spec.metadata.originalEquipmentTag.text,
+      'Service': spec.metadata.service || '',
       'Short Spec': spec.text,
       'Page': spec.page,
       'Drawing Number': drawingNumber,

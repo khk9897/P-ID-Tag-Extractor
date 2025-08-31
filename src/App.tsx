@@ -472,13 +472,20 @@ const App: React.FC = () => {
     // Sort non-tag items by Y coordinate (top to bottom)
     const sortedNonTagItems = nonTagItems.sort((a, b) => b.bbox.y1 - a.bbox.y1);
     
-    // Merge text content from non-tag items with line breaks for different Y positions
+    // Get the topmost non-Equipment item for Service metadata
+    const serviceItem = sortedNonTagItems[0];
+    const serviceText = serviceItem ? serviceItem.text : '';
+    
+    // Exclude the first item (service) from the short spec text content
+    const shortSpecItems = sortedNonTagItems.slice(1); // Skip first item (service)
+    
+    // Merge text content from remaining non-tag items with line breaks for different Y positions
     let text = '';
     let previousY = null;
     const yTolerance = 5; // Y coordinate tolerance for considering items on the same line
     
-    for (let i = 0; i < sortedNonTagItems.length; i++) {
-      const item = sortedNonTagItems[i];
+    for (let i = 0; i < shortSpecItems.length; i++) {
+      const item = shortSpecItems[i];
       const currentY = item.bbox.y1;
       
       // Add line break if this item is on a significantly different Y coordinate
@@ -509,6 +516,7 @@ const App: React.FC = () => {
       sourceItems: sortedItems,
       metadata: {
         originalEquipmentTag: equipmentTag,
+        service: serviceText,
       },
     };
 
@@ -528,8 +536,28 @@ const App: React.FC = () => {
   }, []);
 
   const handleDeleteEquipmentShortSpecs = useCallback((equipmentShortSpecIds: string[]): void => {
+    // Find specs to be deleted to restore their source items
+    const specsToDelete = equipmentShortSpecs.filter(spec => equipmentShortSpecIds.includes(spec.id));
+    
+    // Restore Equipment tags and raw text items
+    specsToDelete.forEach(spec => {
+      // Restore Equipment tag
+      const equipmentTag = spec.metadata.originalEquipmentTag;
+      setTags(prev => [...prev, equipmentTag]);
+      
+      // Restore raw text items that were converted (excluding the Equipment tag)
+      const rawItemsToRestore = spec.sourceItems.filter(item => 
+        !('category' in item) // Only raw text items, not tags
+      );
+      
+      if (rawItemsToRestore.length > 0) {
+        setRawTextItems(prev => [...prev, ...rawItemsToRestore]);
+      }
+    });
+    
+    // Remove the equipment short specs
     setEquipmentShortSpecs(prev => prev.filter(spec => !equipmentShortSpecIds.includes(spec.id)));
-  }, []);
+  }, [equipmentShortSpecs]);
 
   const handleUpdateEquipmentShortSpec = useCallback((id: string, text: string, metadata?: any): void => {
     setEquipmentShortSpecs(prev => prev.map(spec =>
@@ -1535,6 +1563,8 @@ const App: React.FC = () => {
           onAutoLinkEquipmentShortSpecs={handleAutoLinkEquipmentShortSpecs}
           onAutoLinkAll={handleAutoLinkAll}
           onRemoveWhitespace={handleRemoveWhitespace}
+          showRelationships={showRelationships}
+          setShowRelationships={setShowRelationships}
         />
       </ErrorBoundary>
       <main className="flex-grow overflow-hidden">

@@ -1120,15 +1120,6 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                   {sections.viewOptions && (
                     <div className="space-y-4 mt-2 animate-fade-in-up" style={{animationDuration: '0.2s'}}>
                       <div className="space-y-2">
-                        <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300 pl-1">
-                            <input
-                                type="checkbox"
-                                checked={showRelationships}
-                                onChange={(e) => setShowRelationships(e.target.checked)}
-                                className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
-                            />
-                            <span>Show relationship lines</span>
-                        </label>
                          <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300 pl-1">
                             <input
                                 type="checkbox"
@@ -1530,6 +1521,20 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                           </div>
                           
                           <div>
+                            <label className="block text-xs text-slate-400 mb-1">Service</label>
+                            <input
+                              type="text"
+                              value={tempEquipmentShortSpecMetadata.service || ''}
+                              onChange={(e) => setTempEquipmentShortSpecMetadata({
+                                ...tempEquipmentShortSpecMetadata,
+                                service: e.target.value
+                              })}
+                              className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-300 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                              placeholder="Service description..."
+                            />
+                          </div>
+                          
+                          <div>
                             <label className="block text-xs text-slate-400 mb-1">Short Specification</label>
                             <textarea
                               value={tempEquipmentShortSpecText}
@@ -1561,8 +1566,22 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                         </div>
                       </div>
                     ) : (
-                      <div className="whitespace-pre-wrap">
-                        {spec.text || 'No specification entered yet'}
+                      <div className="space-y-2">
+                        {/* Service display */}
+                        {spec.metadata.service && (
+                          <div className="p-2 bg-slate-600/30 rounded border-l-4 border-blue-500">
+                            <div className="text-xs text-blue-300 font-semibold mb-1">Service</div>
+                            <div className="text-sm text-slate-300">{spec.metadata.service}</div>
+                          </div>
+                        )}
+                        
+                        {/* Short Spec display */}
+                        <div className="p-2 bg-slate-700/30 rounded">
+                          <div className="text-xs text-orange-300 font-semibold mb-1">Short Specification</div>
+                          <div className="whitespace-pre-wrap text-sm text-slate-300">
+                            {spec.text || 'No specification entered yet'}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

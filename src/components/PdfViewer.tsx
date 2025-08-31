@@ -37,6 +37,7 @@ export const PdfViewer = ({
   relationshipStartTag,
   setRelationshipStartTag,
   showRelationships,
+  setShowRelationships,
   pingedTagId,
   pingedDescriptionId,
   pingedEquipmentShortSpecId,
@@ -332,11 +333,19 @@ export const PdfViewer = ({
         } else {
           console.warn('To create a loop, please select at least 2 instrument tags.');
         }
+      } else if (e.key.toLowerCase() === 'v') {
+        setShowRelationships(prev => !prev);
+      } else if (e.key.toLowerCase() === 'q' && pdfDoc) {
+        // Previous page
+        setCurrentPage(prev => Math.max(1, prev - 1));
+      } else if (e.key.toLowerCase() === 'w' && pdfDoc) {
+        // Next page
+        setCurrentPage(prev => Math.min(pdfDoc.numPages, prev + 1));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, setSelectedRawTextItemIds, onDeleteTags, onManualCreateLoop, setMode, setRelationshipStartTag, setScale]);
+  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, setSelectedRawTextItemIds, onDeleteTags, onManualCreateLoop, setMode, setRelationshipStartTag, setScale, setShowRelationships, pdfDoc, setCurrentPage]);
   
   useLayoutEffect(() => {
     if (selectedTagIds.length === 1 && scrollContainerRef.current && viewport) {

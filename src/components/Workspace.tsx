@@ -210,6 +210,7 @@ export const Workspace = ({
           relationshipStartTag={relationshipStartTag}
           setRelationshipStartTag={setRelationshipStartTag}
           showRelationships={showRelationships}
+          setShowRelationships={setShowRelationships}
           pingedTagId={pingedTagId}
           pingedDescriptionId={pingedDescriptionId}
           pingedEquipmentShortSpecId={pingedEquipmentShortSpecId}

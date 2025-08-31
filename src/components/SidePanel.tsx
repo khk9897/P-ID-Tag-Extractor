@@ -958,8 +958,8 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   }, [selectedTagIds, onDeleteTags, setSelectedTagIds]);
   
   const handleExport = useCallback(() => {
-    exportToExcel(tags, relationships, rawTextItems, descriptions, equipmentShortSpecs);
-  }, [tags, relationships, rawTextItems, descriptions, equipmentShortSpecs]);
+    exportToExcel(tags, relationships, rawTextItems, descriptions, equipmentShortSpecs, loops);
+  }, [tags, relationships, rawTextItems, descriptions, equipmentShortSpecs, loops]);
 
   const handleDescriptionClick = useCallback((description) => {
     setSelectedDescriptionIds([description.id]);

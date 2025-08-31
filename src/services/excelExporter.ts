@@ -1,7 +1,7 @@
 import { Category, RelationshipType } from '../types.ts';
 import * as XLSX from 'xlsx';
 
-export const exportToExcel = (tags, relationships, rawTextItems, descriptions = [], equipmentShortSpecs = []) => {
+export const exportToExcel = (tags, relationships, rawTextItems, descriptions = [], equipmentShortSpecs = [], loops = []) => {
   const equipment = tags.filter(t => t.category === Category.Equipment);
   const lines = tags.filter(t => t.category === Category.Line);
   const instruments = tags.filter(t => t.category === Category.Instrument);
@@ -12,6 +12,11 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
   const rawTextItemMap = new Map(rawTextItems.map(item => [item.id, item.text]));
 
   const getTagText = (id) => tags.find(t => t.id === id)?.text || '';
+  
+  const getLoopForTag = (tagId) => {
+    const loop = loops.find(l => l.tagIds.includes(tagId));
+    return loop ? loop.id : '';
+  };
   
   const getDescriptionsForTag = (tagId) => {
     return relationships
@@ -41,9 +46,11 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
     const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
     const description = getDescriptionsForTag(tag.id);
     const noteAndHold = getNotesForTag(tag.id);
+    const loopNumber = getLoopForTag(tag.id);
 
     return {
       'Tag': tag.text,
+      'Loop No': loopNumber,
       'Page': tag.page,
       'Drawing Number': drawingNumber,
       'Instruments Installed': instrumentsInstalled,
@@ -75,9 +82,11 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
     const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
     const description = getDescriptionsForTag(tag.id);
     const noteAndHold = getNotesForTag(tag.id);
+    const loopNumber = getLoopForTag(tag.id);
 
     return {
       'Tag': tag.text,
+      'Loop No': loopNumber,
       'Page': tag.page,
       'Drawing Number': drawingNumber,
       'From': from,
@@ -99,9 +108,11 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
     const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
     const description = getDescriptionsForTag(tag.id);
     const noteAndHold = getNotesForTag(tag.id);
+    const loopNumber = getLoopForTag(tag.id);
 
     return {
       'Tag': tag.text,
+      'Loop No': loopNumber,
       'Page': tag.page,
       'Drawing Number': drawingNumber,
       'Installed On': installedOn,

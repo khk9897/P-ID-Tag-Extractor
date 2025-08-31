@@ -166,15 +166,17 @@ interface TagListItemProps {
   onUpdateTagText: (tagId: string, newText: string) => void;
   onDeleteItem: (itemId: string) => void;
   onUpdateItemText: (itemId: string, newText: string) => void;
+  onUpdateLoop: (loopId: string, updates: any) => void;
   showDetails: boolean;
 }
 
-const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, loops, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, showDetails }) => {
+const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, loops, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, onUpdateLoop, showDetails }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
   const [expandedEquipmentShortSpecs, setExpandedEquipmentShortSpecs] = useState(new Set());
   const [expandedNoteTags, setExpandedNoteTags] = useState(new Set());
+  const [expandedLoops, setExpandedLoops] = useState(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
   const isTogglingExpansion = useRef(false);
   
@@ -292,8 +294,86 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
           {tag.category === Category.Instrument && (() => {
             const tagLoops = loops.filter(loop => loop.tagIds.includes(tag.id));
             return tagLoops.length > 0 && (
-              <div className="text-xs text-blue-400 mt-0.5 font-mono">
-                Loop: {tagLoops.map(loop => loop.id).join(', ')}
+              <div className="mt-1">
+                {tagLoops.map(loop => {
+                  const isExpanded = expandedLoops.has(loop.id);
+                  const loopTags = loop.tagIds.map(id => allTags.find(t => t.id === id)).filter(Boolean);
+                  
+                  return (
+                    <div key={loop.id} className="border border-slate-600/50 rounded-md mb-1 bg-slate-800/30">
+                      <div 
+                        className="flex items-center justify-between p-2 cursor-pointer hover:bg-slate-700/30 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedLoops(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(loop.id)) {
+                              newSet.delete(loop.id);
+                            } else {
+                              newSet.add(loop.id);
+                            }
+                            return newSet;
+                          });
+                        }}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-blue-400 font-mono font-semibold">{loop.name || loop.id}</span>
+                          <span className="text-xs text-slate-400">
+                            ({loopTags.length} tags)
+                            {loopTags.length > 0 && ` P. ${loopTags.map(t => t.page).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).join(', ')}`}
+                          </span>
+                        </div>
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          className={`h-3 w-3 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                          viewBox="0 0 20 20" 
+                          fill="currentColor"
+                        >
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      
+                      {isExpanded && (
+                        <div className="px-2 pb-2 border-t border-slate-600/50">
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {loopTags.map(loopTag => (
+                              <div
+                                key={loopTag.id}
+                                className={`inline-flex items-center bg-slate-600/50 text-slate-300 rounded text-xs font-mono overflow-hidden ${loopTag.id === tag.id ? 'ring-1 ring-blue-400' : ''}`}
+                              >
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onGoToTag(loopTag);
+                                  }}
+                                  className="px-2 py-1 cursor-pointer hover:bg-slate-500/50 transition-colors"
+                                  title={`Click to center on tag: ${loopTag.text}`}
+                                >
+                                  {loopTag.text} <span className="text-slate-400">P.{loopTag.page}</span>
+                                </span>
+                                {loopTag.id !== tag.id && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onUpdateLoop(loop.id, {
+                                        ...loop,
+                                        tagIds: loop.tagIds.filter(id => id !== loopTag.id)
+                                      });
+                                    }}
+                                    className="px-1 py-1 text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-colors"
+                                    title={`Remove ${loopTag.text} from loop`}
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           })()}
@@ -1433,6 +1513,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                       onDeleteItem={handleDeleteItem}
                       onUpdateItemText={onUpdateRawTextItemText}
                       loops={loops}
+                      onUpdateLoop={onUpdateLoop}
                       showDetails={showRelationshipDetails}
                     />
                   );

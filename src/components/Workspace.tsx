@@ -50,6 +50,7 @@ export const Workspace = ({
   const [manualCreationData, setManualCreationData] = useState(null); // {bbox, page}
   const [pingedTagId, setPingedTagId] = useState(null);
   const [pingedDescriptionId, setPingedDescriptionId] = useState(null);
+  const [pingedEquipmentShortSpecId, setPingedEquipmentShortSpecId] = useState(null);
 
   const handleDeselectTag = (tagId) => {
     setSelectedTagIds(prev => prev.filter(id => id !== tagId));
@@ -106,6 +107,18 @@ export const Workspace = ({
     setTimeout(() => setPingedDescriptionId(null), 2000);
   }, [descriptions, currentPage, setCurrentPage]);
 
+  const handlePingEquipmentShortSpec = useCallback((equipmentShortSpecId) => {
+    // Find the equipment short spec to get its page
+    const spec = equipmentShortSpecs.find(s => s.id === equipmentShortSpecId);
+    if (spec && spec.page !== currentPage) {
+      setCurrentPage(spec.page);
+    }
+    
+    setPingedEquipmentShortSpecId(equipmentShortSpecId);
+    // Clear after animation is over
+    setTimeout(() => setPingedEquipmentShortSpecId(null), 2000);
+  }, [equipmentShortSpecs, currentPage, setCurrentPage]);
+
   return (
     <div className="flex h-full bg-slate-900 relative">
       {isSidePanelVisible && <SidePanel 
@@ -139,6 +152,7 @@ export const Workspace = ({
         showConfirmation={showConfirmation}
         onPingTag={handlePingTag}
         onPingDescription={handlePingDescription}
+        onPingEquipmentShortSpec={handlePingEquipmentShortSpec}
         showRelationships={showRelationships}
         setShowRelationships={setShowRelationships}
       />}
@@ -177,6 +191,7 @@ export const Workspace = ({
           showRelationships={showRelationships}
           pingedTagId={pingedTagId}
           pingedDescriptionId={pingedDescriptionId}
+          pingedEquipmentShortSpecId={pingedEquipmentShortSpecId}
         />
       </div>
       <SelectionPanel

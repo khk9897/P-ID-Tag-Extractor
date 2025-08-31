@@ -37,6 +37,7 @@ export const PdfViewer = ({
   showRelationships,
   pingedTagId,
   pingedDescriptionId,
+  pingedEquipmentShortSpecId,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -341,6 +342,70 @@ export const PdfViewer = ({
       }
     }
   }, [selectedTagIds, currentPage, viewport, tags, scale]);
+
+  // Auto-scroll to selected description
+  useLayoutEffect(() => {
+    if (selectedDescriptionIds.length === 1 && scrollContainerRef.current && viewport) {
+      const descriptionId = selectedDescriptionIds[0];
+      const description = descriptions.find(d => d.id === descriptionId);
+      if (description && description.page === currentPage) {
+        const { x1, y1, x2, y2 } = description.bbox;
+        const descriptionCenterX = ((x1 + x2) / 2) * scale;
+        const descriptionCenterY = viewport.height - (((y1 + y2) / 2) * scale);
+
+        const container = scrollContainerRef.current;
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        const canvasWrapper = viewerRef.current?.firstChild;
+        if (!canvasWrapper) return;
+        
+        const canvasRect = canvasWrapper.getBoundingClientRect();
+        const scrollContainerRect = container.getBoundingClientRect();
+
+        const wrapperLeftOffset = (canvasRect.left - scrollContainerRect.left) + container.scrollLeft;
+        const wrapperTopOffset = (canvasRect.top - scrollContainerRect.top) + container.scrollTop;
+
+        container.scrollTo({
+          left: (wrapperLeftOffset + descriptionCenterX) - containerWidth / 2,
+          top: (wrapperTopOffset + descriptionCenterY) - containerHeight / 2,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [selectedDescriptionIds, descriptions, currentPage, viewport, scale]);
+
+  // Auto-scroll to selected equipment short spec
+  useLayoutEffect(() => {
+    if (selectedEquipmentShortSpecIds.length === 1 && scrollContainerRef.current && viewport) {
+      const specId = selectedEquipmentShortSpecIds[0];
+      const spec = equipmentShortSpecs.find(s => s.id === specId);
+      if (spec && spec.page === currentPage) {
+        const { x1, y1, x2, y2 } = spec.bbox;
+        const specCenterX = ((x1 + x2) / 2) * scale;
+        const specCenterY = viewport.height - (((y1 + y2) / 2) * scale);
+
+        const container = scrollContainerRef.current;
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        const canvasWrapper = viewerRef.current?.firstChild;
+        if (!canvasWrapper) return;
+        
+        const canvasRect = canvasWrapper.getBoundingClientRect();
+        const scrollContainerRect = container.getBoundingClientRect();
+
+        const wrapperLeftOffset = (canvasRect.left - scrollContainerRect.left) + container.scrollLeft;
+        const wrapperTopOffset = (canvasRect.top - scrollContainerRect.top) + container.scrollTop;
+
+        container.scrollTo({
+          left: (wrapperLeftOffset + specCenterX) - containerWidth / 2,
+          top: (wrapperTopOffset + specCenterY) - containerHeight / 2,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [selectedEquipmentShortSpecIds, equipmentShortSpecs, currentPage, viewport, scale]);
 
   const handleTagMouseDown = (e, tagId) => {
     e.stopPropagation();
@@ -812,6 +877,49 @@ export const PdfViewer = ({
                                     width={rectWidth + padding * 2}
                                     height={rectHeight + padding * 2}
                                     className="fill-none stroke-purple-400 ping-highlight-box"
+                                    strokeWidth="3"
+                                    rx="4"
+                                />
+                            ))}
+                        </g>
+                      );
+                    })()}
+
+                    {/* Pinged Equipment Short Spec highlight */}
+                    {pingedEquipmentShortSpecId && (() => {
+                      const specToPing = equipmentShortSpecs.find(s => s.id === pingedEquipmentShortSpecId);
+                      if (!specToPing || specToPing.page !== currentPage) {
+                        return null;
+                      }
+
+                      const { x1, y1, x2, y2 } = specToPing.bbox;
+                      const rectX = x1 * scale;
+                      const rectY = viewport.height - (y2 * scale);
+                      const rectWidth = (x2 - x1) * scale;
+                      const rectHeight = (y2 - y1) * scale;
+                      
+                      const paddings = [10, 20, 30];
+
+                      return (
+                        <g style={{ pointerEvents: 'none' }}>
+                            {/* Background highlight */}
+                            <rect
+                                x={rectX - 5}
+                                y={rectY - 5}
+                                width={rectWidth + 10}
+                                height={rectHeight + 10}
+                                className="fill-orange-300 opacity-20"
+                                rx="4"
+                            />
+                            {/* Animated rings */}
+                            {paddings.map((padding, index) => (
+                                <rect
+                                    key={index}
+                                    x={rectX - padding}
+                                    y={rectY - padding}
+                                    width={rectWidth + padding * 2}
+                                    height={rectHeight + padding * 2}
+                                    className="fill-none stroke-orange-400 ping-highlight-box"
                                     strokeWidth="3"
                                     rx="4"
                                 />

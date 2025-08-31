@@ -141,6 +141,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
   const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
   const [expandedEquipmentShortSpecs, setExpandedEquipmentShortSpecs] = useState(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
+  const isTogglingExpansion = useRef(false);
   
   const colors = CATEGORY_COLORS[tag.category];
   const tagMap = useMemo(() => new Map(allTags.map(t => [t.id, t])), [allTags]);
@@ -176,7 +177,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
   
   const handleRelatedTagClick = (e, relatedTagId) => {
     e.stopPropagation();
-    const relatedTag = tagMap.get(relatedTagId);
+    const relatedTag = tagMap.get(relatedTagId) || allTags.find(t => t.id === relatedTagId);
     if (relatedTag) {
       onGoToTag(relatedTag);
     }
@@ -350,7 +351,9 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                       {/* Header - always visible */}
                       <div className="flex items-center justify-between p-2">
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent event bubbling
+                            isTogglingExpansion.current = true;
                             const newExpanded = new Set(expandedDescriptions);
                             if (isExpanded) {
                               newExpanded.delete(description.id);
@@ -358,6 +361,10 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                               newExpanded.add(description.id);
                             }
                             setExpandedDescriptions(newExpanded);
+                            // Reset flag after state update
+                            setTimeout(() => {
+                              isTogglingExpansion.current = false;
+                            }, 50);
                           }}
                           className="flex items-center space-x-1.5 text-purple-300 hover:text-purple-100 text-xs cursor-pointer bg-transparent border-none"
                         >
@@ -418,7 +425,9 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                       {/* Header - always visible */}
                       <div className="flex items-center justify-between p-2">
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent event bubbling
+                            isTogglingExpansion.current = true;
                             const newExpanded = new Set(expandedEquipmentShortSpecs);
                             if (isExpanded) {
                               newExpanded.delete(equipmentShortSpec.id);
@@ -426,6 +435,10 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                               newExpanded.add(equipmentShortSpec.id);
                             }
                             setExpandedEquipmentShortSpecs(newExpanded);
+                            // Reset flag after state update
+                            setTimeout(() => {
+                              isTogglingExpansion.current = false;
+                            }, 50);
                           }}
                           className="flex items-center space-x-2 text-left flex-grow text-orange-300 hover:text-orange-200"
                         >
@@ -462,7 +475,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
   );
 });
 
-export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, showConfirmation, onPingTag, onPingDescription, showRelationships, setShowRelationships }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, showConfirmation, onPingTag, onPingDescription, onPingEquipmentShortSpec, showRelationships, setShowRelationships }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -545,12 +558,36 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
     if (sortedAndFilteredTags.length <= 100) {
       return sortedAndFilteredTags; // Don't virtualize small lists
     }
+    
+    // Ensure selected tag is always in the virtual range (optimized for speed)
+    if (selectedTagIds.length === 1) {
+      const selectedIndex = sortedAndFilteredTags.findIndex(tag => tag.id === selectedTagIds[0]);
+      if (selectedIndex !== -1) {
+        const bufferSize = 25; // Reduced buffer for faster rendering
+        const newStart = Math.max(0, selectedIndex - bufferSize);
+        const newEnd = Math.min(sortedAndFilteredTags.length, selectedIndex + bufferSize * 2);
+        
+        // Only update if the selected tag is completely outside current range
+        const isOutsideRange = selectedIndex < virtualizedRange.start || selectedIndex >= virtualizedRange.end;
+        
+        if (isOutsideRange) {
+          // Immediate update for faster response
+          setVirtualizedRange({ start: newStart, end: newEnd });
+        }
+      }
+    }
+    
     return sortedAndFilteredTags.slice(virtualizedRange.start, virtualizedRange.end);
-  }, [sortedAndFilteredTags, virtualizedRange]);
+  }, [sortedAndFilteredTags, virtualizedRange, selectedTagIds]);
 
   const filteredDescriptions = useMemo(() => {
     return descriptions.filter(desc => !showCurrentPageOnly || desc.page === currentPage);
   }, [descriptions, showCurrentPageOnly, currentPage]);
+
+  // Reset virtualization range when show page only changes or filter changes
+  useEffect(() => {
+    setVirtualizedRange({ start: 0, end: 50 });
+  }, [showCurrentPageOnly, filterCategory, searchQuery]);
 
   const filteredEquipmentShortSpecs = useMemo(() => {
     return equipmentShortSpecs.filter(spec => !showCurrentPageOnly || spec.page === currentPage);
@@ -578,12 +615,29 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   useEffect(() => {
     if (activeTab === 'tags' && selectedTagIds.length === 1 && listRef.current) {
       const selectedId = selectedTagIds[0];
-      const element = listRef.current.querySelector(`[data-tag-id='${selectedId}']`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      
+      // Fast scroll function with reduced retry logic
+      const fastScrollToElement = (attempt = 0) => {
+        const element = listRef.current?.querySelector(`[data-tag-id='${selectedId}']`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (attempt < 3) { // Reduced retry count for speed
+          // Quick retries with shorter wait time
+          setTimeout(() => fastScrollToElement(attempt + 1), 50);
+        } else {
+          // Immediate fallback: estimate scroll position
+          const tagIndex = sortedAndFilteredTags.findIndex(tag => tag.id === selectedId);
+          if (tagIndex !== -1 && listRef.current) {
+            const estimatedPosition = tagIndex * 80; // Approximate item height
+            listRef.current.scrollTop = Math.max(0, estimatedPosition - 200);
+          }
+        }
+      };
+      
+      // Start immediately without initial delay
+      fastScrollToElement();
     }
-  }, [selectedTagIds, activeTab, sortedAndFilteredTags]); // Also run when list changes
+  }, [selectedTagIds, activeTab, sortedAndFilteredTags]);
 
   // Focus on selected description in side panel when selected from PDF viewer
   useEffect(() => {
@@ -628,9 +682,53 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   }, [sortedAndFilteredTags, selectedTagIds, setSelectedTagIds, setCurrentPage, onPingTag]);
   
   const goToTag = useCallback((tag) => {
+    // First, switch to tags tab if not already on it
+    if (activeTab !== 'tags') {
+      setActiveTab('tags');
+    }
+    
+    // Check if tag is visible with current filters
+    const isTagVisible = !showCurrentPageOnly || tag.page === currentPage;
+    const isTagInCategory = filterCategory === 'All' || tag.category === filterCategory;
+    const isTagInSearch = tag.text.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Adjust filters immediately and synchronously
+    if (!isTagVisible) {
+      setShowCurrentPageOnly(false);
+    }
+    if (!isTagInCategory) {
+      setFilterCategory('All');
+    }
+    if (!isTagInSearch && searchQuery) {
+      setSearchQuery('');
+    }
+    
+    // Set the page and selection immediately
     setCurrentPage(tag.page);
     setSelectedTagIds([tag.id]);
-  }, [setCurrentPage, setSelectedTagIds]);
+    
+    // Force immediate virtualization update for large lists
+    if (tags.length > 100) {
+      // Calculate based on all tags since we're removing filters
+      const allTags = tags.filter(t => 
+        (!showCurrentPageOnly || !isTagVisible || t.page === tag.page) &&
+        (filterCategory === 'All' || !isTagInCategory || t.category === tag.category) &&
+        (searchQuery === '' || !isTagInSearch || t.text.toLowerCase().includes(tag.text.toLowerCase()))
+      );
+      
+      const selectedIndex = allTags.findIndex(t => t.id === tag.id);
+      if (selectedIndex !== -1) {
+        const bufferSize = 30; // Reduced buffer size for faster updates
+        const newStart = Math.max(0, selectedIndex - bufferSize);
+        const newEnd = Math.min(allTags.length, selectedIndex + bufferSize * 2);
+        
+        // Use requestAnimationFrame for immediate but smooth update
+        requestAnimationFrame(() => {
+          setVirtualizedRange({ start: newStart, end: newEnd });
+        });
+      }
+    }
+  }, [setCurrentPage, setSelectedTagIds, activeTab, setActiveTab, tags, showCurrentPageOnly, currentPage, filterCategory, searchQuery, setShowCurrentPageOnly, setFilterCategory, setSearchQuery]);
 
   const handleBulkDelete = useCallback(() => {
     if (selectedTagIds.length > 0) {
@@ -643,6 +741,26 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   const handleExport = useCallback(() => {
     exportToExcel(tags, relationships, rawTextItems, descriptions, equipmentShortSpecs);
   }, [tags, relationships, rawTextItems, descriptions, equipmentShortSpecs]);
+
+  const handleDescriptionClick = useCallback((description) => {
+    setSelectedDescriptionIds([description.id]);
+    if (description.page !== currentPage) {
+      setCurrentPage(description.page);
+    }
+    onPingDescription(description.id);
+  }, [currentPage, setCurrentPage, setSelectedDescriptionIds, onPingDescription]);
+
+  const handleEquipmentShortSpecClick = useCallback((spec) => {
+    if (selectedEquipmentShortSpecIds.includes(spec.id)) {
+      setSelectedEquipmentShortSpecIds(prev => prev.filter(id => id !== spec.id));
+    } else {
+      setSelectedEquipmentShortSpecIds([spec.id]);
+      if (spec.page !== currentPage) {
+        setCurrentPage(spec.page);
+      }
+      onPingEquipmentShortSpec(spec.id);
+    }
+  }, [selectedEquipmentShortSpecIds, currentPage, setCurrentPage, setSelectedEquipmentShortSpecIds, onPingEquipmentShortSpec]);
 
   // Virtualization scroll handler
   const handleScroll = useCallback((e) => {
@@ -1056,11 +1174,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                     /* Read mode */
                     <div 
                       className="cursor-pointer"
-                      onClick={() => {
-                        setSelectedDescriptionIds([description.id]);
-                        setCurrentPage(description.page);
-                        onPingDescription(description.id);
-                      }}
+                      onClick={() => handleDescriptionClick(description)}
                     >
                       <div className="text-xs text-slate-200 leading-relaxed mb-2">
                         {description.text}
@@ -1103,13 +1217,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                   className={`group border rounded-lg p-3 hover:bg-slate-700/50 transition-colors ${
                     isSelected ? 'bg-orange-600/30 border-orange-400' : 'bg-slate-700/30 border-slate-600'
                   }`}
-                  onClick={() => {
-                    if (selectedEquipmentShortSpecIds.includes(spec.id)) {
-                      setSelectedEquipmentShortSpecIds(prev => prev.filter(id => id !== spec.id));
-                    } else {
-                      setSelectedEquipmentShortSpecIds([spec.id]);
-                    }
-                  }}
+                  onClick={() => handleEquipmentShortSpecClick(spec)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-grow">

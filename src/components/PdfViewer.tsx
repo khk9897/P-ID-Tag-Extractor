@@ -343,6 +343,38 @@ export const PdfViewer = ({
     }
   }, [selectedTagIds, currentPage, viewport, tags, scale]);
 
+  // Auto-scroll to pinged tag
+  useLayoutEffect(() => {
+    if (pingedTagId && scrollContainerRef.current && viewport) {
+      const tag = tags.find(t => t.id === pingedTagId);
+
+      if (tag && tag.page === currentPage) {
+        const { x1, y1, x2, y2 } = tag.bbox;
+        const tagCenterX = ((x1 + x2) / 2) * scale;
+        const tagCenterY = viewport.height - (((y1 + y2) / 2) * scale);
+
+        const container = scrollContainerRef.current;
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        const canvasWrapper = viewerRef.current;
+        if (!canvasWrapper) return;
+        
+        const canvasRect = canvasWrapper.getBoundingClientRect();
+        const scrollContainerRect = container.getBoundingClientRect();
+
+        const wrapperLeftOffset = (canvasRect.left - scrollContainerRect.left) + container.scrollLeft;
+        const wrapperTopOffset = (canvasRect.top - scrollContainerRect.top) + container.scrollTop;
+
+        container.scrollTo({
+          left: (wrapperLeftOffset + tagCenterX) - containerWidth / 2,
+          top: (wrapperTopOffset + tagCenterY) - containerHeight / 2,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [pingedTagId, currentPage, viewport, tags, scale]);
+
   // Auto-scroll to selected description
   useLayoutEffect(() => {
     if (selectedDescriptionIds.length === 1 && scrollContainerRef.current && viewport) {

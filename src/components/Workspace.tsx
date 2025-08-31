@@ -90,10 +90,16 @@ export const Workspace = ({
   };
 
   const handlePingTag = useCallback((tagId) => {
+    // Find the tag to get its page
+    const tag = tags.find(t => t.id === tagId);
+    if (tag && tag.page !== currentPage) {
+      setCurrentPage(tag.page);
+    }
+    
     setPingedTagId(tagId);
     // Clear after animation is over
     setTimeout(() => setPingedTagId(null), 2000);
-  }, []);
+  }, [tags, currentPage, setCurrentPage]);
 
   const handlePingDescription = useCallback((descriptionId) => {
     // Find the description to get its page

@@ -1143,6 +1143,12 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                 const isSelected = selectedDescriptionIds.includes(description.id);
                 const isEditing = editingDescriptionId === description.id;
                 
+                // Find note tags connected to this description
+                const relatedNoteTags = relationships
+                  .filter(r => r.to === description.id && r.type === RelationshipType.Description)
+                  .map(r => tags.find(t => t.id === r.from))
+                  .filter(Boolean);
+                
                 return (
                 <div 
                   key={description.id} 
@@ -1153,8 +1159,29 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                 >
                   {/* Header with controls */}
                   <div className="flex justify-between items-start mb-2">
-                    <div className="text-xs text-slate-400">
-                      {description.metadata.type} {description.metadata.number} - {description.metadata.scope}
+                    <div className="flex flex-col space-y-1">
+                      <div className="text-xs text-slate-400">
+                        {description.metadata.type} {description.metadata.number} - {description.metadata.scope}
+                      </div>
+                      {/* Show related note tags */}
+                      {relatedNoteTags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {relatedNoteTags.map(noteTag => (
+                            <span
+                              key={noteTag.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onPingTag(noteTag.id);
+                              }}
+                              className="inline-flex items-center space-x-1 px-2 py-0.5 bg-sky-600/30 text-sky-300 rounded text-xs border border-sky-600/50 hover:bg-sky-500/40 hover:text-sky-200 cursor-pointer transition-colors"
+                              title={`Click to focus on note tag: ${noteTag.text}`}
+                            >
+                              <span>📝</span>
+                              <span className="font-mono">{noteTag.text}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -1343,8 +1370,12 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                                   {connectedTags.map(tag => (
                                     <span
                                       key={tag.id}
-                                      className="inline-block px-1.5 py-0.5 bg-green-600/30 text-green-300 rounded text-xs border border-green-600/50"
-                                      title={`Connected Equipment: ${tag.text}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onPingTag(tag.id);
+                                      }}
+                                      className="inline-block px-1.5 py-0.5 bg-green-600/30 text-green-300 rounded text-xs border border-green-600/50 hover:bg-green-500/40 hover:text-green-200 cursor-pointer transition-colors"
+                                      title={`Click to focus on equipment tag: ${tag.text}`}
                                     >
                                       {tag.text}
                                     </span>

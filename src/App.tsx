@@ -1344,6 +1344,36 @@ const App: React.FC = () => {
     return null;
   }, []);
 
+  const generateLoopId = useCallback((instrumentTags: Tag[]) => {
+    if (instrumentTags.length === 0) return null;
+    
+    const firstTag = instrumentTags[0];
+    const parsed = parseInstrumentTag(firstTag.text);
+    if (!parsed) return firstTag.text.charAt(0) + '-' + '000';
+    
+    // Find common function prefix among all tags
+    let commonPrefix = parsed.function;
+    for (const tag of instrumentTags.slice(1)) {
+      const tagParsed = parseInstrumentTag(tag.text);
+      if (tagParsed && tagParsed.number === parsed.number) {
+        // Find common prefix between functions
+        let i = 0;
+        while (i < commonPrefix.length && i < tagParsed.function.length && 
+               commonPrefix[i] === tagParsed.function[i]) {
+          i++;
+        }
+        commonPrefix = commonPrefix.substring(0, i);
+      }
+    }
+    
+    // Fallback to first letter if no common prefix
+    if (commonPrefix.length === 0) {
+      commonPrefix = parsed.function.charAt(0);
+    }
+    
+    return `${commonPrefix}-${parsed.number}`;
+  }, [parseInstrumentTag]);
+
   const autoGenerateLoops = useCallback((allTags: Tag[]) => {
     const instrumentTags = allTags.filter(t => t.category === Category.Instrument);
     
@@ -1386,36 +1416,6 @@ const App: React.FC = () => {
       setLoops(prev => [...prev, ...newLoops]);
     }
   }, [parseInstrumentTag, generateLoopId]);
-
-  const generateLoopId = useCallback((instrumentTags: Tag[]) => {
-    if (instrumentTags.length === 0) return null;
-    
-    const firstTag = instrumentTags[0];
-    const parsed = parseInstrumentTag(firstTag.text);
-    if (!parsed) return firstTag.text.charAt(0) + '-' + '000';
-    
-    // Find common function prefix among all tags
-    let commonPrefix = parsed.function;
-    for (const tag of instrumentTags.slice(1)) {
-      const tagParsed = parseInstrumentTag(tag.text);
-      if (tagParsed && tagParsed.number === parsed.number) {
-        // Find common prefix between functions
-        let i = 0;
-        while (i < commonPrefix.length && i < tagParsed.function.length && 
-               commonPrefix[i] === tagParsed.function[i]) {
-          i++;
-        }
-        commonPrefix = commonPrefix.substring(0, i);
-      }
-    }
-    
-    // Fallback to first letter if no common prefix
-    if (commonPrefix.length === 0) {
-      commonPrefix = parsed.function.charAt(0);
-    }
-    
-    return `${commonPrefix}-${parsed.number}`;
-  }, [parseInstrumentTag]);
 
   const handleAutoGenerateLoops = useCallback((pageFilter?: number) => {
     const instrumentTags = tags.filter(t => 

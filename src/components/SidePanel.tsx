@@ -580,6 +580,13 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   const [activeTab, setActiveTab] = useState('tags');
   const [filterCategory, setFilterCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('default');
+  
+  // Reset sort order to default if instrument sorting is selected but not on Instrument filter
+  useEffect(() => {
+    if (sortOrder === 'instrument-number-function' && filterCategory !== Category.Instrument) {
+      setSortOrder('default');
+    }
+  }, [filterCategory, sortOrder]);
   const [editingDescriptionId, setEditingDescriptionId] = useState(null);
   const [editingEquipmentShortSpecId, setEditingEquipmentShortSpecId] = useState(null);
   const [tempEquipmentShortSpecText, setTempEquipmentShortSpecText] = useState('');
@@ -641,6 +648,55 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
              return b.bbox.y2 - a.bbox.y2;
           }
           return xDiff;
+        });
+      case 'instrument-number-function':
+        return [...filtered].sort((a, b) => {
+          if (a.page !== b.page) return a.page - b.page;
+          
+          // Parse instrument tag: e.g., "PIC-101" -> function="PIC", number="101"
+          const parseInstrumentTag = (text) => {
+            // Clean up whitespace and match patterns like "PT-7083 C", "PZV-7012 A", "PIC-101"
+            const cleanText = text.trim();
+            
+            // Match patterns: "PT-7083 C", "PZV-7012 A", "PIC-101", etc.
+            const match = cleanText.match(/^([A-Z]{2,4})-?(\d+)[\s]*([A-Z]*)$/);
+            if (match) {
+              return {
+                function: match[1].trim(),
+                number: parseInt(match[2]),
+                suffix: match[3].trim()
+              };
+            }
+            
+            // Try alternative pattern without dash: "PT7083C"
+            const altMatch = cleanText.match(/^([A-Z]{2,4})(\d+)([A-Z]*)$/);
+            if (altMatch) {
+              return {
+                function: altMatch[1].trim(),
+                number: parseInt(altMatch[2]),
+                suffix: altMatch[3].trim()
+              };
+            }
+            
+            // Fallback for non-standard formats
+            return { function: text, number: 99999, suffix: '' };
+          };
+          
+          const aData = parseInstrumentTag(a.text);
+          const bData = parseInstrumentTag(b.text);
+          
+          // Sort by number first (ascending)
+          if (aData.number !== bData.number) {
+            return aData.number - bData.number;
+          }
+          
+          // Then by function (alphabetical)
+          if (aData.function !== bData.function) {
+            return aData.function.localeCompare(bData.function);
+          }
+          
+          // Finally by suffix (alphabetical)
+          return aData.suffix.localeCompare(bData.suffix);
         });
       case 'default':
       default:
@@ -1030,6 +1086,9 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                           <option value="pos-left-right">Position (Left → Right)</option>
                           <option value="length-asc">Length (Short → Long)</option>
                           <option value="length-desc">Length (Long → Short)</option>
+                          {filterCategory === Category.Instrument && (
+                            <option value="instrument-number-function">Instrument (Number → Function)</option>
+                          )}
                         </select>
                       </div>
                     </div>

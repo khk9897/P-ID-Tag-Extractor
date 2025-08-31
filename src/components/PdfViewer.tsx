@@ -68,42 +68,72 @@ export const PdfViewer = ({
   const panStart = useRef({ scrollX: 0, scrollY: 0, clientX: 0, clientY: 0 });
 
   const renderTaskRef = useRef(null);
+  const isRendering = useRef(false);
 
   const renderPage = useCallback(async (pageNumber) => {
     if (!pdfDoc) return;
 
-    // Cancel any existing render task
-    if (renderTaskRef.current) {
-      renderTaskRef.current.cancel();
-      renderTaskRef.current = null;
+    // If already rendering, wait for current render to finish
+    if (isRendering.current) {
+      // Cancel existing render task
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel();
+        } catch (e) {
+          // Ignore cancel errors
+        }
+        renderTaskRef.current = null;
+      }
+      
+      // Wait a bit for the cancellation to take effect
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
 
-    const page = await pdfDoc.getPage(pageNumber);
-    const vp = page.getViewport({ scale });
+    // Set rendering flag
+    isRendering.current = true;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const context = canvas.getContext('2d');
-    if (!context) return;
-
-    canvas.height = vp.height;
-    canvas.width = vp.width;
-
-    const renderContext = {
-      canvasContext: context,
-      viewport: vp,
-    };
-    
     try {
+      const page = await pdfDoc.getPage(pageNumber);
+      const vp = page.getViewport({ scale });
+
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        isRendering.current = false;
+        return;
+      }
+      
+      const context = canvas.getContext('2d');
+      if (!context) {
+        isRendering.current = false;
+        return;
+      }
+
+      // Clear the canvas before rendering
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      
+      canvas.height = vp.height;
+      canvas.width = vp.width;
+
+      const renderContext = {
+        canvasContext: context,
+        viewport: vp,
+      };
+      
+      // Create new render task
       renderTaskRef.current = page.render(renderContext);
       await renderTaskRef.current.promise;
-      renderTaskRef.current = null;
+      
       // Only set viewport after successful rendering
       setViewport(vp);
+      
     } catch (error) {
       if (error.name !== 'RenderingCancelledException') {
         console.error('PDF rendering error:', error);
       }
+    } finally {
+      // Always clean up
+      renderTaskRef.current = null;
+      isRendering.current = false;
     }
   }, [pdfDoc, scale]);
 
@@ -113,9 +143,14 @@ export const PdfViewer = ({
     // Cleanup function to cancel render task on unmount or dependency change
     return () => {
       if (renderTaskRef.current) {
-        renderTaskRef.current.cancel();
+        try {
+          renderTaskRef.current.cancel();
+        } catch (e) {
+          // Ignore cancel errors
+        }
         renderTaskRef.current = null;
       }
+      isRendering.current = false;
     };
   }, [currentPage, renderPage, scale]); // Rerender on scale change
 

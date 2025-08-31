@@ -160,6 +160,7 @@ interface TagListItemProps {
   allRawTextItems: any[];
   descriptions: any[];
   equipmentShortSpecs: any[];
+  loops: any[];
   onDeleteRelationship: (relId: any) => void;
   onDeleteTag: (tagId: string) => void;
   onUpdateTagText: (tagId: string, newText: string) => void;
@@ -168,7 +169,7 @@ interface TagListItemProps {
   showDetails: boolean;
 }
 
-const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, showDetails }) => {
+const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, loops, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, showDetails }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
@@ -288,6 +289,14 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                   DWG: {drawingNumberTag.text}
               </div>
           )}
+          {tag.category === Category.Instrument && (() => {
+            const tagLoops = loops.filter(loop => loop.tagIds.includes(tag.id));
+            return tagLoops.length > 0 && (
+              <div className="text-xs text-blue-400 mt-0.5 font-mono">
+                Loop: {tagLoops.map(loop => loop.id).join(', ')}
+              </div>
+            );
+          })()}
         </div>
         <div className="flex items-center space-x-1 flex-shrink-0">
           <span className="text-xs text-slate-400">P. {tag.page}</span>
@@ -1415,6 +1424,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                       onUpdateTagText={onUpdateTagText}
                       onDeleteItem={handleDeleteItem}
                       onUpdateItemText={onUpdateRawTextItemText}
+                      loops={loops}
                       showDetails={showRelationshipDetails}
                     />
                   );

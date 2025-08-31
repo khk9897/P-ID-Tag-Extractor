@@ -25,21 +25,24 @@ const HotkeyHelp = ({ onClose }) => {
   }, [onClose]);
 
   const modes = [
-    { key: 'S', desc: 'Toggle Side Panel' },
-    { key: 'C', desc: 'Toggle Connect Mode' },
-    { key: 'K', desc: 'Toggle Manual Create Mode' },
-    { key: 'Esc', desc: 'Exit Mode / Clear Selection' },
+    { key: 'S', desc: <>Toggle <span className="text-sky-300 font-bold">S</span>ide Panel</> },
+    { key: 'C', desc: <>Toggle <span className="text-sky-300 font-bold">C</span>onnect Mode</> },
+    { key: 'K', desc: <>Toggle Manual Ma<span className="text-sky-300 font-bold">k</span>e Mode</> },
+    { key: 'Esc', desc: <><span className="text-sky-300 font-bold">Esc</span> Mode / Clear Selection</> },
   ];
   const actions = [
-    { key: 'M', desc: 'Merge two text items to an Instrument' },
-    { key: 'N', desc: 'Create Description from selected items' },
-    { key: 'I', desc: 'Create "Install" relationship' },
-    { key: 'R', desc: 'Create relationships (Note/Annotation)' },
-    { key: 'Delete', desc: 'Delete selected tag(s)' },
+    { key: 'M', desc: <><span className="text-sky-300 font-bold">M</span>erge two text items to an Instrument</> },
+    { key: 'N', desc: <>Make <span className="text-sky-300 font-bold">N</span>ote Description from selected items</> },
+    { key: 'H', desc: <>Make <span className="text-sky-300 font-bold">H</span>old Description from selected items</> },
+    { key: 'P', desc: <>Make Equipment Short S<span className="text-sky-300 font-bold">p</span>ec</> },
+    { key: 'L', desc: <>Make <span className="text-sky-300 font-bold">L</span>oop from selected instruments</> },
+    { key: 'I', desc: <>Make "<span className="text-sky-300 font-bold">I</span>nstall" relationship</> },
+    { key: 'R', desc: <>Make <span className="text-sky-300 font-bold">R</span>elationships (Note/Annotation)</> },
+    { key: 'Delete', desc: <><span className="text-sky-300 font-bold">Delete</span> selected tag(s)</> },
   ];
 
   return (
-    <div ref={ref} className="absolute top-16 right-4 z-20 w-80 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl p-4 text-white animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
+    <div ref={ref} className="absolute top-16 right-4 z-20 w-96 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl p-4 text-white animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
       <h3 className="text-md font-bold mb-3 border-b border-slate-600 pb-2">Hotkeys & Controls</h3>
       <div className="space-y-4">
         <div>
@@ -145,7 +148,7 @@ export const Header = ({
                 <div className="flex items-center space-x-2">
                     <span className="text-sm text-slate-300">Mode:</span>
                     <span className={`px-2 py-0.5 rounded text-xs font-semibold ${mode === 'select' ? 'bg-slate-600' : mode === 'connect' ? 'bg-blue-500' : 'bg-green-500'}`}>{mode}</span>
-                    <span className="text-xs text-slate-400 hidden lg:inline">Hotkeys: [C], [K], [M]...</span>
+                    <span className="text-xs text-slate-400 hidden lg:inline">Hotkeys: [N], [H], [M], [P], [L]...</span>
                     <button
                         onClick={(e) => { e.stopPropagation(); setShowHotkeyHelp(prev => !prev); }}
                         title="Show hotkeys and controls"

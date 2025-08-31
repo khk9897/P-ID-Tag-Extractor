@@ -19,6 +19,7 @@ export const Workspace = ({
   onCreateTag,
   onCreateManualTag,
   onCreateDescription,
+  onCreateHoldDescription,
   onCreateEquipmentShortSpec,
   onDeleteTags,
   onUpdateTagText,
@@ -194,6 +195,7 @@ export const Workspace = ({
           equipmentShortSpecs={equipmentShortSpecs}
           onCreateTag={onCreateTag}
           onCreateDescription={onCreateDescription}
+          onCreateHoldDescription={onCreateHoldDescription}
           onCreateEquipmentShortSpec={onCreateEquipmentShortSpec}
           selectedRawTextItemIds={selectedRawTextItemIds}
           setSelectedRawTextItemIds={setSelectedRawTextItemIds}

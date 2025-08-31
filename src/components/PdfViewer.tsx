@@ -22,6 +22,7 @@ export const PdfViewer = ({
   equipmentShortSpecs,
   onCreateTag,
   onCreateDescription,
+  onCreateHoldDescription,
   onCreateEquipmentShortSpec,
   selectedRawTextItemIds,
   setSelectedRawTextItemIds,
@@ -211,6 +212,18 @@ export const PdfViewer = ({
         } else {
           alert("Select tags or text items first, then press 'N' to create a description.");
         }
+      } else if (e.key.toLowerCase() === 'h') {
+        const selectedTags = tags.filter(tag => selectedTagIds.includes(tag.id));
+        const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
+        const allSelectedItems = [...selectedTags, ...selectedRawItems];
+        
+        if (allSelectedItems.length > 0) {
+          onCreateHoldDescription(allSelectedItems);
+          setSelectedTagIds([]);
+          setSelectedRawTextItemIds([]);
+        } else {
+          alert("Select tags or text items first, then press 'H' to create a hold description.");
+        }
       } else if (e.key.toLowerCase() === 'p') {
         const selectedTags = tags.filter(tag => selectedTagIds.includes(tag.id));
         const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
@@ -323,7 +336,7 @@ export const PdfViewer = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, setSelectedRawTextItemIds, onDeleteTags, onManualCreateLoop, setMode, setRelationshipStartTag, setScale]);
+  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, setSelectedRawTextItemIds, onDeleteTags, onManualCreateLoop, setMode, setRelationshipStartTag, setScale]);
   
   useLayoutEffect(() => {
     if (selectedTagIds.length === 1 && scrollContainerRef.current && viewport) {

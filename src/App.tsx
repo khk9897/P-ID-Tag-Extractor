@@ -384,7 +384,7 @@ const App: React.FC = () => {
     ));
   }, []);
 
-  const handleCreateDescription = useCallback((selectedItems: (Tag | RawTextItem)[]): void => {
+  const handleCreateDescription = useCallback((selectedItems: (Tag | RawTextItem)[], type: 'Note' | 'Hold' = 'Note'): void => {
     if (!selectedItems || selectedItems.length === 0) return;
 
     // Sort by Y coordinate (top to bottom) - in PDF coordinate system, higher Y values are at the top
@@ -403,7 +403,7 @@ const App: React.FC = () => {
 
     // Find next available number for this page and type
     const currentPage = sortedItems[0].page;
-    const descriptionType = 'Note'; // Default type, can be changed later in UI
+    const descriptionType = type;
     const existingNumbers = descriptions
       .filter(desc => desc.metadata.type === descriptionType && desc.page === currentPage)
       .map(desc => desc.metadata.number);
@@ -442,6 +442,10 @@ const App: React.FC = () => {
       setRawTextItems(prev => prev.filter(item => !rawItemIdsToRemove.includes(item.id)));
     }
   }, [descriptions]);
+
+  const handleCreateHoldDescription = useCallback((selectedItems: (Tag | RawTextItem)[]): void => {
+    handleCreateDescription(selectedItems, 'Hold');
+  }, [handleCreateDescription]);
 
   const handleCreateEquipmentShortSpec = useCallback((selectedItems: (Tag | RawTextItem)[]): void => {
     if (!selectedItems || selectedItems.length === 0) return;
@@ -1448,6 +1452,7 @@ const App: React.FC = () => {
             onCreateTag={handleCreateTag}
             onCreateManualTag={handleCreateManualTag}
             onCreateDescription={handleCreateDescription}
+            onCreateHoldDescription={handleCreateHoldDescription}
             onCreateEquipmentShortSpec={handleCreateEquipmentShortSpec}
             onDeleteTags={handleDeleteTags}
             onUpdateTagText={handleUpdateTagText}

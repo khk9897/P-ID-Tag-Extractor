@@ -802,10 +802,8 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
         const isOutsideRange = selectedIndex < virtualizedRange.start || selectedIndex >= virtualizedRange.end;
         
         if (isOutsideRange) {
-          // Use requestAnimationFrame for smoother updates
-          requestAnimationFrame(() => {
-            setVirtualizedRange({ start: newStart, end: newEnd });
-          });
+          // Use immediate update for tag selection to be responsive
+          setVirtualizedRange({ start: newStart, end: newEnd });
         }
       }
     }
@@ -823,8 +821,25 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
 
   // Reset virtualization range when show page only changes or filter changes
   useEffect(() => {
+    // Clear any pending scroll updates
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
+    pendingUpdateRef.current = false;
+    lastScrollUpdateRef.current = 0;
+    
     setVirtualizedRange({ start: 0, end: 50 });
   }, [showCurrentPageOnly, filterCategory, searchQuery]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const filteredEquipmentShortSpecs = useMemo(() => {
     return equipmentShortSpecs.filter(spec => !showCurrentPageOnly || spec.page === currentPage);
@@ -999,14 +1014,35 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
     }
   }, [selectedEquipmentShortSpecIds, currentPage, setCurrentPage, setSelectedEquipmentShortSpecIds, onPingEquipmentShortSpec]);
 
-  // Virtualization scroll handler
+  // Refs for scroll optimization
+  const scrollTimeoutRef = useRef(null);
+  const lastScrollUpdateRef = useRef(0);
+  const pendingUpdateRef = useRef(false);
+
+  // Virtualization scroll handler with throttling
   const handleScroll = useCallback((e) => {
     // Skip virtualization updates during bulk operations
     if (selectedTagIds.length > 1) return;
+    if (sortedAndFilteredTags.length <= 100) return;
+    
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastScrollUpdateRef.current;
+    
+    // Throttle updates to maximum 60fps (16.67ms)
+    if (timeSinceLastUpdate < 16) {
+      if (!pendingUpdateRef.current) {
+        pendingUpdateRef.current = true;
+        setTimeout(() => {
+          pendingUpdateRef.current = false;
+          handleScroll(e); // Retry the scroll handling
+        }, 16 - timeSinceLastUpdate);
+      }
+      return;
+    }
     
     const { scrollTop, clientHeight } = e.target;
-    const itemHeight = 90; // More accurate height including padding and borders
-    const buffer = 20; // Larger buffer to prevent gaps
+    const itemHeight = 90;
+    const buffer = 25; // Slightly larger buffer for smoother experience
     
     const visibleStart = Math.floor(scrollTop / itemHeight);
     const visibleCount = Math.ceil(clientHeight / itemHeight);
@@ -1015,16 +1051,29 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
       visibleStart + visibleCount + buffer
     );
     
-    if (sortedAndFilteredTags.length > 100) {
-      // Use requestAnimationFrame for smooth updates
-      requestAnimationFrame(() => {
-        setVirtualizedRange({ 
-          start: Math.max(0, visibleStart - buffer/2), 
-          end: visibleEnd 
-        });
-      });
+    const newStart = Math.max(0, visibleStart - buffer/2);
+    const newEnd = visibleEnd;
+    
+    // Only update if there's a significant change (at least 5 items difference)
+    const significantChange = 
+      Math.abs(newStart - virtualizedRange.start) >= 5 || 
+      Math.abs(newEnd - virtualizedRange.end) >= 5;
+    
+    if (significantChange) {
+      lastScrollUpdateRef.current = now;
+      
+      // Clear any pending timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Debounce rapid updates
+      scrollTimeoutRef.current = setTimeout(() => {
+        setVirtualizedRange({ start: newStart, end: newEnd });
+        scrollTimeoutRef.current = null;
+      }, 10); // Small delay for debouncing
     }
-  }, [sortedAndFilteredTags.length, selectedTagIds.length]);
+  }, [sortedAndFilteredTags.length, selectedTagIds.length, virtualizedRange.start, virtualizedRange.end]);
 
   const RelationshipViewer = useCallback(({ relationships: inputRelationships }) => {
     const [relSearchQuery, setRelSearchQuery] = useState('');

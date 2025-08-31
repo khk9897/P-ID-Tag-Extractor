@@ -637,6 +637,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loopSearchQuery, setLoopSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
   const [editingLoopId, setEditingLoopId] = useState(null);
   const [editingLoopValue, setEditingLoopValue] = useState('');
@@ -1791,8 +1792,15 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
 
       {activeTab === 'loops' && (
         <div className="flex-grow flex flex-col overflow-hidden">
-          <div className="p-3 border-b border-slate-700">
-            <div className="text-xs text-slate-400 mb-2">
+          <div className="p-3 space-y-2 border-b border-slate-700">
+            <input
+              type="text"
+              placeholder="Search loops..."
+              value={loopSearchQuery}
+              onChange={(e) => setLoopSearchQuery(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 text-sm focus:ring-sky-500 focus:border-sky-500"
+            />
+            <div className="text-xs text-slate-400">
               Press 'L' to create loops from selected instrument tags
             </div>
             <button 
@@ -1817,6 +1825,16 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                   const tag = tags.find(t => t.id === tagId);
                   return tag && tag.page === currentPage;
                 }))
+                .filter(loop => {
+                  if (!loopSearchQuery) return true;
+                  const loopName = loop.name || loop.id;
+                  return loopName.toLowerCase().includes(loopSearchQuery.toLowerCase());
+                })
+                .sort((a, b) => {
+                  const nameA = a.name || a.id;
+                  const nameB = b.name || b.id;
+                  return nameA.localeCompare(nameB);
+                })
                 .map(loop => {
                   const loopTags = loop.tagIds.map(id => tags.find(t => t.id === id)).filter(Boolean);
                   

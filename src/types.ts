@@ -42,6 +42,7 @@ export interface Tag {
   bbox: BoundingBox;
   category: CategoryType;
   sourceItems: RawTextItem[];
+  isReviewed?: boolean;
 }
 
 export interface Description {

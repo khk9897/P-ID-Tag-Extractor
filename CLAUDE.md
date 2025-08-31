@@ -48,7 +48,7 @@ The app uses React state with lifting patterns:
 ### Data Model
 
 Core entities:
-- **Tags**: Extracted entities with category, bbox, page, and source items
+- **Tags**: Extracted entities with category, bbox, page, source items, and optional review status (`isReviewed?: boolean`)
 - **Relationships**: Connections between tags (4 types: Connection, Installation, Annotation, Note)
 - **Descriptions**: Note & Hold entities with metadata (type, scope, number) and page-specific numbering
 - **RawTextItems**: Unprocessed text fragments for manual tag creation
@@ -60,9 +60,10 @@ Core entities:
 2. **Spatial Analysis**: Tolerance-based component combination and proximity detection
 3. **Relationship Management**: Visual connection tools with keyboard shortcuts
 4. **Description Management**: Note & Hold auto-linking with page-specific numbering
-5. **Advanced UI Controls**: Page filtering, read/edit mode toggles, and improved layouts
-6. **Project Management**: JSON export/import for work continuity
-7. **Excel Export**: Structured reports with relationship mapping and Description sheet
+5. **Review System**: Tag review status tracking with checkbox interface and filtering (All/Reviewed/Not Reviewed)
+6. **Advanced UI Controls**: Page filtering, read/edit mode toggles, and improved layouts
+7. **Project Management**: JSON export/import for work continuity with review status preservation
+8. **Excel Export**: Structured reports with relationship mapping and Description sheet
 
 ### Configuration
 

@@ -28,6 +28,7 @@
 
 ### 🎨 Interactive Workspace  
 - **Visual Tag Management**: Color-coded tag highlighting with category-based organization
+- **Review System**: Tag review status tracking with checkbox interface and filtering (All/Reviewed/Not Reviewed)
 - **Relationship Mapping**: Intuitive connection, installation, and annotation relationship creation
 - **Multi-selection Tools**: Advanced selection capabilities with area and multi-tag selection
 - **Page Filtering**: Smart page-only view for focused editing across all entity types
@@ -40,8 +41,8 @@
 
 ### 📊 Professional Export
 - **Structured Excel Output**: Organized sheets for Equipment, Line, Instrument, and Description lists
-- **Complete Data Export**: Includes relationships, annotations, Note & Hold data, and drawing references
-- **Project Continuity**: Save/load projects for iterative work sessions
+- **Complete Data Export**: Includes relationships, annotations, Note & Hold data, drawing references, and review status
+- **Project Continuity**: Save/load projects with review status preservation for iterative work sessions
 - **Auto-linking**: Intelligent Note & Hold association with page-specific numbering
 
 ---
@@ -190,8 +191,9 @@ const maxFileSize = '100MB'; // Recommended
 
 1. **Automatic Recognition**: Upload triggers pattern matching
 2. **Manual Review**: Verify and adjust detected tags  
-3. **Custom Creation**: Add tags for unrecognized elements
-4. **Relationship Building**: Connect related components
+3. **Review Status Tracking**: Mark tags as reviewed using checkboxes
+4. **Custom Creation**: Add tags for unrecognized elements
+5. **Relationship Building**: Connect related components
 
 ### 3. Relationship Types
 

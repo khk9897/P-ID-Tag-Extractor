@@ -161,6 +161,7 @@ interface TagListItemProps {
   descriptions: any[];
   equipmentShortSpecs: any[];
   loops: any[];
+  onToggleReviewStatus: (tagId: string) => void;
   onDeleteRelationship: (relId: any) => void;
   onDeleteTag: (tagId: string) => void;
   onUpdateTagText: (tagId: string, newText: string) => void;
@@ -170,7 +171,7 @@ interface TagListItemProps {
   showDetails: boolean;
 }
 
-const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, loops, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, onUpdateLoop, showDetails }) => {
+const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, loops, onToggleReviewStatus, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, onUpdateLoop, showDetails }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
@@ -288,6 +289,16 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
             </div>
           ) : (
             <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={tag.isReviewed || false}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onToggleReviewStatus(tag.id);
+                }}
+                className="w-4 h-4 text-sky-600 bg-slate-700 border-slate-500 rounded focus:ring-sky-500 focus:ring-2"
+                title="Mark as reviewed"
+              />
               <span 
                 className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold text-white ${colors.bg} ${colors.border} border`}
                 title={tag.category}
@@ -737,6 +748,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   const [editingLoopId, setEditingLoopId] = useState(null);
   const [editingLoopValue, setEditingLoopValue] = useState('');
   const [filterCategory, setFilterCategory] = useState('All');
+  const [reviewFilter, setReviewFilter] = useState('All');
   const [sortOrder, setSortOrder] = useState('default');
   
   // Reset sort order to default if instrument sorting is selected but not on Instrument filter
@@ -775,6 +787,14 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
     onDeleteRawTextItems([itemId]);
   }, [onDeleteRawTextItems]);
   
+  const handleToggleReviewStatus = useCallback((tagId) => {
+    setTags(prev => prev.map(tag => 
+      tag.id === tagId 
+        ? { ...tag, isReviewed: !tag.isReviewed }
+        : tag
+    ));
+  }, [setTags]);
+  
   const handleLoopEdit = useCallback((loopId) => {
     const loop = loops.find(l => l.id === loopId);
     if (loop) {
@@ -806,6 +826,12 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
     const filtered = baseTags
       .filter(tag => !showCurrentPageOnly || tag.page === currentPage)
       .filter(tag => filterCategory === 'All' || tag.category === filterCategory)
+      .filter(tag => {
+        if (reviewFilter === 'All') return true;
+        if (reviewFilter === 'Reviewed') return tag.isReviewed === true;
+        if (reviewFilter === 'NotReviewed') return tag.isReviewed !== true;
+        return true;
+      })
       .filter(tag => tag.text.toLowerCase().includes(searchQuery.toLowerCase()));
 
     switch (sortOrder) {
@@ -887,7 +913,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
           return a.text.localeCompare(b.text);
         });
     }
-  }, [tags, showCurrentPageOnly, currentPage, filterCategory, searchQuery, sortOrder]);
+  }, [tags, showCurrentPageOnly, currentPage, filterCategory, reviewFilter, searchQuery, sortOrder]);
 
   // Virtualized tags for performance
   const virtualizedTags = useMemo(() => {
@@ -1482,6 +1508,41 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                     );
                   })}
                 </div>
+
+                {/* Review Status Filter */}
+                <div className="border-b border-slate-700 flex text-xs">
+                  {['All', 'Reviewed', 'NotReviewed'].map((filter) => {
+                    const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage)
+                      .filter(tag => filterCategory === 'All' || tag.category === filterCategory);
+                    
+                    let count;
+                    if (filter === 'All') {
+                      count = baseTags.length;
+                    } else if (filter === 'Reviewed') {
+                      count = baseTags.filter(t => t.isReviewed === true).length;
+                    } else {
+                      count = baseTags.filter(t => t.isReviewed !== true).length;
+                    }
+                    
+                    const isActive = reviewFilter === filter;
+                    const displayName = filter === 'NotReviewed' ? 'Not Reviewed' : filter;
+                    
+                    return (
+                      <button 
+                        key={filter} 
+                        onClick={() => setReviewFilter(filter)} 
+                        className={`flex-1 py-1.5 px-1 font-semibold text-center border-r border-slate-600 last:border-r-0 ${
+                          isActive ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs leading-tight">{displayName}</span>
+                          <span className="text-xs text-slate-400 leading-tight">({count})</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
             </div>
             
             {selectedTagIds.length > 1 && (
@@ -1522,6 +1583,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                       allRawTextItems={rawTextItems}
                       descriptions={descriptions}
                       equipmentShortSpecs={equipmentShortSpecs}
+                      onToggleReviewStatus={handleToggleReviewStatus}
                       onDeleteRelationship={handleDeleteRelationship}
                       onDeleteTag={handleDeleteTag}
                       onUpdateTagText={onUpdateTagText}

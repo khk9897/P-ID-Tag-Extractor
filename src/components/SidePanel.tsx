@@ -1891,7 +1891,6 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                               <span className="text-sky-300 font-mono font-semibold text-sm">{loop.name || loop.id}</span>
                               <span className="text-xs text-slate-400">
                                 ({loopTags.length} tags)
-                                {loopTags.length > 0 && ` P. ${loopTags.map(t => t.page).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).join(', ')}`}
                               </span>
                               <EditButton 
                                 onClick={() => handleLoopEdit(loop.id)}
@@ -1926,7 +1925,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                             className="inline-block px-2 py-1 bg-slate-600/50 text-slate-300 rounded text-xs font-mono cursor-pointer hover:bg-slate-500/50 transition-colors"
                             title={`Click to center on tag: ${tag.text}`}
                           >
-                            {tag.text}
+                            {tag.text} <span className="text-slate-400">P.{tag.page}</span>
                           </span>
                         ))}
                       </div>

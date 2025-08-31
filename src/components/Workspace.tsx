@@ -14,6 +14,8 @@ export const Workspace = ({
   setDescriptions,
   equipmentShortSpecs,
   setEquipmentShortSpecs,
+  loops,
+  setLoops,
   onCreateTag,
   onCreateManualTag,
   onCreateDescription,
@@ -29,6 +31,10 @@ export const Workspace = ({
   onAutoLinkDescriptions,
   onAutoLinkNotesAndHolds,
   onAutoLinkEquipmentShortSpecs,
+  onAutoGenerateLoops,
+  onManualCreateLoop,
+  onDeleteLoops,
+  onUpdateLoop,
   showConfirmation,
   // Viewer state from App
   currentPage,
@@ -134,6 +140,8 @@ export const Workspace = ({
         descriptions={descriptions}
         equipmentShortSpecs={equipmentShortSpecs}
         setEquipmentShortSpecs={setEquipmentShortSpecs}
+        loops={loops}
+        setLoops={setLoops}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         selectedTagIds={selectedTagIds}
@@ -155,6 +163,10 @@ export const Workspace = ({
         onAutoLinkDescriptions={onAutoLinkDescriptions}
         onAutoLinkNotesAndHolds={onAutoLinkNotesAndHolds}
         onAutoLinkEquipmentShortSpecs={onAutoLinkEquipmentShortSpecs}
+        onAutoGenerateLoops={onAutoGenerateLoops}
+        onManualCreateLoop={onManualCreateLoop}
+        onDeleteLoops={onDeleteLoops}
+        onUpdateLoop={onUpdateLoop}
         showConfirmation={showConfirmation}
         onPingTag={handlePingTag}
         onPingDescription={handlePingDescription}
@@ -186,6 +198,7 @@ export const Workspace = ({
           selectedRawTextItemIds={selectedRawTextItemIds}
           setSelectedRawTextItemIds={setSelectedRawTextItemIds}
           onDeleteTags={onDeleteTags}
+          onManualCreateLoop={onManualCreateLoop}
           onManualAreaSelect={handleManualAreaSelect}
           // Pass down viewer state
           scale={scale}

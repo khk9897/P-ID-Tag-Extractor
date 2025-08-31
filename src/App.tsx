@@ -17,6 +17,7 @@ import {
   Relationship,
   Description,
   EquipmentShortSpec,
+  Loop,
   ConfirmModalProps,
   ProcessingProgress,
   ProjectData,
@@ -74,6 +75,7 @@ const App: React.FC = () => {
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [descriptions, setDescriptions] = useState<Description[]>([]);
   const [equipmentShortSpecs, setEquipmentShortSpecs] = useState<EquipmentShortSpec[]>([]);
+  const [loops, setLoops] = useState<Loop[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [progress, setProgress] = useState<ProcessingProgress>({ current: 0, total: 0 });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -692,6 +694,7 @@ const App: React.FC = () => {
     setRawTextItems(sanitizedData.rawTextItems);
     setDescriptions(sanitizedData.descriptions || []);
     setEquipmentShortSpecs(sanitizedData.equipmentShortSpecs || []);
+    setLoops(sanitizedData.loops || []);
     
     if (sanitizedData.settings?.patterns) {
         setPatterns(sanitizedData.settings.patterns);
@@ -780,6 +783,7 @@ const App: React.FC = () => {
         rawTextItems,
         descriptions,
         equipmentShortSpecs,
+        loops,
         settings: {
             patterns,
             tolerances,
@@ -1233,6 +1237,170 @@ const App: React.FC = () => {
     );
   }, [tags, showConfirmation]);
 
+  // Loop generation utility functions
+  const parseInstrumentTag = useCallback((text: string) => {
+    const cleanText = text.trim();
+    
+    // Match patterns: "PT-7083 C", "PZV-7012 A", "PIC-101", etc.
+    const match = cleanText.match(/^([A-Z]{1,4})-?(\d+)[\s]*([A-Z]*)$/);
+    if (match) {
+      return {
+        function: match[1].trim(),
+        number: parseInt(match[2]),
+        suffix: match[3].trim()
+      };
+    }
+    
+    // Try alternative pattern without dash: "PT7083C"
+    const altMatch = cleanText.match(/^([A-Z]{1,4})(\d+)([A-Z]*)$/);
+    if (altMatch) {
+      return {
+        function: altMatch[1].trim(),
+        number: parseInt(altMatch[2]),
+        suffix: altMatch[3].trim()
+      };
+    }
+    
+    return null;
+  }, []);
+
+  const generateLoopId = useCallback((instrumentTags: Tag[]) => {
+    if (instrumentTags.length === 0) return null;
+    
+    const firstTag = instrumentTags[0];
+    const parsed = parseInstrumentTag(firstTag.text);
+    if (!parsed) return firstTag.text.charAt(0) + '-' + '000';
+    
+    // Find common function prefix among all tags
+    let commonPrefix = parsed.function;
+    for (const tag of instrumentTags.slice(1)) {
+      const tagParsed = parseInstrumentTag(tag.text);
+      if (tagParsed && tagParsed.number === parsed.number) {
+        // Find common prefix between functions
+        let i = 0;
+        while (i < commonPrefix.length && i < tagParsed.function.length && 
+               commonPrefix[i] === tagParsed.function[i]) {
+          i++;
+        }
+        commonPrefix = commonPrefix.substring(0, i);
+      }
+    }
+    
+    // Fallback to first letter if no common prefix
+    if (commonPrefix.length === 0) {
+      commonPrefix = parsed.function.charAt(0);
+    }
+    
+    return `${commonPrefix}-${parsed.number}`;
+  }, [parseInstrumentTag]);
+
+  const handleAutoGenerateLoops = useCallback((pageFilter?: number) => {
+    const instrumentTags = tags.filter(t => 
+      t.category === Category.Instrument && 
+      (pageFilter ? t.page === pageFilter : true)
+    );
+    
+    if (instrumentTags.length === 0) {
+      alert('No instrument tags found to create loops.');
+      return;
+    }
+
+    showConfirmation(
+      `This will automatically create loops from ${instrumentTags.length} instrument tags based on function prefix and number matching. Continue?`,
+      () => {
+        // First, group by 1-letter prefix and number
+        const oneLetterGroups = new Map<string, Tag[]>();
+        
+        for (const tag of instrumentTags) {
+          const parsed = parseInstrumentTag(tag.text);
+          if (!parsed) continue;
+          
+          const oneLetterKey = `${parsed.function.charAt(0)}-${parsed.number}`;
+          if (!oneLetterGroups.has(oneLetterKey)) {
+            oneLetterGroups.set(oneLetterKey, []);
+          }
+          oneLetterGroups.get(oneLetterKey)!.push(tag);
+        }
+        
+        // Use 1-letter groups as the primary grouping method
+        const loopGroups = oneLetterGroups;
+        
+        // Create loops from groups with multiple tags
+        const newLoops: Loop[] = [];
+        const existingLoopIds = new Set(loops.map(l => l.id));
+        
+        for (const [groupKey, groupTags] of loopGroups.entries()) {
+          if (groupTags.length > 1) {
+            const loopId = generateLoopId(groupTags) || groupKey;
+            
+            // Skip if loop already exists
+            if (existingLoopIds.has(loopId)) continue;
+            
+            newLoops.push({
+              id: loopId,
+              tagIds: groupTags.map(t => t.id),
+              createdAt: new Date().toISOString(),
+              isAutoGenerated: true
+            });
+          }
+        }
+        
+        if (newLoops.length > 0) {
+          setLoops(prev => [...prev, ...newLoops]);
+          alert(`Created ${newLoops.length} new loops from ${newLoops.reduce((sum, loop) => sum + loop.tagIds.length, 0)} instrument tags.`);
+        } else {
+          alert('No new loops could be created. They may already exist or no matching groups were found.');
+        }
+      }
+    );
+  }, [tags, loops, parseInstrumentTag, generateLoopId, showConfirmation]);
+
+  const handleManualCreateLoop = useCallback((selectedTagIds: string[]) => {
+    const selectedInstrumentTags = tags.filter(t => 
+      selectedTagIds.includes(t.id) && t.category === Category.Instrument
+    );
+    
+    if (selectedInstrumentTags.length < 2) {
+      alert('Please select at least 2 instrument tags to create a loop.');
+      return;
+    }
+    
+    const loopId = generateLoopId(selectedInstrumentTags);
+    if (!loopId) {
+      alert('Could not generate loop ID from selected tags.');
+      return;
+    }
+    
+    // Check if loop already exists
+    const existingLoop = loops.find(l => l.id === loopId);
+    if (existingLoop) {
+      alert(`Loop "${loopId}" already exists.`);
+      return;
+    }
+    
+    const newLoop: Loop = {
+      id: loopId,
+      tagIds: selectedInstrumentTags.map(t => t.id),
+      createdAt: new Date().toISOString(),
+      isAutoGenerated: false
+    };
+    
+    setLoops(prev => [...prev, newLoop]);
+    alert(`Created loop "${loopId}" with ${selectedInstrumentTags.length} instrument tags.`);
+  }, [tags, loops, generateLoopId]);
+
+  const handleDeleteLoops = useCallback((loopIds: string[]) => {
+    setLoops(prev => prev.filter(l => !loopIds.includes(l.id)));
+  }, []);
+
+  const handleUpdateLoop = useCallback((loopId: string, updates: { id?: string; name?: string }) => {
+    setLoops(prev => prev.map(loop => 
+      loop.id === loopId 
+        ? { ...loop, ...updates }
+        : loop
+    ));
+  }, []);
+
   const mainContent = () => {
     if (isLoading) {
       return (
@@ -1275,6 +1443,8 @@ const App: React.FC = () => {
             setDescriptions={setDescriptions}
             equipmentShortSpecs={equipmentShortSpecs}
             setEquipmentShortSpecs={setEquipmentShortSpecs}
+            loops={loops}
+            setLoops={setLoops}
             onCreateTag={handleCreateTag}
             onCreateManualTag={handleCreateManualTag}
             onCreateDescription={handleCreateDescription}
@@ -1290,6 +1460,10 @@ const App: React.FC = () => {
             onAutoLinkDescriptions={handleAutoLinkDescriptions}
             onAutoLinkNotesAndHolds={handleAutoLinkNotesAndHolds}
             onAutoLinkEquipmentShortSpecs={handleAutoLinkEquipmentShortSpecs}
+            onAutoGenerateLoops={handleAutoGenerateLoops}
+            onManualCreateLoop={handleManualCreateLoop}
+            onDeleteLoops={handleDeleteLoops}
+            onUpdateLoop={handleUpdateLoop}
             showConfirmation={showConfirmation}
             // Pass down viewer state
             currentPage={currentPage}

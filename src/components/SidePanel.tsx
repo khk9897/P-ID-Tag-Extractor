@@ -573,11 +573,13 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
   );
 });
 
-export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, showConfirmation, onPingTag, onPingDescription, onPingEquipmentShortSpec, showRelationships, setShowRelationships }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, loops, setLoops, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, onAutoGenerateLoops, onManualCreateLoop, onDeleteLoops, onUpdateLoop, showConfirmation, onPingTag, onPingDescription, onPingEquipmentShortSpec, showRelationships, setShowRelationships }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
+  const [editingLoopId, setEditingLoopId] = useState(null);
+  const [editingLoopValue, setEditingLoopValue] = useState('');
   const [filterCategory, setFilterCategory] = useState('All');
   const [sortOrder, setSortOrder] = useState('default');
   
@@ -616,6 +618,30 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   const handleDeleteItem = useCallback((itemId) => {
     onDeleteRawTextItems([itemId]);
   }, [onDeleteRawTextItems]);
+  
+  const handleLoopEdit = useCallback((loopId) => {
+    const loop = loops.find(l => l.id === loopId);
+    if (loop) {
+      setEditingLoopId(loopId);
+      setEditingLoopValue(loop.name || loop.id);
+    }
+  }, [loops]);
+  
+  const handleLoopSave = useCallback(() => {
+    if (editingLoopId && editingLoopValue.trim()) {
+      onUpdateLoop(editingLoopId, { 
+        id: editingLoopValue.trim(),
+        name: editingLoopValue.trim() 
+      });
+      setEditingLoopId(null);
+      setEditingLoopValue('');
+    }
+  }, [editingLoopId, editingLoopValue, onUpdateLoop]);
+  
+  const handleLoopCancel = useCallback(() => {
+    setEditingLoopId(null);
+    setEditingLoopValue('');
+  }, []);
   
   
   const sortedAndFilteredTags = useMemo(() => {
@@ -1028,6 +1054,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
         <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({totalTagCount})</button>
         <button onClick={() => setActiveTab('descriptions')} className={`flex-1 py-2 font-semibold ${activeTab === 'descriptions' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Notes ({filteredDescriptions.length})</button>
         <button onClick={() => setActiveTab('equipmentShortSpecs')} className={`flex-1 py-2 font-semibold ${activeTab === 'equipmentShortSpecs' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Equipment Specs ({filteredEquipmentShortSpecs.length})</button>
+        <button onClick={() => setActiveTab('loops')} className={`flex-1 py-2 font-semibold ${activeTab === 'loops' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Loops ({loops.length})</button>
         <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relations ({filteredRelationships.length})</button>
       </div>
 
@@ -1561,6 +1588,169 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                 </div>
                 );
               })
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'loops' && (
+        <div className="flex-grow flex flex-col overflow-hidden">
+          <div className="p-3 border-b border-slate-700">
+            <div className="text-xs text-slate-400 mb-2">
+              Press 'L' to create loops from selected instrument tags
+            </div>
+            <button 
+              onClick={() => onAutoGenerateLoops(showCurrentPageOnly ? currentPage : undefined)}
+              className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-md transition-colors text-sm"
+            >
+              <span>🔄</span>
+              <span>Auto Generate Loops</span>
+            </button>
+          </div>
+          
+          <div className="flex-grow overflow-y-auto p-3 space-y-2">
+            {loops.length === 0 ? (
+              <div className="text-center text-slate-500 mt-8">
+                <div className="text-lg mb-2">🔗</div>
+                <div className="text-sm">No loops created yet</div>
+                <div className="text-xs mt-1">Select instrument tags and press 'L' to create, or use Auto Generate</div>
+              </div>
+            ) : (
+              loops
+                .filter(loop => !showCurrentPageOnly || loop.tagIds.some(tagId => {
+                  const tag = tags.find(t => t.id === tagId);
+                  return tag && tag.page === currentPage;
+                }))
+                .map(loop => {
+                  const loopTags = loop.tagIds.map(id => tags.find(t => t.id === id)).filter(Boolean);
+                  
+                  // Find top-left tag (smallest y, then smallest x)
+                  const getTopLeftTag = () => {
+                    if (loopTags.length === 0) return null;
+                    return loopTags.reduce((topLeft, tag) => {
+                      if (tag.bbox.y1 < topLeft.bbox.y1) return tag;
+                      if (tag.bbox.y1 === topLeft.bbox.y1 && tag.bbox.x1 < topLeft.bbox.x1) return tag;
+                      return topLeft;
+                    });
+                  };
+                  
+                  const handleLoopSelect = () => {
+                    setSelectedTagIds(loop.tagIds);
+                    const topLeftTag = getTopLeftTag();
+                    if (topLeftTag) {
+                      onPingTag(topLeftTag.id);
+                    }
+                  };
+                  
+                  return (
+                    <div 
+                      key={loop.id} 
+                      className="group border border-slate-600 rounded-lg p-3 bg-slate-700/30 cursor-pointer hover:bg-slate-600/30 transition-colors"
+                      onClick={handleLoopSelect}
+                      title="Click to select all tags in this loop"
+                    >
+                      {/* Loop header */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2 flex-grow">
+                          {editingLoopId === loop.id ? (
+                            <div className="flex items-center space-x-2 flex-grow">
+                              <input
+                                type="text"
+                                value={editingLoopValue}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  setEditingLoopValue(e.target.value);
+                                }}
+                                onKeyDown={(e) => {
+                                  e.stopPropagation();
+                                  if (e.key === 'Enter') {
+                                    handleLoopSave();
+                                  } else if (e.key === 'Escape') {
+                                    handleLoopCancel();
+                                  }
+                                }}
+                                className="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sky-300 font-mono font-semibold text-sm flex-grow focus:ring-sky-500 focus:border-sky-500"
+                                autoFocus
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLoopSave();
+                                }}
+                                className="text-green-400 hover:text-green-300 p-1"
+                                title="Save"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLoopCancel();
+                                }}
+                                className="text-slate-400 hover:text-slate-300 p-1"
+                                title="Cancel"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="text-sky-300 font-mono font-semibold text-sm">{loop.name || loop.id}</span>
+                              <span className="text-xs text-slate-400">
+                                ({loopTags.length} tags) {loop.isAutoGenerated ? '🔄' : '✋'}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLoopEdit(loop.id);
+                                }}
+                                className="text-slate-500 hover:text-sky-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Edit loop name"
+                              >
+                                ✏️
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        {editingLoopId !== loop.id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteLoops([loop.id]);
+                            }}
+                            className="text-red-400 hover:text-red-300 p-1"
+                            title="Delete loop"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Loop tags */}
+                      <div className="flex flex-wrap gap-1">
+                        {loopTags.map(tag => (
+                          <span
+                            key={tag.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onPingTag(tag.id);
+                            }}
+                            className="inline-block px-2 py-1 bg-slate-600/50 text-slate-300 rounded text-xs font-mono cursor-pointer hover:bg-slate-500/50 transition-colors"
+                            title={`Click to center on tag: ${tag.text}`}
+                          >
+                            {tag.text}
+                          </span>
+                        ))}
+                      </div>
+                      
+                      {/* Loop metadata */}
+                      <div className="text-xs text-slate-500 mt-2">
+                        Created: {new Date(loop.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  );
+                })
             )}
           </div>
         </div>

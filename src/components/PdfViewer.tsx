@@ -26,6 +26,7 @@ export const PdfViewer = ({
   selectedRawTextItemIds,
   setSelectedRawTextItemIds,
   onDeleteTags,
+  onManualCreateLoop,
   onManualAreaSelect,
   // Viewer state from props
   scale,
@@ -305,11 +306,24 @@ export const PdfViewer = ({
         } else {
           console.warn('To create an installation, please select exactly one Equipment or Line, and one or more Instruments.');
         }
+      } else if (e.key.toLowerCase() === 'l' && mode === 'select' && selectedTagIds.length >= 2) {
+        const selectedInstrumentTags = tags.filter(t => 
+          selectedTagIds.includes(t.id) && t.category === Category.Instrument
+        );
+        
+        if (selectedInstrumentTags.length >= 2) {
+          if (onManualCreateLoop) {
+            onManualCreateLoop(selectedTagIds);
+            setSelectedTagIds([]);
+          }
+        } else {
+          console.warn('To create a loop, please select at least 2 instrument tags.');
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, setSelectedRawTextItemIds, onDeleteTags, setMode, setRelationshipStartTag, setScale]);
+  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, setSelectedRawTextItemIds, onDeleteTags, onManualCreateLoop, setMode, setRelationshipStartTag, setScale]);
   
   useLayoutEffect(() => {
     if (selectedTagIds.length === 1 && scrollContainerRef.current && viewport) {

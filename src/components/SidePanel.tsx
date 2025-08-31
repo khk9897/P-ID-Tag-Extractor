@@ -1891,6 +1891,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                               <span className="text-sky-300 font-mono font-semibold text-sm">{loop.name || loop.id}</span>
                               <span className="text-xs text-slate-400">
                                 ({loopTags.length} tags)
+                                {loopTags.length > 0 && ` P. ${loopTags.map(t => t.page).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).join(', ')}`}
                               </span>
                               <EditButton 
                                 onClick={() => handleLoopEdit(loop.id)}

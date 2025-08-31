@@ -450,16 +450,17 @@ const App: React.FC = () => {
   const handleCreateEquipmentShortSpec = useCallback((selectedItems: (Tag | RawTextItem)[]): void => {
     if (!selectedItems || selectedItems.length === 0) return;
 
-    // Find exactly one Equipment tag
+    // Find Equipment tags - support multiple equipment tags (e.g., A/B/C/D/E)
     const equipmentTags = selectedItems.filter(item => 'category' in item && item.category === Category.Equipment) as Tag[];
     
-    if (equipmentTags.length !== 1) {
-      console.error('Must select exactly one Equipment tag');
+    if (equipmentTags.length === 0) {
+      console.error('Must select at least one Equipment tag');
       return;
     }
 
-    const equipmentTag = equipmentTags[0];
-    const nonTagItems = selectedItems.filter(item => !('category' in item) || item !== equipmentTag);
+    // Use the first equipment tag as the primary one for metadata
+    const primaryEquipmentTag = equipmentTags[0];
+    const nonTagItems = selectedItems.filter(item => !('category' in item));
 
     if (nonTagItems.length === 0) {
       console.error('Must select at least one non-tag item');
@@ -515,15 +516,16 @@ const App: React.FC = () => {
       bbox: mergedBbox,
       sourceItems: sortedItems,
       metadata: {
-        originalEquipmentTag: equipmentTag,
+        originalEquipmentTag: primaryEquipmentTag,
         service: serviceText,
       },
     };
 
     setEquipmentShortSpecs(prev => [...prev, newEquipmentShortSpec]);
 
-    // Remove the Equipment tag from tags
-    setTags(prev => prev.filter(tag => tag.id !== equipmentTag.id));
+    // Remove all selected Equipment tags from tags
+    const equipmentTagIds = equipmentTags.map(tag => tag.id);
+    setTags(prev => prev.filter(tag => !equipmentTagIds.includes(tag.id)));
 
     // Remove raw text items that were converted
     const rawItemIdsToRemove = nonTagItems
@@ -533,7 +535,17 @@ const App: React.FC = () => {
     if (rawItemIdsToRemove.length > 0) {
       setRawTextItems(prev => prev.filter(item => !rawItemIdsToRemove.includes(item.id)));
     }
-  }, []);
+
+    // Create relationships between all Equipment tags and the Equipment Short Spec
+    const newRelationships = equipmentTags.map(equipmentTag => ({
+      id: uuidv4(),
+      from: equipmentTag.id,
+      to: newEquipmentShortSpec.id,
+      type: RelationshipType.EquipmentShortSpec,
+    }));
+
+    setRelationships(prev => [...prev, ...newRelationships]);
+  }, [equipmentShortSpecs]);
 
   const handleDeleteEquipmentShortSpecs = useCallback((equipmentShortSpecIds: string[]): void => {
     // Find specs to be deleted to restore their source items
@@ -541,11 +553,16 @@ const App: React.FC = () => {
     
     // Restore Equipment tags and raw text items
     specsToDelete.forEach(spec => {
-      // Restore Equipment tag
-      const equipmentTag = spec.metadata.originalEquipmentTag;
-      setTags(prev => [...prev, equipmentTag]);
+      // Restore all Equipment tags from sourceItems
+      const equipmentTagsToRestore = spec.sourceItems.filter(item => 
+        'category' in item && item.category === Category.Equipment
+      ) as Tag[];
       
-      // Restore raw text items that were converted (excluding the Equipment tag)
+      if (equipmentTagsToRestore.length > 0) {
+        setTags(prev => [...prev, ...equipmentTagsToRestore]);
+      }
+      
+      // Restore raw text items that were converted (excluding the Equipment tags)
       const rawItemsToRestore = spec.sourceItems.filter(item => 
         !('category' in item) // Only raw text items, not tags
       );

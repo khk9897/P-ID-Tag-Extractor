@@ -41,6 +41,7 @@ export const PdfViewer = ({
   pingedTagId,
   pingedDescriptionId,
   pingedEquipmentShortSpecId,
+  pingedRelationshipId,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -812,7 +813,40 @@ export const PdfViewer = ({
                             }
                         }
 
-                        return <line key={rel.id} x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={strokeColor} strokeWidth="2" strokeDasharray={rel.type === RelationshipType.Annotation || rel.type === RelationshipType.Note ? '3 3' : 'none'} markerEnd={marker} />;
+                        // Check if this relationship should be highlighted
+                        const isPinged = pingedRelationshipId === rel.id;
+                        const lineStrokeWidth = isPinged ? '4' : '2';
+                        const lineStrokeColor = isPinged ? '#ef4444' : strokeColor; // red-500 for pinged
+                        const dashArray = isPinged ? 'none' : (rel.type === RelationshipType.Annotation || rel.type === RelationshipType.Note ? '3 3' : 'none');
+
+                        return (
+                            <g key={rel.id}>
+                                <line 
+                                    x1={start.x} 
+                                    y1={start.y} 
+                                    x2={end.x} 
+                                    y2={end.y} 
+                                    stroke={lineStrokeColor} 
+                                    strokeWidth={lineStrokeWidth} 
+                                    strokeDasharray={dashArray} 
+                                    markerEnd={marker}
+                                    className={isPinged ? 'ping-highlight-line' : ''}
+                                />
+                                {isPinged && (
+                                    <line 
+                                        x1={start.x} 
+                                        y1={start.y} 
+                                        x2={end.x} 
+                                        y2={end.y} 
+                                        stroke="#ef4444" 
+                                        strokeWidth="8" 
+                                        strokeOpacity="0.3"
+                                        strokeDasharray="none"
+                                        className="ping-highlight-line-glow"
+                                    />
+                                )}
+                            </g>
+                        );
                     })}
                     
                     {currentTags.map(tag => {

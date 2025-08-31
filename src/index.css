@@ -24,3 +24,41 @@
 .ping-highlight-box {
   animation: fade-in-out 2s ease-out;
 }
+
+.ping-highlight-line {
+  animation: line-pulse 2s ease-out;
+}
+
+.ping-highlight-line-glow {
+  animation: line-glow-pulse 2s ease-out;
+}
+
+@keyframes line-pulse {
+  0% {
+    stroke-width: 2;
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-width: 6;
+    stroke-opacity: 0.8;
+  }
+  100% {
+    stroke-width: 4;
+    stroke-opacity: 1;
+  }
+}
+
+@keyframes line-glow-pulse {
+  0% {
+    stroke-width: 6;
+    stroke-opacity: 0.2;
+  }
+  50% {
+    stroke-width: 12;
+    stroke-opacity: 0.4;
+  }
+  100% {
+    stroke-width: 8;
+    stroke-opacity: 0.3;
+  }
+}

@@ -612,7 +612,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
   );
 });
 
-export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, loops, setLoops, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, onAutoGenerateLoops, onManualCreateLoop, onDeleteLoops, onUpdateLoop, showConfirmation, onPingTag, onPingDescription, onPingEquipmentShortSpec, showRelationships, setShowRelationships }) => {
+export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, loops, setLoops, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, onAutoGenerateLoops, onManualCreateLoop, onDeleteLoops, onUpdateLoop, showConfirmation, onPingTag, onPingDescription, onPingEquipmentShortSpec, onPingRelationship, showRelationships, setShowRelationships }) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1063,7 +1063,10 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
           setCurrentPage(targetPage);
         }
         
-        // Ping both entities
+        // Ping the relationship itself (which will highlight the line and entities)
+        onPingRelationship(relationship.id);
+        
+        // Also ping both entities
         if (entityMaps.tags.has(relationship.from)) {
           onPingTag(relationship.from);
         }
@@ -1083,7 +1086,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
           onPingEquipmentShortSpec(relationship.to);
         }
       }
-    }, [getEntity, currentPage, setCurrentPage, entityMaps, onPingTag, onPingDescription, onPingEquipmentShortSpec]);
+    }, [getEntity, currentPage, setCurrentPage, entityMaps, onPingTag, onPingDescription, onPingEquipmentShortSpec, onPingRelationship]);
 
     return (
         <div className="flex-grow flex flex-col overflow-hidden">
@@ -1191,7 +1194,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
             </ul>
         </div>
     );
-  }, [tags, descriptions, rawTextItems, equipmentShortSpecs, currentPage, setCurrentPage, onPingTag, onPingDescription, onPingEquipmentShortSpec, goToTag, handleDeleteRelationship]);
+  }, [tags, descriptions, rawTextItems, equipmentShortSpecs, currentPage, setCurrentPage, onPingTag, onPingDescription, onPingEquipmentShortSpec, onPingRelationship, goToTag, handleDeleteRelationship]);
 
   const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.NotesAndHolds, Category.DrawingNumber];
   

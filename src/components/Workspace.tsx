@@ -58,6 +58,7 @@ export const Workspace = ({
   const [pingedTagId, setPingedTagId] = useState(null);
   const [pingedDescriptionId, setPingedDescriptionId] = useState(null);
   const [pingedEquipmentShortSpecId, setPingedEquipmentShortSpecId] = useState(null);
+  const [pingedRelationshipId, setPingedRelationshipId] = useState(null);
 
   const handleDeselectTag = (tagId) => {
     setSelectedTagIds(prev => prev.filter(id => id !== tagId));
@@ -132,6 +133,25 @@ export const Workspace = ({
     setTimeout(() => setPingedEquipmentShortSpecId(null), 2000);
   }, [equipmentShortSpecs, currentPage, setCurrentPage]);
 
+  const handlePingRelationship = useCallback((relationshipId) => {
+    // Find the relationship to get the page of related entities
+    const relationship = relationships.find(r => r.id === relationshipId);
+    if (relationship) {
+      // Find entities to determine page
+      const fromEntity = [...tags, ...descriptions, ...rawTextItems, ...equipmentShortSpecs].find(e => e.id === relationship.from);
+      const toEntity = [...tags, ...descriptions, ...rawTextItems, ...equipmentShortSpecs].find(e => e.id === relationship.to);
+      
+      const targetPage = fromEntity?.page || toEntity?.page;
+      if (targetPage && targetPage !== currentPage) {
+        setCurrentPage(targetPage);
+      }
+    }
+    
+    setPingedRelationshipId(relationshipId);
+    // Clear after animation is over
+    setTimeout(() => setPingedRelationshipId(null), 2000);
+  }, [relationships, tags, descriptions, rawTextItems, equipmentShortSpecs, currentPage, setCurrentPage]);
+
   return (
     <div className="flex h-full bg-slate-900 relative">
       {isSidePanelVisible && <SidePanel 
@@ -172,6 +192,7 @@ export const Workspace = ({
         onPingTag={handlePingTag}
         onPingDescription={handlePingDescription}
         onPingEquipmentShortSpec={handlePingEquipmentShortSpec}
+        onPingRelationship={handlePingRelationship}
         showRelationships={showRelationships}
         setShowRelationships={setShowRelationships}
       />}
@@ -214,6 +235,7 @@ export const Workspace = ({
           pingedTagId={pingedTagId}
           pingedDescriptionId={pingedDescriptionId}
           pingedEquipmentShortSpecId={pingedEquipmentShortSpecId}
+          pingedRelationshipId={pingedRelationshipId}
         />
       </div>
       <SelectionPanel

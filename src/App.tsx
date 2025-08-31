@@ -1516,12 +1516,17 @@ const App: React.FC = () => {
     setLoops(prev => prev.filter(l => !loopIds.includes(l.id)));
   }, []);
 
-  const handleUpdateLoop = useCallback((loopId: string, updates: { id?: string; name?: string }) => {
-    setLoops(prev => prev.map(loop => 
-      loop.id === loopId 
-        ? { ...loop, ...updates }
-        : loop
-    ));
+  const handleUpdateLoop = useCallback((loopId: string, updates: Partial<Loop>) => {
+    setLoops(prev => {
+      const updatedLoops = prev.map(loop => 
+        loop.id === loopId 
+          ? { ...loop, ...updates }
+          : loop
+      );
+      
+      // Remove loops with no tags
+      return updatedLoops.filter(loop => loop.tagIds && loop.tagIds.length > 0);
+    });
   }, []);
 
   const mainContent = () => {

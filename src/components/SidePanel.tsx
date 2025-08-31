@@ -1917,17 +1917,34 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                       {/* Loop tags */}
                       <div className="flex flex-wrap gap-1">
                         {loopTags.map(tag => (
-                          <span
+                          <div
                             key={tag.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onPingTag(tag.id);
-                            }}
-                            className="inline-block px-2 py-1 bg-slate-600/50 text-slate-300 rounded text-xs font-mono cursor-pointer hover:bg-slate-500/50 transition-colors"
-                            title={`Click to center on tag: ${tag.text}`}
+                            className="inline-flex items-center bg-slate-600/50 text-slate-300 rounded text-xs font-mono overflow-hidden"
                           >
-                            {tag.text} <span className="text-slate-400">P.{tag.page}</span>
-                          </span>
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onPingTag(tag.id);
+                              }}
+                              className="px-2 py-1 cursor-pointer hover:bg-slate-500/50 transition-colors"
+                              title={`Click to center on tag: ${tag.text}`}
+                            >
+                              {tag.text} <span className="text-slate-400">P.{tag.page}</span>
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onUpdateLoop(loop.id, {
+                                  ...loop,
+                                  tagIds: loop.tagIds.filter(id => id !== tag.id)
+                                });
+                              }}
+                              className="px-1 py-1 text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-colors"
+                              title={`Remove ${tag.text} from loop`}
+                            >
+                              ✕
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>

@@ -794,7 +794,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
     if (selectedTagIds.length === 1) {
       const selectedIndex = sortedAndFilteredTags.findIndex(tag => tag.id === selectedTagIds[0]);
       if (selectedIndex !== -1) {
-        const bufferSize = 25; // Reduced buffer for faster rendering
+        const bufferSize = 30; // Increased buffer for smoother scrolling
         const newStart = Math.max(0, selectedIndex - bufferSize);
         const newEnd = Math.min(sortedAndFilteredTags.length, selectedIndex + bufferSize * 2);
         
@@ -802,13 +802,19 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
         const isOutsideRange = selectedIndex < virtualizedRange.start || selectedIndex >= virtualizedRange.end;
         
         if (isOutsideRange) {
-          // Immediate update for faster response
-          setVirtualizedRange({ start: newStart, end: newEnd });
+          // Use requestAnimationFrame for smoother updates
+          requestAnimationFrame(() => {
+            setVirtualizedRange({ start: newStart, end: newEnd });
+          });
         }
       }
     }
     
-    return sortedAndFilteredTags.slice(virtualizedRange.start, virtualizedRange.end);
+    // Ensure we don't exceed array bounds
+    const safeStart = Math.max(0, Math.min(virtualizedRange.start, sortedAndFilteredTags.length - 1));
+    const safeEnd = Math.min(virtualizedRange.end, sortedAndFilteredTags.length);
+    
+    return sortedAndFilteredTags.slice(safeStart, safeEnd);
   }, [sortedAndFilteredTags, virtualizedRange, selectedTagIds]);
 
   const filteredDescriptions = useMemo(() => {
@@ -995,18 +1001,30 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
 
   // Virtualization scroll handler
   const handleScroll = useCallback((e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    const itemHeight = 80; // Approximate height of each tag item
+    // Skip virtualization updates during bulk operations
+    if (selectedTagIds.length > 1) return;
+    
+    const { scrollTop, clientHeight } = e.target;
+    const itemHeight = 90; // More accurate height including padding and borders
+    const buffer = 20; // Larger buffer to prevent gaps
+    
     const visibleStart = Math.floor(scrollTop / itemHeight);
+    const visibleCount = Math.ceil(clientHeight / itemHeight);
     const visibleEnd = Math.min(
       sortedAndFilteredTags.length,
-      visibleStart + Math.ceil(clientHeight / itemHeight) + 10 // Buffer of 10 items
+      visibleStart + visibleCount + buffer
     );
     
     if (sortedAndFilteredTags.length > 100) {
-      setVirtualizedRange({ start: Math.max(0, visibleStart - 5), end: visibleEnd });
+      // Use requestAnimationFrame for smooth updates
+      requestAnimationFrame(() => {
+        setVirtualizedRange({ 
+          start: Math.max(0, visibleStart - buffer/2), 
+          end: visibleEnd 
+        });
+      });
     }
-  }, [sortedAndFilteredTags.length]);
+  }, [sortedAndFilteredTags.length, selectedTagIds.length]);
 
   const RelationshipViewer = useCallback(({ relationships: inputRelationships }) => {
     const [relSearchQuery, setRelSearchQuery] = useState('');
@@ -1346,7 +1364,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
               onScroll={handleScroll}
             >
                 {sortedAndFilteredTags.length > 100 && (
-                  <div style={{ height: `${virtualizedRange.start * 80}px` }} />
+                  <div style={{ height: `${virtualizedRange.start * 90}px` }} />
                 )}
                 {virtualizedTags.map((tag, virtualIndex) => {
                   const actualIndex = sortedAndFilteredTags.length > 100 ? 
@@ -1374,7 +1392,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                   );
                 })}
                 {sortedAndFilteredTags.length > 100 && (
-                  <div style={{ height: `${(sortedAndFilteredTags.length - virtualizedRange.end) * 80}px` }} />
+                  <div style={{ height: `${Math.max(0, (sortedAndFilteredTags.length - virtualizedRange.end) * 90)}px` }} />
                 )}
             </ul>
         </div>

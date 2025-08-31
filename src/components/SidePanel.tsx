@@ -140,6 +140,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
   const [editText, setEditText] = useState(tag.text);
   const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
   const [expandedEquipmentShortSpecs, setExpandedEquipmentShortSpecs] = useState(new Set());
+  const [expandedNoteTags, setExpandedNoteTags] = useState(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
   const isTogglingExpansion = useRef(false);
   
@@ -316,10 +317,107 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
           {noteRelationships.length > 0 && (
             <div>
               <span className="text-slate-400 font-semibold">Notes:</span>
-              <div className="pl-3 space-y-0.5 mt-1">
+              <div className="pl-3 space-y-1 mt-1">
                 {noteRelationships.map(rel => {
                   const noteTag = tagMap.get(rel.to);
-                  return noteTag ? <div key={rel.id} className="flex items-center justify-between"><div className="flex items-center space-x-1.5"><span title="Note">📝</span>{renderRelationship(noteTag.id, noteTag.text)}</div><DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} /></div> : null;
+                  if (!noteTag) return null;
+                  
+                  // Find descriptions connected to this note tag
+                  const noteDescriptions = relationships.filter(r => 
+                    r.from === noteTag.id && r.type === RelationshipType.Description
+                  ).map(r => descriptions.find(d => d.id === r.to)).filter(Boolean);
+                  
+                  const isExpanded = expandedNoteTags.has(noteTag.id);
+                  
+                  return (
+                    <div key={rel.id} className="border border-slate-600 rounded-md bg-slate-700/20">
+                      {/* Note tag header */}
+                      <div className="flex items-center justify-between p-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            isTogglingExpansion.current = true;
+                            const newExpanded = new Set(expandedNoteTags);
+                            if (isExpanded) {
+                              newExpanded.delete(noteTag.id);
+                            } else {
+                              newExpanded.add(noteTag.id);
+                            }
+                            setExpandedNoteTags(newExpanded);
+                            setTimeout(() => {
+                              isTogglingExpansion.current = false;
+                            }, 50);
+                          }}
+                          className="flex items-center space-x-1.5 text-left flex-grow cursor-pointer"
+                        >
+                          <span title="Note">📝</span>
+                          <span className="text-sky-400 hover:text-sky-300 font-mono">
+                            {noteTag.text}
+                          </span>
+                          {noteDescriptions.length > 0 && (
+                            <span className="text-slate-400 text-xs">
+                              ({noteDescriptions.length}) {isExpanded ? '▼' : '▶'}
+                            </span>
+                          )}
+                        </button>
+                        <DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} />
+                      </div>
+                      
+                      {/* Descriptions - expandable */}
+                      {isExpanded && noteDescriptions.length > 0 && (
+                        <div className="px-3 pb-2 border-t border-slate-600">
+                          <div className="space-y-1 mt-2">
+                            {noteDescriptions.map(description => {
+                              const descRel = relationships.find(r => 
+                                r.from === noteTag.id && r.to === description.id && r.type === RelationshipType.Description
+                              );
+                              const isDescExpanded = expandedDescriptions.has(description.id);
+                              
+                              return (
+                                <div key={description.id} className="border border-slate-500 rounded-md bg-slate-700/30">
+                                  {/* Description header */}
+                                  <div className="flex items-center justify-between p-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const newExpanded = new Set(expandedDescriptions);
+                                        if (isDescExpanded) {
+                                          newExpanded.delete(description.id);
+                                        } else {
+                                          newExpanded.add(description.id);
+                                        }
+                                        setExpandedDescriptions(newExpanded);
+                                      }}
+                                      className="flex items-center space-x-1.5 text-purple-300 hover:text-purple-100 text-xs cursor-pointer"
+                                    >
+                                      <span>{isDescExpanded ? '📖' : '📄'}</span>
+                                      <span>{description.metadata.type} {description.metadata.number}</span>
+                                      <span className="text-slate-400">{isDescExpanded ? '▼' : '▶'}</span>
+                                    </button>
+                                    {descRel && (
+                                      <DeleteRelationshipButton onClick={() => onDeleteRelationship(descRel.id)} />
+                                    )}
+                                  </div>
+                                  
+                                  {/* Description content */}
+                                  {isDescExpanded && (
+                                    <div className="px-3 pb-3 border-t border-slate-500">
+                                      <div className="text-xs text-slate-300 mt-2 leading-relaxed">
+                                        {description.text}
+                                      </div>
+                                      <div className="text-xs text-slate-400 mt-1">
+                                        Page {description.page} • {description.metadata.scope}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
                 })}
               </div>
             </div>

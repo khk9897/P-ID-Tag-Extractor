@@ -595,8 +595,20 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                           <div className="text-xs text-slate-400 mb-2">
                             Page {equipmentShortSpec.page} • {equipmentShortSpec.sourceItems.length} source items
                           </div>
-                          <div className="text-sm bg-slate-800/50 rounded p-2 whitespace-pre-wrap">
-                            {equipmentShortSpec.text}
+                          <div className="space-y-2">
+                            {/* Service display */}
+                            {equipmentShortSpec.metadata.service && (
+                              <div className="p-2 bg-slate-600/30 rounded border-l-4 border-blue-500">
+                                <div className="text-xs text-blue-300 font-semibold mb-1">Service</div>
+                                <div className="text-sm text-slate-300">{equipmentShortSpec.metadata.service}</div>
+                              </div>
+                            )}
+                            
+                            {/* Short Spec display */}
+                            <div className="p-2 bg-slate-800/50 rounded">
+                              <div className="text-xs text-orange-300 font-semibold mb-1">Short Spec</div>
+                              <div className="text-sm text-slate-300 whitespace-pre-wrap">{equipmentShortSpec.text}</div>
+                            </div>
                           </div>
                         </div>
                       )}

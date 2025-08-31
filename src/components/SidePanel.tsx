@@ -181,6 +181,14 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
   const isTogglingExpansion = useRef(false);
   
   const colors = CATEGORY_COLORS[tag.category];
+  const categoryLetters = {
+    [Category.Equipment]: 'E',
+    [Category.Line]: 'L',
+    [Category.Instrument]: 'I',
+    [Category.DrawingNumber]: 'D',
+    [Category.NotesAndHolds]: 'N',
+    [Category.Uncategorized]: 'U'
+  };
   const tagMap = useMemo(() => new Map(allTags.map(t => [t.id, t])), [allTags]);
   const rawTextItemMap = useMemo(() => new Map(allRawTextItems.map(item => [item.id, item])), [allRawTextItems]);
   
@@ -279,13 +287,18 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
               }} />
             </div>
           ) : (
-            <span 
-              className="font-mono text-sm text-white block"
-            >
-              {tag.text}
-            </span>
+            <div className="flex items-center space-x-2">
+              <span 
+                className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold text-white ${colors.bg} ${colors.border} border`}
+                title={tag.category}
+              >
+                {categoryLetters[tag.category]}
+              </span>
+              <span className="font-mono text-sm text-white">
+                {tag.text}
+              </span>
+            </div>
           )}
-          <span className={`text-xs font-semibold ${colors.text}`}>{tag.category}</span>
           {tag.category !== Category.DrawingNumber && drawingNumberTag && (
               <div className="text-xs text-slate-500 mt-0.5 font-mono">
                   DWG: {drawingNumberTag.text}

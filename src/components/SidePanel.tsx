@@ -294,8 +294,9 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
           {tag.category === Category.Instrument && (() => {
             const tagLoops = loops.filter(loop => loop.tagIds.includes(tag.id));
             return tagLoops.length > 0 && (
-              <div className="mt-1">
-                {tagLoops.map(loop => {
+              showDetails ? (
+                <div className="mt-1">
+                  {tagLoops.map(loop => {
                   const isExpanded = expandedLoops.has(loop.id);
                   const loopTags = loop.tagIds.map(id => allTags.find(t => t.id === id)).filter(Boolean);
                   
@@ -374,7 +375,12 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
                     </div>
                   );
                 })}
-              </div>
+                </div>
+              ) : (
+                <div className="text-xs text-blue-400 mt-0.5 font-mono">
+                  Loop: {tagLoops.map(loop => loop.id).join(', ')}
+                </div>
+              )
             );
           })()}
         </div>

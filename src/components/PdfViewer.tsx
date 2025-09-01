@@ -786,6 +786,8 @@ export const PdfViewer = ({
                     {currentRawTextItems.map(item => {
                          const { x1, y1, x2, y2 } = item.bbox;
                          const rectX = x1 * scale;
+                         // PDF coordinate system has origin at bottom-left, SVG at top-left
+                         // So we need to flip Y coordinates
                          const rectY = viewport.height - (y2 * scale);
                          const rectWidth = (x2 - x1) * scale;
                          const rectHeight = (y2 - y1) * scale;
@@ -887,6 +889,8 @@ export const PdfViewer = ({
                     {currentTags.map(tag => {
                     const { x1, y1, x2, y2 } = tag.bbox;
                     const rectX = x1 * scale;
+                    // PDF coordinate system has origin at bottom-left, SVG at top-left
+                    // So we need to flip Y coordinates
                     const rectY = viewport.height - (y2 * scale);
                     const rectWidth = (x2 - x1) * scale;
                     const rectHeight = (y2 - y1) * scale;

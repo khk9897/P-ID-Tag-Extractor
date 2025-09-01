@@ -2,7 +2,7 @@ import { Category } from '../types.ts';
 import { v4 as uuidv4 } from 'uuid';
 
 // Helper function to calculate bounding box
-const calculateBbox = (item) => {
+const calculateBbox = (item, viewBoxOffsetX = 0, viewBoxOffsetY = 0) => {
     const { transform, width, height } = item;
     const [a, b, , , e, f] = transform;
     const x = e;
@@ -16,8 +16,8 @@ const calculateBbox = (item) => {
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
     const transformedCorners = localCorners.map(p => ({
-        x: p.x * cos - p.y * sin + x,
-        y: p.x * sin + p.y * cos + y,
+        x: p.x * cos - p.y * sin + x - viewBoxOffsetX,  // Apply viewBox offset
+        y: p.x * sin + p.y * cos + y - viewBoxOffsetY,  // Apply viewBox offset
     }));
     const xs = transformedCorners.map(p => p.x);
     const ys = transformedCorners.map(p => p.y);
@@ -31,6 +31,13 @@ const calculateBbox = (item) => {
 export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
     const page = await pdfDoc.getPage(pageNum);
     const textContent = await page.getTextContent();
+    const viewport = page.getViewport({ scale: 1.0 });
+    
+    // Get the viewBox offset - some PDFs have non-zero origin
+    const viewBoxOffsetX = viewport.viewBox ? viewport.viewBox[0] : 0;
+    const viewBoxOffsetY = viewport.viewBox ? viewport.viewBox[1] : 0;
+    
+    
     const foundTags = [];
     const rawTextItems = [];
     const textItems = textContent.items.filter((item) => 'str' in item && item.str.trim() !== '');
@@ -48,9 +55,9 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
 
             textItems.forEach((item, index) => {
                 if (funcRegex.test(item.str)) {
-                    funcCandidates.push({ item, index, bbox: calculateBbox(item) });
+                    funcCandidates.push({ item, index, bbox: calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY) });
                 } else if (numRegex.test(item.str)) {
-                    numCandidates.push({ item, index, bbox: calculateBbox(item) });
+                    numCandidates.push({ item, index, bbox: calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY) });
                 }
             });
 
@@ -148,7 +155,7 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
                             id: uuidv4(),
                             text: matchText,
                             page: pageNum,
-                            bbox: calculateBbox(item),
+                            bbox: calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY),
                             category: pattern.category,
                         });
                     }
@@ -180,7 +187,7 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
                 const match = item.str.match(drawingNumberRegex);
                 
                 if (match) {
-                    const bbox = calculateBbox(item);
+                    const bbox = calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY);
                     // Calculate squared distance from bottom-right corner of the bbox 
                     // to the bottom-right corner of the page (pageWidth, 0).
                     const dx = pageWidth - bbox.x2;
@@ -213,11 +220,14 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
     for (let i = 0; i < textItems.length; i++) {
         if (consumedIndices.has(i)) continue;
         const item = textItems[i];
+        const bbox = calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY);
+        
+        
         rawTextItems.push({
             id: uuidv4(),
             text: item.str,
             page: pageNum,
-            bbox: calculateBbox(item),
+            bbox: bbox,
          });
     }
 

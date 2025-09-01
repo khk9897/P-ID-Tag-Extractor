@@ -202,7 +202,37 @@ const App: React.FC = () => {
   const [colorSettings, setColorSettings] = useState<ColorSettings>(() => {
     try {
       const saved = localStorage.getItem('pid-tagger-color-settings');
-      return saved ? JSON.parse(saved) : DEFAULT_COLORS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        
+        // Migration from old structure to new structure
+        if (parsed.tags && !parsed.entities) {
+          console.log('Migrating color settings from old structure to new structure');
+          return {
+            entities: {
+              ...parsed.tags,
+              description: parsed.relationships?.description || DEFAULT_COLORS.entities.description,
+              equipmentShortSpec: parsed.relationships?.equipmentShortSpec || DEFAULT_COLORS.entities.equipmentShortSpec,
+            },
+            relationships: {
+              connection: parsed.relationships?.connection || DEFAULT_COLORS.relationships.connection,
+              installation: parsed.relationships?.installation || DEFAULT_COLORS.relationships.installation,
+              annotation: parsed.relationships?.annotation || DEFAULT_COLORS.relationships.annotation,
+              note: parsed.relationships?.note || DEFAULT_COLORS.relationships.note,
+            },
+            highlights: {
+              noteRelated: parsed.relationships?.noteRelated || DEFAULT_COLORS.highlights.noteRelated,
+              selected: DEFAULT_COLORS.highlights.selected,
+            }
+          };
+        }
+        
+        // If it has the new structure, return it
+        if (parsed.entities) {
+          return parsed;
+        }
+      }
+      return DEFAULT_COLORS;
     } catch (error) {
       console.error("Failed to load color settings from localStorage", error);
       return DEFAULT_COLORS;

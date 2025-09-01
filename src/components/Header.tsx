@@ -28,7 +28,7 @@ const HotkeyHelp = ({ onClose }) => {
     { key: 'S', desc: <>Toggle <span className="text-sky-300 font-bold">S</span>ide Panel</> },
     { key: 'C', desc: <>Toggle <span className="text-sky-300 font-bold">C</span>onnect Mode</> },
     { key: 'K', desc: <>Toggle Manual Ma<span className="text-sky-300 font-bold">k</span>e Mode</> },
-    { key: 'V', desc: <>Toggle Relationship <span className="text-sky-300 font-bold">V</span>isibility</> },
+    { key: 'V', desc: <>Toggle <span className="text-sky-300 font-bold">V</span>isibility Panel</> },
     { key: 'Esc', desc: <><span className="text-sky-300 font-bold">Esc</span> Mode / Clear Selection</> },
   ];
   const actions = [
@@ -248,6 +248,15 @@ export const Header = ({
   const importInputRef = useRef(null);
   const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
   const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
+
+  useEffect(() => {
+    const handleToggleVisibilityPanel = () => {
+      setShowVisibilityPanel(prev => !prev);
+    };
+
+    window.addEventListener('toggleVisibilityPanel', handleToggleVisibilityPanel);
+    return () => window.removeEventListener('toggleVisibilityPanel', handleToggleVisibilityPanel);
+  }, []);
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {

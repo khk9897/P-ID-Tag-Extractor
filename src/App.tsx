@@ -229,6 +229,10 @@ const App: React.FC = () => {
         if (e.key.toLowerCase() === 's') {
             e.preventDefault();
             setIsSidePanelVisible(prev => !prev);
+        } else if (e.key.toLowerCase() === 'v') {
+            e.preventDefault();
+            // Toggle visibility panel by dispatching a custom event
+            window.dispatchEvent(new CustomEvent('toggleVisibilityPanel'));
         }
     };
 

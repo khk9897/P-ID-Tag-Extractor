@@ -20,6 +20,21 @@ export const RelationshipType = {
 
 export type RelationshipTypeValue = typeof RelationshipType[keyof typeof RelationshipType];
 
+// Comment system types
+export interface Comment {
+  id: string;
+  targetId: string;        // 대상 엔티티 ID
+  targetType: 'tag' | 'description' | 'equipmentSpec' | 'relationship' | 'loop';
+  content: string;         // 댓글 내용
+  author: string;          // 작성자 (기본값: "User")
+  timestamp: number;       // 작성 시간
+  isResolved: boolean;     // 해결됨 여부
+  priority: 'low' | 'medium' | 'high'; // 우선순위
+}
+
+export type CommentTargetType = Comment['targetType'];
+export type CommentPriority = Comment['priority'];
+
 // Visibility settings interface
 export interface VisibilitySettings {
   tags: {
@@ -230,6 +245,7 @@ export interface ProjectData {
   rawTextItems: RawTextItem[];
   descriptions: Description[];
   equipmentShortSpecs: EquipmentShortSpec[];
+  comments: Comment[];
   settings: {
     patterns: PatternConfig;
     tolerances: ToleranceConfig;

@@ -53,6 +53,12 @@ export const Workspace = ({
   toggleAllTags,
   toggleAllRelationships,
   isSidePanelVisible,
+  // Comment system
+  comments,
+  onCreateComment,
+  onUpdateComment,
+  onDeleteComment,
+  getCommentsForTarget,
 }) => {
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
@@ -203,6 +209,11 @@ export const Workspace = ({
         toggleRelationshipVisibility={toggleRelationshipVisibility}
         toggleAllTags={toggleAllTags}
         toggleAllRelationships={toggleAllRelationships}
+        comments={comments}
+        onCreateComment={onCreateComment}
+        onUpdateComment={onUpdateComment}
+        onDeleteComment={onDeleteComment}
+        getCommentsForTarget={getCommentsForTarget}
       />}
       <div className="flex-grow h-full overflow-auto bg-slate-800/30">
         <PdfViewer

@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Category, RelationshipType } from '../types.ts';
+import { Category, RelationshipType, Comment, CommentPriority } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
 import { exportToExcel } from '../services/excelExporter.ts';
+import { CommentModal } from './CommentModal.tsx';
+import { CommentIndicator } from './CommentIndicator.tsx';
 
 const DeleteRelationshipButton = React.memo(({ onClick }) => (
   <button
@@ -169,9 +171,13 @@ interface TagListItemProps {
   onUpdateItemText: (itemId: string, newText: string) => void;
   onUpdateLoop: (loopId: string, updates: any) => void;
   showDetails: boolean;
+  // Comment system props
+  comments: Comment[];
+  onOpenComments: (targetId: string, targetName: string, targetType: string) => void;
+  getCommentsForTarget: (targetId: string) => Comment[];
 }
 
-const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, loops, onToggleReviewStatus, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, onUpdateLoop, showDetails }) => {
+const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, onItemClick, onGoToTag, relationships, allTags, allRawTextItems, descriptions, equipmentShortSpecs, loops, onToggleReviewStatus, onDeleteRelationship, onDeleteTag, onUpdateTagText, onDeleteItem, onUpdateItemText, onUpdateLoop, showDetails, comments, onOpenComments, getCommentsForTarget }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(tag.text);
   const [expandedDescriptions, setExpandedDescriptions] = useState(new Set());
@@ -288,26 +294,34 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
               }} />
             </div>
           ) : (
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={tag.isReviewed || false}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  onToggleReviewStatus(tag.id);
-                }}
-                className="w-4 h-4 text-sky-600 bg-slate-700 border-slate-500 rounded focus:ring-sky-500 focus:ring-2"
-                title="Mark as reviewed"
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center space-x-2 flex-grow min-w-0">
+                <input
+                  type="checkbox"
+                  checked={tag.isReviewed || false}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    onToggleReviewStatus(tag.id);
+                  }}
+                  className="w-4 h-4 text-sky-600 bg-slate-700 border-slate-500 rounded focus:ring-sky-500 focus:ring-2"
+                  title="Mark as reviewed"
+                />
+                <span 
+                  className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold text-white ${colors.bg} ${colors.border} border flex-shrink-0`}
+                  title={tag.category}
+                >
+                  {categoryLetters[tag.category]}
+                </span>
+                <span className="font-mono text-sm text-white truncate">
+                  {tag.text}
+                </span>
+              </div>
+              <CommentIndicator
+                comments={getCommentsForTarget(tag.id)}
+                onClick={() => onOpenComments(tag.id, tag.text, 'tag')}
+                size="sm"
+                className="flex-shrink-0 ml-2"
               />
-              <span 
-                className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold text-white ${colors.bg} ${colors.border} border`}
-                title={tag.category}
-              >
-                {categoryLetters[tag.category]}
-              </span>
-              <span className="font-mono text-sm text-white">
-                {tag.text}
-              </span>
             </div>
           )}
           {tag.category !== Category.DrawingNumber && drawingNumberTag && (
@@ -739,7 +753,26 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
   );
 });
 
-export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, loops, setLoops, relationships, setRelationships, currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds, onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText, onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, onAutoGenerateLoops, onManualCreateLoop, onDeleteLoops, onUpdateLoop, showConfirmation, onPingTag, onPingDescription, onPingEquipmentShortSpec, onPingRelationship, visibilitySettings, updateVisibilitySettings, toggleTagVisibility, toggleRelationshipVisibility, toggleAllTags, toggleAllRelationships }) => {
+export const SidePanel = ({
+  // Data props
+  tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, 
+  loops, setLoops, relationships, setRelationships,
+  // View props
+  currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, 
+  setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds,
+  // Action props
+  onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, 
+  onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText,
+  onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, 
+  onAutoGenerateLoops, onManualCreateLoop, onDeleteLoops, onUpdateLoop, showConfirmation,
+  // Ping props
+  onPingTag, onPingDescription, onPingEquipmentShortSpec, onPingRelationship,
+  // Visibility props
+  visibilitySettings, updateVisibilitySettings, toggleTagVisibility, toggleRelationshipVisibility, 
+  toggleAllTags, toggleAllRelationships,
+  // Comment props
+  comments, onCreateComment, onUpdateComment, onDeleteComment, getCommentsForTarget
+}) => {
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -749,7 +782,22 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   const [editingLoopValue, setEditingLoopValue] = useState('');
   const [filterCategory, setFilterCategory] = useState('All');
   const [reviewFilter, setReviewFilter] = useState('All');
+  const [commentFilter, setCommentFilter] = useState('All'); // All, WithComments, WithoutComments
   const [sortOrder, setSortOrder] = useState('default');
+  
+  // Comment system state
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [commentTargetId, setCommentTargetId] = useState(null);
+  const [commentTargetName, setCommentTargetName] = useState('');
+  const [commentTargetType, setCommentTargetType] = useState(null);
+  const [commentsTabFilter, setCommentsTabFilter] = useState('all'); // Comments 탭 전용 필터
+  
+  // Sidebar resizing state
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem('sidebarWidth');
+    return saved ? parseInt(saved) : 320;
+  });
+  const [isResizing, setIsResizing] = useState(false); // all, unresolved, resolved, high, medium, low
   
   // Reset sort order to default if instrument sorting is selected but not on Instrument filter
   useEffect(() => {
@@ -818,7 +866,181 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
     setEditingLoopId(null);
     setEditingLoopValue('');
   }, []);
-  
+
+  // Comment system helpers
+  const handleOpenComments = useCallback((targetId, targetName, targetType) => {
+    setCommentTargetId(targetId);
+    setCommentTargetName(targetName);
+    setCommentTargetType(targetType);
+    setCommentModalOpen(true);
+  }, []);
+
+  const handleCloseComments = useCallback(() => {
+    setCommentModalOpen(false);
+    setCommentTargetId(null);
+    setCommentTargetName('');
+    setCommentTargetType(null);
+  }, []);
+
+  const handleCreateComment = useCallback((content, priority) => {
+    if (commentTargetId && commentTargetType) {
+      onCreateComment(commentTargetId, commentTargetType, content, priority);
+    }
+  }, [commentTargetId, commentTargetType, onCreateComment]);
+
+  // Get target name helper
+  const getTargetName = useCallback((targetId, targetType) => {
+    switch (targetType) {
+      case 'tag':
+        const tag = tags.find(t => t.id === targetId);
+        return tag ? tag.text : 'Unknown Tag';
+      case 'description':
+        const desc = descriptions.find(d => d.id === targetId);
+        return desc ? `${desc.metadata.type} ${desc.metadata.number}` : 'Unknown Description';
+      case 'equipmentSpec':
+        const spec = equipmentShortSpecs.find(s => s.id === targetId);
+        return spec ? spec.equipmentTag : 'Unknown Equipment Spec';
+      case 'relationship':
+        const rel = relationships.find(r => r.id === targetId);
+        if (!rel) return 'Unknown Relationship';
+        const fromTag = tags.find(t => t.id === rel.from);
+        const toTag = tags.find(t => t.id === rel.to);
+        return `${fromTag?.text || 'Unknown'} → ${toTag?.text || 'Unknown'}`;
+      default:
+        return 'Unknown';
+    }
+  }, [tags, descriptions, equipmentShortSpecs, relationships]);
+
+  // Get user-friendly type name for comments
+  const getTypeDisplayName = useCallback((targetType) => {
+    switch (targetType) {
+      case 'tag': return 'Tags';
+      case 'description': return 'Notes';
+      case 'equipmentSpec': return 'Equipment Specs';
+      case 'relationship': return 'Relations';
+      case 'loop': return 'Loops';
+      default: return targetType;
+    }
+  }, []);
+
+  // Get detailed target info with metadata
+  const getTargetDetails = useCallback((targetId, targetType) => {
+    switch (targetType) {
+      case 'tag':
+        const tag = tags.find(t => t.id === targetId);
+        return tag ? {
+          name: tag.text,
+          metadata: `Category: ${tag.category}, Page: ${tag.page}`
+        } : { name: 'Unknown Tag', metadata: '' };
+      
+      case 'description':
+        const desc = descriptions.find(d => d.id === targetId);
+        return desc ? {
+          name: `${desc.metadata.type} ${desc.metadata.number}`,
+          metadata: `Scope: ${desc.metadata.scope}, Page: ${desc.page}`
+        } : { name: 'Unknown Description', metadata: '' };
+      
+      case 'equipmentSpec':
+        const spec = equipmentShortSpecs.find(s => s.id === targetId);
+        return spec ? {
+          name: spec.metadata.originalEquipmentTag.text,
+          metadata: `Service: ${spec.metadata.service || 'N/A'}, Page: ${spec.page}`
+        } : { name: 'Unknown Equipment Spec', metadata: '' };
+      
+      case 'loop':
+        const loop = loops.find(l => l.id === targetId);
+        if (!loop) return { name: 'Unknown Loop', metadata: '' };
+        const loopTags = loop.tagIds.map(id => tags.find(t => t.id === id)).filter(Boolean);
+        return {
+          name: loop.name || loop.id,
+          metadata: `Tags: ${loopTags.length}, Pages: ${loopTags.map(t => t.page).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).join(', ')}`
+        };
+      
+      case 'relationship':
+        const rel = relationships.find(r => r.id === targetId);
+        if (!rel) return { name: 'Unknown Relationship', metadata: '' };
+        const fromTag = tags.find(t => t.id === rel.from);
+        const toTag = tags.find(t => t.id === rel.to);
+        return {
+          name: `${fromTag?.text || 'Unknown'} → ${toTag?.text || 'Unknown'}`,
+          metadata: `Type: ${rel.type}`
+        };
+      
+      default:
+        return { name: 'Unknown', metadata: '' };
+    }
+  }, [tags, descriptions, equipmentShortSpecs, loops, relationships]);
+
+  // Sidebar resizing handlers
+  const handleMouseDown = useCallback((e) => {
+    setIsResizing(true);
+    e.preventDefault();
+  }, []);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isResizing) return;
+    
+    const newWidth = e.clientX;
+    if (newWidth >= 280 && newWidth <= 600) { // Min 280px, Max 600px
+      setSidebarWidth(newWidth);
+      localStorage.setItem('sidebarWidth', newWidth.toString());
+    }
+  }, [isResizing]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, handleMouseMove, handleMouseUp]);
+
+  // Filtered comments for Comments tab
+  const filteredComments = useMemo(() => {
+    let filtered = [...comments];
+
+    // Filter by status/priority
+    switch (commentsTabFilter) {
+      case 'unresolved':
+        filtered = filtered.filter(c => !c.isResolved);
+        break;
+      case 'resolved':
+        filtered = filtered.filter(c => c.isResolved);
+        break;
+      case 'high':
+        filtered = filtered.filter(c => c.priority === 'high');
+        break;
+      case 'medium':
+        filtered = filtered.filter(c => c.priority === 'medium');
+        break;
+      case 'low':
+        filtered = filtered.filter(c => c.priority === 'low');
+        break;
+    }
+
+    // Sort by priority (high first), then by timestamp (newest first)
+    filtered.sort((a, b) => {
+      const priorityOrder = { high: 3, medium: 2, low: 1 };
+      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      }
+      return b.timestamp - a.timestamp;
+    });
+
+    return filtered;
+  }, [comments, commentsTabFilter]);
   
   const sortedAndFilteredTags = useMemo(() => {
     let baseTags = tags;
@@ -830,6 +1052,13 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
         if (reviewFilter === 'All') return true;
         if (reviewFilter === 'Reviewed') return tag.isReviewed === true;
         if (reviewFilter === 'NotReviewed') return tag.isReviewed !== true;
+        return true;
+      })
+      .filter(tag => {
+        if (commentFilter === 'All') return true;
+        const tagComments = comments.filter(c => c.targetId === tag.id);
+        if (commentFilter === 'WithComments') return tagComments.length > 0;
+        if (commentFilter === 'WithoutComments') return tagComments.length === 0;
         return true;
       })
       .filter(tag => tag.text.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -913,7 +1142,7 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
           return a.text.localeCompare(b.text);
         });
     }
-  }, [tags, showCurrentPageOnly, currentPage, filterCategory, reviewFilter, searchQuery, sortOrder]);
+  }, [tags, showCurrentPageOnly, currentPage, filterCategory, reviewFilter, commentFilter, searchQuery, sortOrder, comments]);
 
   // Virtualized tags for performance
   const virtualizedTags = useMemo(() => {
@@ -1130,8 +1359,8 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   }, [selectedTagIds, onDeleteTags, setSelectedTagIds]);
   
   const handleExport = useCallback(() => {
-    exportToExcel(tags, relationships, rawTextItems, descriptions, equipmentShortSpecs, loops);
-  }, [tags, relationships, rawTextItems, descriptions, equipmentShortSpecs, loops]);
+    exportToExcel(tags, relationships, rawTextItems, descriptions, equipmentShortSpecs, loops, comments);
+  }, [tags, relationships, rawTextItems, descriptions, equipmentShortSpecs, loops, comments]);
 
   const handleDescriptionClick = useCallback((description) => {
     setSelectedDescriptionIds([description.id]);
@@ -1374,11 +1603,22 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                           onClick={() => handleRelationshipClick(rel)}
                           title={`Click to highlight in PDF: ${title}`}
                         >
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2 flex-grow">
                                 <span className="text-xs text-slate-500 font-medium">{rel.type}</span>
                                 {renderEntity(fromEntity)}
                                 <span className="text-slate-400" title={title}>{icon}</span>
                                 {renderEntity(toEntity)}
+                                <CommentIndicator
+                                  comments={getCommentsForTarget(rel.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const fromName = fromEntity?.text || 'Unknown';
+                                    const toName = toEntity?.text || 'Unknown';
+                                    handleOpenComments(rel.id, `${fromName} → ${toName}`, 'relationship');
+                                  }}
+                                  size="sm"
+                                  className="ml-2"
+                                />
                             </div>
                             <DeleteRelationshipButton onClick={(e) => {
                               e.stopPropagation();
@@ -1399,38 +1639,43 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
   }, [tags, showCurrentPageOnly, currentPage]);
   
   return (
-    <aside className="w-80 h-full bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0">
-      {/* Show page only checkbox */}
-      <div className="p-2 border-b border-slate-700">
-        <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
-          <input
-            type="checkbox"
-            checked={showCurrentPageOnly}
-            onChange={(e) => setShowCurrentPageOnly(e.target.checked)}
-            className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
-          />
-          <span>Show page only</span>
-        </label>
-      </div>
+    <aside 
+      className="h-full bg-slate-800 border-r border-slate-700 flex flex-col flex-shrink-0 relative"
+      style={{ width: `${sidebarWidth}px` }}
+    >
       
       <div className="border-b border-slate-700 flex text-xs">
-        <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({totalTagCount})</button>
-        <button onClick={() => setActiveTab('descriptions')} className={`flex-1 py-2 font-semibold ${activeTab === 'descriptions' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Notes ({filteredDescriptions.length})</button>
-        <button onClick={() => setActiveTab('equipmentShortSpecs')} className={`flex-1 py-2 font-semibold ${activeTab === 'equipmentShortSpecs' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Equipment Specs ({filteredEquipmentShortSpecs.length})</button>
-        <button onClick={() => setActiveTab('loops')} className={`flex-1 py-2 font-semibold ${activeTab === 'loops' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Loops ({filteredLoops.length})</button>
-        <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relations ({filteredRelationships.length})</button>
+        <button onClick={() => setActiveTab('tags')} className={`flex-1 py-2 px-1 font-semibold ${activeTab === 'tags' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Tags ({totalTagCount})</button>
+        <button onClick={() => setActiveTab('descriptions')} className={`flex-1 py-2 px-1 font-semibold ${activeTab === 'descriptions' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Notes ({filteredDescriptions.length})</button>
+        <button onClick={() => setActiveTab('equipmentShortSpecs')} className={`flex-1 py-2 px-1 font-semibold ${activeTab === 'equipmentShortSpecs' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Equipment Specs ({filteredEquipmentShortSpecs.length})</button>
+        <button onClick={() => setActiveTab('loops')} className={`flex-1 py-2 px-1 font-semibold ${activeTab === 'loops' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Loops ({filteredLoops.length})</button>
+        <button onClick={() => setActiveTab('relationships')} className={`flex-1 py-2 px-1 font-semibold ${activeTab === 'relationships' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>Relations ({filteredRelationships.length})</button>
+        <button onClick={() => setActiveTab('comments')} className={`flex-1 py-2 px-1 font-semibold ${activeTab === 'comments' ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'}`}>💬 ({comments.length})</button>
       </div>
 
       {activeTab === 'tags' && (
         <div className="flex-grow flex flex-col overflow-hidden">
             <div className="p-3 space-y-2 border-b border-slate-700 flex-shrink-0">
-                <input
-                  type="text"
-                  placeholder="Search tags..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 text-sm focus:ring-sky-500 focus:border-sky-500"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search tags..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 pr-8 text-sm focus:ring-sky-500 focus:border-sky-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors p-0.5 rounded"
+                      title="Clear search"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
 
                 {/* View Options & Category Filter Section */}
                 <hr className="border-slate-700" />
@@ -1442,9 +1687,18 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                     </svg>
                   </button>
                   {sections.viewOptions && (
-                    <div className="space-y-4 mt-2 animate-fade-in-up" style={{animationDuration: '0.2s'}}>
-                      <div className="space-y-2">
-                         <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300 pl-1">
+                    <div className="space-y-1.5 mt-1.5 animate-fade-in-up" style={{animationDuration: '0.2s'}}>
+                      <div className="flex items-center justify-between">
+                         <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
+                            <input
+                                type="checkbox"
+                                checked={showCurrentPageOnly}
+                                onChange={(e) => setShowCurrentPageOnly(e.target.checked)}
+                                className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
+                            />
+                            <span>Show page only</span>
+                        </label>
+                         <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-300">
                             <input
                                 type="checkbox"
                                 checked={showRelationshipDetails}
@@ -1471,6 +1725,91 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                             <option value="instrument-number-function">Instrument (Number → Function)</option>
                           )}
                         </select>
+                      </div>
+                      
+                      {/* Review & Comments Filter */}
+                      <div>
+                        <h5 className="text-xs font-semibold text-slate-400 mb-1.5">Review & Comments</h5>
+                        <div className="flex text-xs border border-slate-600 rounded">
+                          {[
+                            { key: 'All', display: 'All', tooltip: 'Show all tags' },
+                            { key: 'Reviewed', display: '✅', tooltip: 'Show reviewed tags only' },
+                            { key: 'NotReviewed', display: '☐', tooltip: 'Show unreviewed tags only' },
+                            { key: 'WithComments', display: '💬+', tooltip: 'Show tags with comments only' },
+                            { key: 'WithoutComments', display: '💬-', tooltip: 'Show tags without comments only' }
+                          ].map((filterOption, index) => {
+                            const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage)
+                              .filter(tag => filterCategory === 'All' || tag.category === filterCategory);
+                            
+                            let count = 0;
+                            let isActive = false;
+                            
+                            if (filterOption.key === 'All') {
+                              // All shows when both filters are 'All'
+                              count = baseTags.length;
+                              isActive = reviewFilter === 'All' && commentFilter === 'All';
+                            } else if (filterOption.key === 'Reviewed') {
+                              count = baseTags.filter(t => t.isReviewed === true).length;
+                              isActive = reviewFilter === 'Reviewed';
+                            } else if (filterOption.key === 'NotReviewed') {
+                              count = baseTags.filter(t => t.isReviewed !== true).length;
+                              isActive = reviewFilter === 'NotReviewed';
+                            } else if (filterOption.key === 'WithComments') {
+                              // Apply review filter first, then count comments
+                              const reviewFilteredTags = baseTags.filter(tag => {
+                                if (reviewFilter === 'All') return true;
+                                if (reviewFilter === 'Reviewed') return tag.isReviewed === true;
+                                if (reviewFilter === 'NotReviewed') return tag.isReviewed !== true;
+                                return true;
+                              });
+                              count = reviewFilteredTags.filter(t => comments.some(c => c.targetId === t.id)).length;
+                              isActive = commentFilter === 'WithComments';
+                            } else if (filterOption.key === 'WithoutComments') {
+                              // Apply review filter first, then count no comments
+                              const reviewFilteredTags = baseTags.filter(tag => {
+                                if (reviewFilter === 'All') return true;
+                                if (reviewFilter === 'Reviewed') return tag.isReviewed === true;
+                                if (reviewFilter === 'NotReviewed') return tag.isReviewed !== true;
+                                return true;
+                              });
+                              count = reviewFilteredTags.filter(t => !comments.some(c => c.targetId === t.id)).length;
+                              isActive = commentFilter === 'WithoutComments';
+                            }
+                            
+                            const handleClick = () => {
+                              if (filterOption.key === 'All') {
+                                setReviewFilter('All');
+                                setCommentFilter('All');
+                              } else if (filterOption.key === 'Reviewed' || filterOption.key === 'NotReviewed') {
+                                setReviewFilter(filterOption.key);
+                              } else {
+                                setCommentFilter(filterOption.key);
+                              }
+                            };
+                            
+                            return (
+                              <button 
+                                key={filterOption.key} 
+                                onClick={handleClick}
+                                className={`group relative flex-1 py-1.5 px-1 font-semibold text-center ${
+                                  index > 0 ? 'border-l border-slate-600' : ''
+                                } ${
+                                  isActive ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300 hover:bg-slate-700/30'
+                                }`}
+                              >
+                                <div className="flex flex-col items-center">
+                                  <span className="text-xs leading-tight">{filterOption.display}</span>
+                                  <span className="text-xs text-slate-400 leading-tight">({count})</span>
+                                </div>
+                                {/* Custom Tooltip */}
+                                <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 border border-slate-600">
+                                  {filterOption.tooltip}
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1509,40 +1848,6 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                   })}
                 </div>
 
-                {/* Review Status Filter */}
-                <div className="border-b border-slate-700 flex text-xs">
-                  {['All', 'Reviewed', 'NotReviewed'].map((filter) => {
-                    const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage)
-                      .filter(tag => filterCategory === 'All' || tag.category === filterCategory);
-                    
-                    let count;
-                    if (filter === 'All') {
-                      count = baseTags.length;
-                    } else if (filter === 'Reviewed') {
-                      count = baseTags.filter(t => t.isReviewed === true).length;
-                    } else {
-                      count = baseTags.filter(t => t.isReviewed !== true).length;
-                    }
-                    
-                    const isActive = reviewFilter === filter;
-                    const displayName = filter === 'NotReviewed' ? 'Not Reviewed' : filter;
-                    
-                    return (
-                      <button 
-                        key={filter} 
-                        onClick={() => setReviewFilter(filter)} 
-                        className={`flex-1 py-1.5 px-1 font-semibold text-center border-r border-slate-600 last:border-r-0 ${
-                          isActive ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'
-                        }`}
-                      >
-                        <div className="flex flex-col items-center">
-                          <span className="text-xs leading-tight">{displayName}</span>
-                          <span className="text-xs text-slate-400 leading-tight">({count})</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
             </div>
             
             {selectedTagIds.length > 1 && (
@@ -1592,6 +1897,9 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                       loops={loops}
                       onUpdateLoop={onUpdateLoop}
                       showDetails={showRelationshipDetails}
+                      comments={comments}
+                      onOpenComments={handleOpenComments}
+                      getCommentsForTarget={getCommentsForTarget}
                     />
                   );
                 })}
@@ -1638,8 +1946,15 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                   {/* Header with controls */}
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex flex-col space-y-1">
-                      <div className="text-xs text-slate-400">
-                        {description.metadata.type} {description.metadata.number} - {description.metadata.scope}
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-slate-400">
+                          {description.metadata.type} {description.metadata.number} - {description.metadata.scope}
+                        </div>
+                        <CommentIndicator
+                          comments={getCommentsForTarget(description.id)}
+                          onClick={() => handleOpenComments(description.id, `${description.metadata.type} ${description.metadata.number}`, 'description')}
+                          size="sm"
+                        />
                       </div>
                       {/* Show related note tags */}
                       {relatedNoteTags.length > 0 && (
@@ -1806,6 +2121,11 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                           {spec.metadata.originalEquipmentTag.text}
                         </span>
                         <span className="text-xs text-slate-400">Page {spec.page}</span>
+                        <CommentIndicator
+                          comments={getCommentsForTarget(spec.id)}
+                          onClick={() => handleOpenComments(spec.id, spec.equipmentTag || spec.metadata.originalEquipmentTag.text, 'equipmentSpec')}
+                          size="sm"
+                        />
                         
                         {/* Show connected Equipment tags */}
                         {(() => {
@@ -2051,6 +2371,14 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
                                 ({loopTags.length} tags)
                                 {loopTags.length > 0 && ` P. ${loopTags.map(t => t.page).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).join(', ')}`}
                               </span>
+                              <CommentIndicator
+                                comments={getCommentsForTarget(loop.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenComments(loop.id, loop.name || loop.id, 'loop');
+                                }}
+                                size="sm"
+                              />
                               <EditButton 
                                 onClick={() => handleLoopEdit(loop.id)}
                                 title="Edit loop name"
@@ -2115,11 +2443,132 @@ export const SidePanel = ({ tags, setTags, rawTextItems, descriptions, equipment
       
       {activeTab === 'relationships' && <RelationshipViewer relationships={filteredRelationships} />}
 
+      {activeTab === 'comments' && (
+        <div className="flex-grow flex flex-col overflow-hidden">
+          {/* Comment Filters */}
+          <div className="p-3 border-b border-slate-700 flex-shrink-0">
+            <div className="flex gap-1 text-xs">
+              <button 
+                onClick={() => setCommentsTabFilter('all')}
+                className={`px-2 py-1 rounded ${commentsTabFilter === 'all' ? 'bg-sky-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+              >
+                All ({comments.length})
+              </button>
+              <button 
+                onClick={() => setCommentsTabFilter('unresolved')}
+                className={`px-2 py-1 rounded ${commentsTabFilter === 'unresolved' ? 'bg-amber-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+              >
+                Unresolved ({comments.filter(c => !c.isResolved).length})
+              </button>
+              <button 
+                onClick={() => setCommentsTabFilter('high')}
+                className={`px-2 py-1 rounded ${commentsTabFilter === 'high' ? 'bg-red-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+              >
+                🔴 High ({comments.filter(c => c.priority === 'high').length})
+              </button>
+            </div>
+          </div>
+
+          {/* Comments List */}
+          <div className="flex-grow overflow-y-auto">
+            {filteredComments.length === 0 ? (
+              <div className="p-4 text-center text-slate-500">
+                {commentsTabFilter === 'all' ? 'No comments yet' : `No ${commentsTabFilter} comments`}
+              </div>
+            ) : (
+              <div className="space-y-2 p-3">
+                {filteredComments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className={`p-3 rounded-lg border cursor-pointer hover:bg-slate-700/30 transition-colors ${
+                      comment.isResolved 
+                        ? 'bg-slate-700/20 border-slate-600/50' 
+                        : 'bg-slate-700/40 border-slate-600'
+                    }`}
+                    onClick={() => handleOpenComments(
+                      comment.targetId,
+                      getTargetName(comment.targetId, comment.targetType),
+                      comment.targetType
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          comment.priority === 'high' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                          comment.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                          'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                        }`}>
+                          {comment.priority === 'high' ? '🔴 HIGH' :
+                           comment.priority === 'medium' ? '🟡 MED' : '⚪ LOW'}
+                        </span>
+                        {comment.isResolved && (
+                          <span className="text-green-400 text-sm">✅</span>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-500">
+                        {new Date(comment.timestamp).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    <div className="mb-2">
+                      <p className="text-sm text-sky-400 font-medium">
+                        {getTypeDisplayName(comment.targetType)}: {getTargetDetails(comment.targetId, comment.targetType).name}
+                      </p>
+                      {getTargetDetails(comment.targetId, comment.targetType).metadata && (
+                        <p className="text-xs text-slate-500 mt-1">
+                          {getTargetDetails(comment.targetId, comment.targetType).metadata}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <p className={`text-sm ${comment.isResolved ? 'text-slate-400' : 'text-white'} line-clamp-3`}>
+                      {comment.content}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="p-4 border-t border-slate-700 flex-shrink-0">
         <button onClick={handleExport} className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
             <span>Export to Excel</span>
         </button>
+      </div>
+
+      {/* Comment Modal */}
+      {commentModalOpen && commentTargetId && (
+        <CommentModal
+          isOpen={commentModalOpen}
+          targetId={commentTargetId}
+          targetName={commentTargetName}
+          targetType={commentTargetType}
+          comments={getCommentsForTarget(commentTargetId)}
+          onClose={handleCloseComments}
+          onCreateComment={handleCreateComment}
+          onUpdateComment={onUpdateComment}
+          onDeleteComment={onDeleteComment}
+        />
+      )}
+      
+      {/* Resize Handle */}
+      <div
+        className={`absolute top-0 right-0 w-1 h-full cursor-col-resize group hover:bg-sky-500/50 transition-colors ${
+          isResizing ? 'bg-sky-500' : 'bg-transparent'
+        }`}
+        onMouseDown={handleMouseDown}
+        title="Drag to resize sidebar"
+      >
+        <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex flex-col items-center justify-center w-3 h-8 bg-slate-700 border border-slate-600 rounded-sm">
+            <div className="w-0.5 h-1 bg-slate-400 mb-0.5"></div>
+            <div className="w-0.5 h-1 bg-slate-400 mb-0.5"></div>
+            <div className="w-0.5 h-1 bg-slate-400"></div>
+          </div>
+        </div>
       </div>
     </aside>
   );

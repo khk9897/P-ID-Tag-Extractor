@@ -26,7 +26,10 @@ import {
   AppSettings,
   ViewMode,
   ManualTagData,
-  VisibilitySettings
+  VisibilitySettings,
+  Comment,
+  CommentTargetType,
+  CommentPriority
 } from './types.ts';
 
 // Set PDF.js worker source - use local worker to avoid CORS issues
@@ -78,6 +81,7 @@ const App: React.FC = () => {
   const [descriptions, setDescriptions] = useState<Description[]>([]);
   const [equipmentShortSpecs, setEquipmentShortSpecs] = useState<EquipmentShortSpec[]>([]);
   const [loops, setLoops] = useState<Loop[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [progress, setProgress] = useState<ProcessingProgress>({ current: 0, total: 0 });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -325,6 +329,7 @@ const App: React.FC = () => {
     setRelationships([]);
     setDescriptions([]);
     setEquipmentShortSpecs([]);
+    setComments([]);
     setIsLoading(false);
     setProgress({ current: 0, total: 0 });
     setCurrentPage(1);
@@ -478,6 +483,8 @@ const App: React.FC = () => {
     setRawTextItems(prev => [...prev, ...itemsToRestore]);
     // Clean up any relationships involving the deleted tags
     setRelationships(prev => prev.filter(rel => !idsToDelete.has(rel.from) && !idsToDelete.has(rel.to)));
+    // Clean up any comments for the deleted tags
+    setComments(prev => prev.filter(comment => !idsToDelete.has(comment.targetId)));
   }, [tags]);
   
   const handleDeleteRawTextItems = useCallback((itemIdsToDelete: string[]): void => {
@@ -768,6 +775,50 @@ const App: React.FC = () => {
     });
   }, []);
 
+  // Comment management functions
+  const handleCreateComment = useCallback((
+    targetId: string, 
+    targetType: CommentTargetType, 
+    content: string, 
+    priority: CommentPriority = 'medium'
+  ): void => {
+    const newComment: Comment = {
+      id: uuidv4(),
+      targetId,
+      targetType,
+      content,
+      author: 'User',
+      timestamp: Date.now(),
+      isResolved: false,
+      priority
+    };
+    
+    setComments(prev => [...prev, newComment]);
+  }, []);
+
+  const handleUpdateComment = useCallback((
+    commentId: string, 
+    updates: Partial<Pick<Comment, 'content' | 'priority' | 'isResolved'>>
+  ): void => {
+    setComments(prev => prev.map(comment => 
+      comment.id === commentId 
+        ? { ...comment, ...updates, timestamp: updates.content ? Date.now() : comment.timestamp }
+        : comment
+    ));
+  }, []);
+
+  const handleDeleteComment = useCallback((commentId: string): void => {
+    setComments(prev => prev.filter(comment => comment.id !== commentId));
+  }, []);
+
+  const handleDeleteCommentsForTarget = useCallback((targetId: string): void => {
+    setComments(prev => prev.filter(comment => comment.targetId !== targetId));
+  }, []);
+
+  const getCommentsForTarget = useCallback((targetId: string): Comment[] => {
+    return comments.filter(comment => comment.targetId === targetId);
+  }, [comments]);
+
   const validateProjectData = (data: any): data is ProjectData => {
     // Basic structure validation
     if (!data || typeof data !== 'object') return false;
@@ -859,6 +910,7 @@ const App: React.FC = () => {
     setDescriptions(sanitizedData.descriptions || []);
     setEquipmentShortSpecs(sanitizedData.equipmentShortSpecs || []);
     setLoops(sanitizedData.loops || []);
+    setComments(sanitizedData.comments || []);
     
     if (sanitizedData.settings?.patterns) {
         setPatterns(sanitizedData.settings.patterns);
@@ -950,6 +1002,7 @@ const App: React.FC = () => {
         rawTextItems,
         descriptions,
         equipmentShortSpecs,
+        comments,
         loops,
         settings: {
             patterns,
@@ -1697,6 +1750,11 @@ const App: React.FC = () => {
             toggleRelationshipVisibility={toggleRelationshipVisibility}
             toggleAllTags={toggleAllTags}
             toggleAllRelationships={toggleAllRelationships}
+            comments={comments}
+            onCreateComment={handleCreateComment}
+            onUpdateComment={handleUpdateComment}
+            onDeleteComment={handleDeleteComment}
+            getCommentsForTarget={getCommentsForTarget}
             isSidePanelVisible={isSidePanelVisible}
           />
         </ErrorBoundary>

@@ -2,7 +2,7 @@ import { Category } from './types.ts';
 
 export const DEFAULT_PATTERNS = {
   [Category.Equipment]: '^([^-]*-){2}[^-]*$',
-  [Category.Line]: '^([^-]*-){3,}[^-]*$',
+  [Category.Line]: '^(?=.{10,25}$)(?=.*")([^-]*-){3,}[^-]*$',
   [Category.Instrument]: {
     func: '[A-Z]{2,4}',
     num: '\\d{4}(?:\\s?[A-Z])?'

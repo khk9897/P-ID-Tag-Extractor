@@ -901,21 +901,22 @@ export const PdfViewer = ({
                                  };
                              }
                              if (isHighlighted) {
-                                 // 태그 선택 시 관련 Raw Text 강조 - 진한 노란색으로 변경
+                                 // 태그 선택 시 관련 Raw Text 강조 - 진한 보라색
                                  return { 
-                                     fill: "rgb(250 204 21 / 0.6)", // Yellow with 60% opacity
-                                     stroke: "#facc15",
-                                     strokeWidth: "3", 
+                                     fill: "rgb(139 69 255 / 0.5)", // Violet with 50% opacity (더 진하게)
+                                     stroke: "#8b5cf6",
+                                     strokeWidth: "2.5", 
                                      strokeDasharray: "none" 
                                  };
                              }
                              if (isLinked) {
-                                // Annotation 연결된 상태 - 연한 보라색
+                                // Annotation 연결된 상태 - 매우 연한 보라색
                                 return { 
-                                    fill: `${colors.relationships.annotation}33`, // 20% opacity (더 연하게)
+                                    fill: `${colors.relationships.annotation}1A`, // 10% opacity (매우 연하게)
                                     stroke: colors.relationships.annotation,
-                                    strokeWidth: "1.5", 
-                                    strokeDasharray: "none" 
+                                    strokeWidth: "1", 
+                                    strokeDasharray: "2 2",  // 점선으로 변경
+                                    opacity: "0.7"  // 전체 투명도도 추가
                                 };
                              }
                              return { 

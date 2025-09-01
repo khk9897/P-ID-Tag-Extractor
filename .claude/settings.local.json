@@ -32,7 +32,8 @@
       "Bash(grep:*)",
       "Bash(npm run dev:*)",
       "Bash(rg:*)",
-      "Bash(gh workflow:*)"
+      "Bash(gh workflow:*)",
+      "Bash(git config:*)"
     ],
     "deny": [],
     "ask": []

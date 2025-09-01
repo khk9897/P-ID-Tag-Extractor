@@ -108,152 +108,156 @@ export const Header = ({
   };
 
   return (
-    <header className="relative flex-shrink-0 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 p-2 flex justify-between items-center z-50">
-      <div className="flex items-center space-x-2">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <path d="M14 2v6h6"></path>
-          <circle cx="12" cy="15" r="2"></circle>
-          <path d="M12 10v3"></path>
-          <path d="m15 12-1.5 2.6"></path>
-          <path d="m9 12 1.5 2.6"></path>
-        </svg>
-        <h1 className="text-xl font-bold text-white tracking-tight">P&ID Smart Digitizer</h1>
-        
-        {/* Side Panel Toggle - next to title */}
-        {hasData && (
-          <button
-            onClick={onToggleSidePanel}
-            className="p-1.5 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
-            title="Toggle Side Panel (S)"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="9" y1="3" x2="9" y2="21"></line>
-            </svg>
-          </button>
-        )}
-      </div>
-
-      {/* Viewer Controls - Centered */}
-      {hasData && pdfDoc && (
-        <div className="absolute left-1/2 -translate-x-1/2">
-            <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center space-x-4">
-                <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="px-3 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors">Prev</button>
-                <span>Page {currentPage} of {pdfDoc.numPages}</span>
-                <button onClick={() => setCurrentPage(Math.min(pdfDoc.numPages, currentPage + 1))} disabled={currentPage === pdfDoc.numPages} className="px-3 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors">Next</button>
-                <div className="h-6 w-px bg-slate-600"></div>
-                <div className="flex items-center space-x-2">
-                    <span className="text-sm text-slate-300">Zoom:</span>
-                    <button onClick={() => setScale(s => Math.max(0.25, s - 0.25))} className="px-2 py-0.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors">-</button>
-                    <span className="w-12 text-center text-sm font-semibold text-white">{(scale * 100).toFixed(0)}%</span>
-                    <button onClick={() => setScale(s => s + 0.25)} className="px-2 py-0.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors">+</button>
-                    
-                    {/* Relationship lines toggle */}
-                    <button
-                        onClick={() => setShowRelationships(!showRelationships)}
-                        className={`px-2 py-0.5 rounded transition-colors ${
-                            showRelationships 
-                                ? 'bg-sky-600 text-white hover:bg-sky-500' 
-                                : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
-                        }`}
-                        title="Toggle relationship lines visibility (V)"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            {showRelationships ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                            )}
-                        </svg>
-                    </button>
-                </div>
-                <div className="h-6 w-px bg-slate-600"></div>
-                <div className="flex items-center space-x-2">
-                    <span className="text-sm text-slate-300">Mode:</span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${mode === 'select' ? 'bg-slate-600' : mode === 'connect' ? 'bg-blue-500' : 'bg-green-500'}`}>{mode}</span>
-                    <span className="text-xs text-slate-400 hidden lg:inline">Hotkeys: [N], [H], [M], [P], [L]...</span>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); setShowHotkeyHelp(prev => !prev); }}
-                        title="Show hotkeys and controls"
-                        className="p-1.5 rounded-full transition-colors bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-      )}
-
-      <div className="flex items-center space-x-2">
-        {/* Auto-link buttons */}
-        {hasData && (
-          <>
+    <header className="relative flex-shrink-0 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 p-2 z-50">
+      {/* Single-line layout with flex-wrap */}
+      <div className="flex flex-wrap items-center gap-2 justify-between">
+        {/* Logo and title */}
+        <div className="flex items-center space-x-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 lg:h-8 lg:w-8 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <path d="M14 2v6h6"></path>
+            <circle cx="12" cy="15" r="2"></circle>
+            <path d="M12 10v3"></path>
+            <path d="m15 12-1.5 2.6"></path>
+            <path d="m9 12 1.5 2.6"></path>
+          </svg>
+          <h1 className="text-lg lg:text-xl font-bold text-white tracking-tight hidden sm:inline">P&ID Smart Digitizer</h1>
+          <h1 className="text-lg font-bold text-white tracking-tight sm:hidden">P&ID</h1>
+          
+          {/* Side Panel Toggle - next to title */}
+          {hasData && (
             <button
-              onClick={onAutoLinkAll}
-              className="flex items-center justify-center space-x-1 bg-green-700 hover:bg-green-600 text-green-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs"
-              title="Run all auto-linking functions: Descriptions, Notes & Holds, and Equipment Short Specs"
+              onClick={onToggleSidePanel}
+              className="p-1.5 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+              title="Toggle Side Panel (S)"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 lg:h-5 lg:w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* PDF Navigation & Mode - when data is loaded */}
+        {hasData && (
+          <div className="flex items-center gap-2">
+            {pdfDoc && (
+              <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-2">
+                <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">←</button>
+                <span className="text-sm whitespace-nowrap">Page {currentPage}/{pdfDoc.numPages}</span>
+                <button onClick={() => setCurrentPage(Math.min(pdfDoc.numPages, currentPage + 1))} disabled={currentPage === pdfDoc.numPages} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">→</button>
+              </div>
+            )}
+            
+            {/* Mode indicator */}
+            <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-1">
+              <span className="text-xs text-slate-300 hidden sm:inline">Mode:</span>
+              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${mode === 'select' ? 'bg-slate-600' : mode === 'connect' ? 'bg-blue-500' : 'bg-green-500'}`}>{mode}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowHotkeyHelp(prev => !prev); }}
+                title="Show hotkeys and controls"
+                className="p-1.5 rounded-full transition-colors bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Zoom & View Controls - when data is loaded */}
+        {hasData && (
+          <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-slate-300 hidden sm:inline">Zoom:</span>
+              <button onClick={() => setScale(s => Math.max(0.25, s - 0.25))} className="px-2 py-0.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors text-sm">-</button>
+              <span className="w-12 text-center text-xs font-semibold text-white">{(scale * 100).toFixed(0)}%</span>
+              <button onClick={() => setScale(s => s + 0.25)} className="px-2 py-0.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors text-sm">+</button>
+            </div>
+            
+            <div className="h-6 w-px bg-slate-600"></div>
+            
+            {/* Relationship lines toggle */}
+            <button
+              onClick={() => setShowRelationships(!showRelationships)}
+              className={`px-2 py-0.5 rounded transition-colors ${
+                showRelationships 
+                  ? 'bg-sky-600 text-white hover:bg-sky-500' 
+                  : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
+              }`}
+              title="Toggle relationship lines visibility (V)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                {showRelationships ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                )}
               </svg>
-              <span>Auto Link</span>
+            </button>
+          </div>
+        )}
+
+        {/* Auto-link buttons - when data is loaded */}
+        {hasData && (
+          <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-1">
+            <button
+              onClick={onAutoLinkAll}
+              className="flex items-center justify-center space-x-1 bg-green-700 hover:bg-green-600 text-green-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
+              title="Run all auto-linking functions"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <span className="hidden md:inline">Auto</span>
             </button>
             <button
               onClick={onAutoLinkDescriptions}
-              className="flex items-center justify-center space-x-1 bg-sky-700 hover:bg-sky-600 text-sky-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs"
+              className="flex items-center justify-center bg-sky-700 hover:bg-sky-600 text-sky-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
               title="Auto-link nearby text as descriptions to Instrument tags"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
               <span>Inst</span>
             </button>
             <button
               onClick={onAutoLinkNotesAndHolds}
-              className="flex items-center justify-center space-x-1 bg-purple-700 hover:bg-purple-600 text-purple-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs"
+              className="flex items-center justify-center bg-purple-700 hover:bg-purple-600 text-purple-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
               title="Auto-link Note & Hold tags to corresponding descriptions"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
               <span>N&H</span>
             </button>
             <button
               onClick={onAutoLinkEquipmentShortSpecs}
-              className="flex items-center justify-center space-x-1 bg-orange-700 hover:bg-orange-600 text-orange-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs"
-              title="Auto-link Equipment tags to Equipment Short Specs (A/B pattern support)"
+              className="flex items-center justify-center bg-orange-700 hover:bg-orange-600 text-orange-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
+              title="Auto-link Equipment tags to Equipment Short Specs"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
               <span>Equip</span>
             </button>
-            <button
-              onClick={onRemoveWhitespace}
-              className="flex items-center justify-center space-x-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-1 px-2 rounded-md transition-colors text-xs"
-              title="Remove all whitespace from Equipment, Line, and Instrument tags"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" />
-              </svg>
-              <span>Strip</span>
-            </button>
-          </>
+          </div>
         )}
-        
-        {hasData && (
-            <>
+
+        {/* Tools & Essential buttons */}
+        <div className="flex items-center gap-1">
+          {hasData && (
+            <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-1">
+              <button
+                onClick={onRemoveWhitespace}
+                className="flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
+                title="Remove all whitespace from tags"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" />
+                </svg>
+                <span className="hidden md:inline ml-1">Strip</span>
+              </button>
               <button
                 onClick={() => importInputRef.current?.click()}
-                className="px-3 py-1.5 text-sm font-semibold text-white bg-slate-600 rounded-md hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900 flex items-center space-x-2"
-                title="Import project data from a .json file"
+                className="flex items-center bg-slate-600 hover:bg-slate-700 text-white font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
+                title="Import project data"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
-                <span>Import</span>
+                <span className="hidden md:inline ml-1">Import</span>
               </button>
               <input
                 type="file"
@@ -264,33 +268,39 @@ export const Header = ({
               />
               <button
                 onClick={onExportProject}
-                className="px-3 py-1.5 text-sm font-semibold text-white bg-slate-600 rounded-md hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900 flex items-center space-x-2"
-                title="Export current tags and relationships to a .json file"
+                className="flex items-center bg-slate-600 hover:bg-slate-700 text-white font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
+                title="Export project data"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                <span>Export</span>
+                <span className="hidden md:inline ml-1">Export</span>
               </button>
-            </>
+            </div>
           )}
-        <button
-          onClick={onOpenSettings}
-          className="px-3 py-1.5 text-sm font-semibold text-white bg-slate-600 rounded-md hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-900 flex items-center space-x-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-          </svg>
-          <span>Settings</span>
-        </button>
-        {hasData && (
+          
+          {/* Always visible essential buttons */}
           <button
-            onClick={onReset}
-            className="px-3 py-1.5 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+            onClick={onOpenSettings}
+            className="p-2 text-sm font-semibold text-white bg-slate-600 rounded-md hover:bg-slate-700 transition-colors"
+            title="Settings"
           >
-            Reset
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
           </button>
-        )}
+          {hasData && (
+            <button
+              onClick={onReset}
+              className="p-2 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+              title="Reset"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {showHotkeyHelp && <HotkeyHelp onClose={() => setShowHotkeyHelp(false)} />}

@@ -893,15 +893,36 @@ export const PdfViewer = ({
                          
                          const getRectProps = () => {
                              if (isSelected) {
-                                 return { fill: "rgb(56 189 248 / 0.5)", className: "stroke-sky-400", strokeWidth: "2.5", strokeDasharray: "none" };
+                                 return { 
+                                     fill: "rgb(56 189 248 / 0.5)", 
+                                     stroke: "#38bdf8",
+                                     strokeWidth: "2.5", 
+                                     strokeDasharray: "none" 
+                                 };
                              }
                              if (isHighlighted) {
-                                 return { fill: "rgb(139 69 255 / 0.4)", className: "stroke-violet-500", strokeWidth: "2.5", strokeDasharray: "none" };
+                                 return { 
+                                     fill: "rgb(139 69 255 / 0.4)", 
+                                     stroke: "#8b5cf6",
+                                     strokeWidth: "2.5", 
+                                     strokeDasharray: "none" 
+                                 };
                              }
                              if (isLinked) {
-                                return { fill: "rgb(20 184 166 / 0.3)", className: "stroke-teal-500", strokeWidth: "2", strokeDasharray: "none" };
+                                return { 
+                                    fill: `${colors.relationships.annotation}4D`, // 30% opacity
+                                    stroke: colors.relationships.annotation,
+                                    strokeWidth: "2", 
+                                    strokeDasharray: "none" 
+                                };
                              }
-                             return { className: "fill-transparent stroke-slate-600/80 group-hover:stroke-sky-400 group-hover:fill-sky-400/30 transition-all", strokeWidth: "2", strokeDasharray: "3 3" };
+                             return { 
+                                 fill: "transparent",
+                                 stroke: "#64748b",
+                                 strokeWidth: "2", 
+                                 strokeDasharray: "3 3",
+                                 className: "group-hover:stroke-sky-400 group-hover:fill-sky-400/30 transition-all"
+                             };
                          };
 
                          return (

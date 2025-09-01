@@ -58,22 +58,25 @@ export interface VisibilitySettings {
 
 // Color settings interface
 export interface ColorSettings {
-  tags: {
+  entities: {
     equipment: string;
     line: string;
     instrument: string;
     drawingNumber: string;
     notesAndHolds: string;
     uncategorized: string;
+    description: string;        // Description entity color
+    equipmentShortSpec: string;  // Equipment Short Spec entity color
   };
   relationships: {
-    connection: string;
-    installation: string;
-    annotation: string;
-    note: string;
-    noteRelated: string; // Color for tags related to notes
-    description: string;
-    equipmentShortSpec: string;
+    connection: string;      // Connection arrow line
+    installation: string;    // Installation arrow line
+    annotation: string;      // Annotation line & linked raw text
+    note: string;           // Note relationship line
+  };
+  highlights: {
+    noteRelated: string;    // Highlight color for tags related to notes
+    selected: string;       // Selected items
   };
 }
 

@@ -67,21 +67,21 @@ export const PdfViewer = ({
   // Use colorSettings with fallback to DEFAULT_COLORS
   const colors = colorSettings || DEFAULT_COLORS;
 
-  // Helper function to get tag color
-  const getTagColor = useCallback((category) => {
+  // Helper function to get entity color
+  const getEntityColor = useCallback((category) => {
     switch (category) {
       case Category.Equipment:
-        return colors.tags.equipment;
+        return colors.entities.equipment;
       case Category.Line:
-        return colors.tags.line;
+        return colors.entities.line;
       case Category.Instrument:
-        return colors.tags.instrument;
+        return colors.entities.instrument;
       case Category.DrawingNumber:
-        return colors.tags.drawingNumber;
+        return colors.entities.drawingNumber;
       case Category.NotesAndHolds:
-        return colors.tags.notesAndHolds;
+        return colors.entities.notesAndHolds;
       default:
-        return colors.tags.uncategorized;
+        return colors.entities.uncategorized;
     }
   }, [colors]);
 
@@ -96,10 +96,6 @@ export const PdfViewer = ({
         return colors.relationships.annotation;
       case RelationshipType.Note:
         return colors.relationships.note;
-      case RelationshipType.Description:
-        return colors.relationships.description;
-      case RelationshipType.EquipmentShortSpec:
-        return colors.relationships.equipmentShortSpec;
       default:
         return '#94a3b8'; // Default slate color
     }
@@ -1022,12 +1018,12 @@ export const PdfViewer = ({
                           y={rectY} 
                           width={rectWidth} 
                           height={rectHeight} 
-                          stroke={isVisible ? getTagColor(tag.category) : 'transparent'}
+                          stroke={isVisible ? getEntityColor(tag.category) : 'transparent'}
                           strokeWidth={isVisible ? 3 : 0.5}
                           className="transition-all duration-150" 
                           fill={
                             isVisible 
-                              ? `${getTagColor(tag.category)}66` // Add 40% opacity (66 in hex)
+                              ? `${getEntityColor(tag.category)}66` // Add 40% opacity (66 in hex)
                               : 'rgba(255, 255, 255, 0.003)'
                           } 
                           strokeDasharray={isRelStart ? "4 2" : "none"}
@@ -1039,7 +1035,8 @@ export const PdfViewer = ({
                             y={rectY - 4} 
                             width={rectWidth + 8} 
                             height={rectHeight + 8} 
-                            className="fill-none stroke-red-500" 
+                            fill="none"
+                            stroke={colors.highlights.selected} 
                             strokeWidth={isVisible ? "4" : "2"} 
                             strokeDasharray={isVisible ? "none" : "4 4"}
                             opacity={isVisible ? "1" : "0.7"}
@@ -1052,8 +1049,8 @@ export const PdfViewer = ({
                             y={rectY} 
                             width={rectWidth} 
                             height={rectHeight} 
-                            fill={`${colors.relationships.noteRelated}66`} 
-                            stroke={colors.relationships.noteRelated}
+                            fill={`${colors.highlights.noteRelated}66`} 
+                            stroke={colors.highlights.noteRelated}
                             strokeWidth="3"
                             />
                         )}

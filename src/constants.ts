@@ -57,21 +57,24 @@ export const CATEGORY_COLORS = {
 };
 
 export const DEFAULT_COLORS: ColorSettings = {
-  tags: {
+  entities: {
     equipment: '#38bdf8',      // Sky blue
     line: '#fb7185',           // Rose
     instrument: '#fbbf24',     // Amber
     drawingNumber: '#818cf8',  // Indigo
     notesAndHolds: '#14b8a6',  // Teal
     uncategorized: '#94a3b8',  // Slate
+    description: '#f472b6',     // Pink (for Note & Hold descriptions)
+    equipmentShortSpec: '#10b981', // Emerald (for equipment short specs)
   },
   relationships: {
-    connection: '#38bdf8',      // Sky blue
-    installation: '#facc15',    // Yellow
-    annotation: '#a78bfa',      // Purple-400 (for linked Raw Text Items)
-    note: '#14b8a6',           // Teal (same as NotesAndHolds)
-    noteRelated: '#6366f1',    // Indigo-500 (different from note color)
-    description: '#f472b6',     // Pink
-    equipmentShortSpec: '#10b981', // Emerald
+    connection: '#38bdf8',      // Sky blue (arrow line)
+    installation: '#facc15',    // Yellow (arrow line)
+    annotation: '#a78bfa',      // Purple-400 (line & linked raw text)
+    note: '#14b8a6',           // Teal (line connecting to notes)
+  },
+  highlights: {
+    noteRelated: '#6366f1',    // Indigo-500 (highlight for note-related tags)
+    selected: '#ef4444',       // Red (selected items)
   },
 };

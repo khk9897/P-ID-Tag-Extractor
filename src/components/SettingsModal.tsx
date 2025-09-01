@@ -333,16 +333,18 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                 </p>
               </div>
               
-              {/* Tag Colors */}
+              {/* Entity Colors */}
               <div>
-                <h3 className="text-sm font-semibold mb-3 text-slate-200">Tag Colors</h3>
+                <h3 className="text-sm font-semibold mb-3 text-slate-200">Entity Colors</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries({
-                    equipment: 'Equipment',
-                    line: 'Line',
-                    instrument: 'Instrument',
+                    equipment: 'Equipment Tag',
+                    line: 'Line Tag',
+                    instrument: 'Instrument Tag',
                     drawingNumber: 'Drawing Number',
-                    notesAndHolds: 'Notes & Holds',
+                    notesAndHolds: 'Notes & Holds Tag',
+                    description: 'Note/Hold Description',
+                    equipmentShortSpec: 'Equipment Short Spec',
                     uncategorized: 'Uncategorized'
                   }).map(([key, label]) => (
                     <div key={key} className="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg">
@@ -350,19 +352,19 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                       <div className="flex items-center space-x-2">
                         <input
                           type="color"
-                          value={localColorSettings.tags[key]}
+                          value={localColorSettings.entities[key]}
                           onChange={(e) => setLocalColorSettings(prev => ({
                             ...prev,
-                            tags: { ...prev.tags, [key]: e.target.value }
+                            entities: { ...prev.entities, [key]: e.target.value }
                           }))}
                           className="w-10 h-10 rounded cursor-pointer border border-slate-600"
                         />
                         <input
                           type="text"
-                          value={localColorSettings.tags[key]}
+                          value={localColorSettings.entities[key]}
                           onChange={(e) => setLocalColorSettings(prev => ({
                             ...prev,
-                            tags: { ...prev.tags, [key]: e.target.value }
+                            entities: { ...prev.entities, [key]: e.target.value }
                           }))}
                           className="w-24 bg-slate-900 border border-slate-600 rounded-md px-2 py-1 text-xs font-mono"
                         />
@@ -372,18 +374,15 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                 </div>
               </div>
               
-              {/* Relationship Colors */}
+              {/* Relationship Line Colors */}
               <div>
-                <h3 className="text-sm font-semibold mb-3 text-slate-200">Relationship Colors</h3>
+                <h3 className="text-sm font-semibold mb-3 text-slate-200">Relationship Line Colors</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries({
-                    connection: 'Connection',
-                    installation: 'Installation',
-                    annotation: 'Annotation',
-                    note: 'Note',
-                    noteRelated: 'Note-Related Tags',
-                    description: 'Description',
-                    equipmentShortSpec: 'Equipment Short Spec'
+                    connection: 'Connection Arrow',
+                    installation: 'Installation Arrow',
+                    annotation: 'Annotation Line & Linked Text',
+                    note: 'Note Relationship Line'
                   }).map(([key, label]) => (
                     <div key={key} className="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg">
                       <label className="text-sm text-slate-200">{label}</label>
@@ -403,6 +402,41 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                           onChange={(e) => setLocalColorSettings(prev => ({
                             ...prev,
                             relationships: { ...prev.relationships, [key]: e.target.value }
+                          }))}
+                          className="w-24 bg-slate-900 border border-slate-600 rounded-md px-2 py-1 text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Highlight Colors */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-slate-200">Highlight Colors</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries({
+                    noteRelated: 'Note-Related Tag Highlight',
+                    selected: 'Selected Item Border'
+                  }).map(([key, label]) => (
+                    <div key={key} className="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg">
+                      <label className="text-sm text-slate-200">{label}</label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="color"
+                          value={localColorSettings.highlights[key]}
+                          onChange={(e) => setLocalColorSettings(prev => ({
+                            ...prev,
+                            highlights: { ...prev.highlights, [key]: e.target.value }
+                          }))}
+                          className="w-10 h-10 rounded cursor-pointer border border-slate-600"
+                        />
+                        <input
+                          type="text"
+                          value={localColorSettings.highlights[key]}
+                          onChange={(e) => setLocalColorSettings(prev => ({
+                            ...prev,
+                            highlights: { ...prev.highlights, [key]: e.target.value }
                           }))}
                           className="w-24 bg-slate-900 border border-slate-600 rounded-md px-2 py-1 text-xs font-mono"
                         />
@@ -432,7 +466,7 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                     onClick={handleSave}
                     className="px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-800"
                 >
-                    Save and Re-scan
+                    {activeTab === 'patterns' ? 'Save and Re-scan' : 'Save'}
                 </button>
             </div>
         </div>

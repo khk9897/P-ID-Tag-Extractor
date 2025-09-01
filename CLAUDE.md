@@ -19,7 +19,9 @@ The application follows a component-based architecture:
 - **App.tsx**: Main application state management and orchestration
 - **Workspace.tsx**: Central workspace containing PDF viewer and side panel
 - **Header.tsx**: Top navigation with PDF controls and project management
-- **SidePanel.tsx**: Tag list management with page filtering, description editing, and Excel export functionality
+- **SidePanel.tsx**: Tag list management with page filtering, description editing, comment system, and Excel export functionality
+- **CommentModal.tsx**: Modal interface for creating, editing, and managing comments with priority levels
+- **CommentIndicator.tsx**: Visual comment indicator with count and priority display
 - **PdfViewer.tsx**: Core PDF rendering and tag visualization
 - **SelectionPanel.tsx**: Bottom panel for creating tags from selected text
 
@@ -32,18 +34,20 @@ The application follows a component-based architecture:
    - Final: Raw text collection for annotations
 
 2. **excelExporter.ts**: Structured Excel report generation
-   - Creates Equipment, Line, Instrument, and Description worksheets
+   - Creates Equipment, Line, Instrument, Description, and Comments worksheets
    - Processes relationships (Connection, Installation, Annotation, Note)
    - Aggregates related data with proper formatting
    - Supports Note & Hold data with page-specific numbering
+   - Includes comprehensive comment data with priority levels and resolution status
 
 ### State Management
 
 The app uses React state with lifting patterns:
-- Global state in App.tsx (tags, relationships, descriptions, rawTextItems, patterns, tolerances, visibilitySettings)
+- Global state in App.tsx (tags, relationships, descriptions, rawTextItems, comments, patterns, tolerances, visibilitySettings)
 - Viewer state passed down (currentPage, scale, mode, selection)
-- UI state management (page filtering, edit modes, selections, advanced visibility controls)
-- Local storage for user preferences (patterns, tolerances, visibility settings)
+- UI state management (page filtering, edit modes, selections, advanced visibility controls, comment filters)
+- Local storage for user preferences (patterns, tolerances, visibility settings, sidebar width)
+- Comment system with CRUD operations and priority-based filtering
 
 ### Data Model
 
@@ -51,6 +55,7 @@ Core entities:
 - **Tags**: Extracted entities with category, bbox, page, source items, and optional review status (`isReviewed?: boolean`)
 - **Relationships**: Connections between tags (6 types: Connection, Installation, Annotation, Note, Description, EquipmentShortSpec)
 - **Descriptions**: Note & Hold entities with metadata (type, scope, number) and page-specific numbering
+- **Comments**: User comments with target references, priority levels (High/Medium/Low), and resolution tracking
 - **RawTextItems**: Unprocessed text fragments for manual tag creation
 - **Categories**: Equipment, Line, Instrument, DrawingNumber, NotesAndHolds
 - **VisibilitySettings**: Granular controls for tags, relationships, descriptions, and equipment specs
@@ -62,11 +67,15 @@ Core entities:
 3. **Relationship Management**: Visual connection tools with keyboard shortcuts
 4. **Description Management**: Note & Hold auto-linking with page-specific numbering
 5. **Review System**: Tag review status tracking with checkbox interface and filtering (All/Reviewed/Not Reviewed)
-6. **Advanced Visibility Controls**: Granular show/hide controls for each tag type and relationship category with preserved interaction for hidden elements
-7. **Responsive UI**: Single-line header layout with flex-wrap for narrow browser widths
-8. **Advanced UI Controls**: Page filtering, read/edit mode toggles, and improved layouts
-9. **Project Management**: JSON export/import for work continuity with review status preservation
-10. **Excel Export**: Structured reports with relationship mapping and Description sheet
+6. **Comment System**: Comprehensive commenting with priority levels, resolution tracking, and filtering capabilities
+7. **Advanced Visibility Controls**: Granular show/hide controls for each tag type and relationship category with preserved interaction for hidden elements
+8. **Smart UI Design**: Compact filter interface combining Review & Comment filters with intuitive icons (✅ ☐ 💬+ 💬-)
+9. **Resizable Interface**: Drag-to-resize sidebar with localStorage persistence for user preferences
+10. **Enhanced Search**: Search input with clear button (X) for improved user experience
+11. **Responsive UI**: Single-line header layout with flex-wrap for narrow browser widths
+12. **Advanced UI Controls**: Page filtering, read/edit mode toggles, and improved layouts
+13. **Project Management**: JSON export/import for work continuity with review status and comment preservation
+14. **Excel Export**: Structured reports with relationship mapping, Description sheet, and comprehensive Comment tracking
 
 ### Configuration
 

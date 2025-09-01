@@ -30,11 +30,15 @@
 - **Visual Tag Management**: Color-coded tag highlighting with category-based organization
 - **Advanced Visibility Controls**: Granular show/hide controls for each tag type and relationship category
 - **Review System**: Tag review status tracking with checkbox interface and filtering (All/Reviewed/Not Reviewed)
+- **Comment System**: Comprehensive commenting with priority levels (High/Medium/Low) and resolution tracking
+- **Smart Filtering**: Combined Review & Comment filters with compact single-line interface (✅ ☐ 💬+ 💬-)
+- **Resizable Interface**: Drag-to-resize sidebar with persistent width preferences
 - **Relationship Mapping**: Intuitive connection, installation, and annotation relationship creation
 - **Multi-selection Tools**: Advanced selection capabilities with area and multi-tag selection
 - **Smart Interaction**: Hidden tags remain selectable while being visually decluttered
 - **Page Filtering**: Smart page-only view for focused editing across all entity types
 - **Description Management**: Clean read/edit mode toggle for Note & Hold annotations
+- **Enhanced Search**: Search input with clear button (X) for improved usability
 
 ### 🔐 Privacy-First Design
 - **100% Client-Side Processing**: All data stays in your browser - no server uploads
@@ -42,10 +46,11 @@
 - **Offline Capable**: Works entirely without internet connectivity
 
 ### 📊 Professional Export
-- **Structured Excel Output**: Organized sheets for Equipment, Line, Instrument, and Description lists
-- **Complete Data Export**: Includes relationships, annotations, Note & Hold data, drawing references, and review status
-- **Project Continuity**: Save/load projects with review status preservation for iterative work sessions
+- **Structured Excel Output**: Organized sheets for Equipment, Line, Instrument, Description, and Comment lists
+- **Complete Data Export**: Includes relationships, annotations, Note & Hold data, comments with priority/status, drawing references, and review status
+- **Project Continuity**: Save/load projects with review status and comments preservation for iterative work sessions
 - **Auto-linking**: Intelligent Note & Hold association with page-specific numbering
+- **Comment Integration**: Comprehensive comment tracking across all entity types in export data
 
 ---
 
@@ -269,6 +274,7 @@ The generated Excel file contains organized sheets:
 | Instruments | Installed instruments |
 | Description | Associated annotations |
 | Notes | Special notes/holds |
+| Comments | Priority-based comments with resolution status |
 
 #### Line List  
 | Column | Description |
@@ -281,6 +287,7 @@ The generated Excel file contains organized sheets:
 | Instruments | Installed instruments |
 | Description | Associated annotations |
 | Notes | Special notes/holds |
+| Comments | Priority-based comments with resolution status |
 
 #### Instrument List
 | Column | Description |
@@ -291,6 +298,7 @@ The generated Excel file contains organized sheets:
 | Installed On | Host equipment/line |
 | Description | Associated annotations |
 | Notes | Special notes/holds |
+| Comments | Priority-based comments with resolution status |
 
 #### Equipment Short Spec List
 | Column | Description |
@@ -299,6 +307,7 @@ The generated Excel file contains organized sheets:
 | Service | Service description |
 | Short Spec | Equipment specification details |
 | Page | Source drawing page |
+| Comments | Priority-based comments with resolution status |
 
 #### Description List
 | Column | Description |
@@ -309,6 +318,20 @@ The generated Excel file contains organized sheets:
 | Page | Source drawing page |
 | Content | Description text content |
 | Related Tags | Associated equipment/line/instrument tags |
+| Comments | Priority-based comments with resolution status |
+
+#### Comments List
+| Column | Description |
+|--------|--------------|
+| Target Type | Entity type (Tags/Notes/Equipment Specs/Relations/Loops) |
+| Target Name | Name/identifier of the commented entity |
+| Category | Category classification of the target |
+| Page | Source drawing page |
+| Priority | Comment priority level (HIGH/MEDIUM/LOW) |
+| Status | Resolution status (Open/Resolved) |
+| Content | Comment text content |
+| Author | Comment author |
+| Created | Timestamp of comment creation |
 
 ---
 

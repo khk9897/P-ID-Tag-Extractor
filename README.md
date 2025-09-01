@@ -28,9 +28,11 @@
 
 ### 🎨 Interactive Workspace  
 - **Visual Tag Management**: Color-coded tag highlighting with category-based organization
+- **Advanced Visibility Controls**: Granular show/hide controls for each tag type and relationship category
 - **Review System**: Tag review status tracking with checkbox interface and filtering (All/Reviewed/Not Reviewed)
 - **Relationship Mapping**: Intuitive connection, installation, and annotation relationship creation
 - **Multi-selection Tools**: Advanced selection capabilities with area and multi-tag selection
+- **Smart Interaction**: Hidden tags remain selectable while being visually decluttered
 - **Page Filtering**: Smart page-only view for focused editing across all entity types
 - **Description Management**: Clean read/edit mode toggle for Note & Hold annotations
 

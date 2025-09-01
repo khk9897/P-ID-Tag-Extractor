@@ -40,30 +40,33 @@ The application follows a component-based architecture:
 ### State Management
 
 The app uses React state with lifting patterns:
-- Global state in App.tsx (tags, relationships, descriptions, rawTextItems, patterns, tolerances)
+- Global state in App.tsx (tags, relationships, descriptions, rawTextItems, patterns, tolerances, visibilitySettings)
 - Viewer state passed down (currentPage, scale, mode, selection)
-- UI state management (page filtering, edit modes, selections)
-- Local storage for user preferences (patterns, tolerances)
+- UI state management (page filtering, edit modes, selections, advanced visibility controls)
+- Local storage for user preferences (patterns, tolerances, visibility settings)
 
 ### Data Model
 
 Core entities:
 - **Tags**: Extracted entities with category, bbox, page, source items, and optional review status (`isReviewed?: boolean`)
-- **Relationships**: Connections between tags (4 types: Connection, Installation, Annotation, Note)
+- **Relationships**: Connections between tags (6 types: Connection, Installation, Annotation, Note, Description, EquipmentShortSpec)
 - **Descriptions**: Note & Hold entities with metadata (type, scope, number) and page-specific numbering
 - **RawTextItems**: Unprocessed text fragments for manual tag creation
 - **Categories**: Equipment, Line, Instrument, DrawingNumber, NotesAndHolds
+- **VisibilitySettings**: Granular controls for tags, relationships, descriptions, and equipment specs
 
 ### Key Features
 
-1. **Tag Recognition**: Regex-based pattern matching with customizable patterns
-2. **Spatial Analysis**: Tolerance-based component combination and proximity detection
+1. **Tag Recognition**: Regex-based pattern matching with customizable patterns including enhanced Line detection with length and inch symbol requirements
+2. **Spatial Analysis**: Tolerance-based component combination and proximity detection with PDF viewBox offset correction
 3. **Relationship Management**: Visual connection tools with keyboard shortcuts
 4. **Description Management**: Note & Hold auto-linking with page-specific numbering
 5. **Review System**: Tag review status tracking with checkbox interface and filtering (All/Reviewed/Not Reviewed)
-6. **Advanced UI Controls**: Page filtering, read/edit mode toggles, and improved layouts
-7. **Project Management**: JSON export/import for work continuity with review status preservation
-8. **Excel Export**: Structured reports with relationship mapping and Description sheet
+6. **Advanced Visibility Controls**: Granular show/hide controls for each tag type and relationship category with preserved interaction for hidden elements
+7. **Responsive UI**: Single-line header layout with flex-wrap for narrow browser widths
+8. **Advanced UI Controls**: Page filtering, read/edit mode toggles, and improved layouts
+9. **Project Management**: JSON export/import for work continuity with review status preservation
+10. **Excel Export**: Structured reports with relationship mapping and Description sheet
 
 ### Configuration
 
@@ -82,7 +85,9 @@ Core entities:
 ### Development Notes
 
 - Uses ES modules with CDN imports for React
-- PDF.js worker configured in App.tsx
-- Tailwind CSS for styling with custom animations
+- PDF.js worker configured in App.tsx with viewBox offset handling for coordinate accuracy
+- Tailwind CSS for styling with custom animations and responsive design patterns
+- SVG rendering with ultra-low opacity for hidden tag interaction (rgba(255, 255, 255, 0.003))
 - No external server dependencies - fully client-side processing
 - Korean documentation in README.md for end users
+- Enhanced Line pattern regex: `^(?=.{10,25}$)(?=.*")([^-]*-){3,}[^-]*$` for improved accuracy

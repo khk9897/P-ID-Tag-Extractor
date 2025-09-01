@@ -1,25 +1,28 @@
 {
   "name": "p&id-smart-digitizer",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
+  "description": "P&ID Smart Digitizer - Server Architecture Version for Intranet Deployment",
   "homepage": "https://khk9897.github.io/P-ID-Tag-Extractor",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "typecheck": "tsc --noEmit",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "dev": "echo 'Use: npm run server:dev OR npm run client:dev'",
+    "build": "echo 'Use: npm run server:build AND npm run client:build'",
+    "server:dev": "cd server && npm run dev",
+    "server:build": "cd server && npm run build",
+    "server:start": "cd server && npm run start",
+    "client:dev": "cd client && npm run dev",
+    "client:build": "cd client && npm run build",
+    "client:preview": "cd client && npm run preview",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "test:all": "cd server && npm run test",
+    "lint": "cd server && npm run lint && cd ../client && npm run lint",
+    "typecheck": "cd server && npm run typecheck && cd ../client && npm run typecheck"
   },
-  "dependencies": {
-    "pdfjs-dist": "^4.0.379",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "uuid": "^9.0.0",
-    "xlsx": "^0.18.5"
-  },
+  "workspaces": [
+    "server",
+    "client"
+  ],
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@types/react": "^18.2.0",

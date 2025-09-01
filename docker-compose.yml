@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Backend Server
+  pid-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: pid-digitizer-server
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_PATH=/app/data/app.db
+      - UPLOAD_DIR=/app/uploads
+      - SESSION_SECRET=${SESSION_SECRET:-your-super-secret-session-key-change-this-in-production}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-50MB}
+      - ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://localhost:8080
+    volumes:
+      # Persistent data storage
+      - pid-data:/app/data
+      - pid-uploads:/app/uploads
+      # Optional: bind mount for easy access (comment out in production)
+      # - ./server/data:/app/data
+      # - ./server/uploads:/app/uploads
+    ports:
+      - "3000:3000"
+    networks:
+      - pid-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Client
+  pid-client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: pid-digitizer-client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - pid-server
+    networks:
+      - pid-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Database Backup Service (runs periodically)
+  pid-backup:
+    image: alpine:latest
+    container_name: pid-digitizer-backup
+    restart: unless-stopped
+    environment:
+      - BACKUP_INTERVAL=${BACKUP_INTERVAL:-86400} # 24 hours in seconds
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+    volumes:
+      - pid-data:/data:ro
+      - pid-backups:/backups
+      - ./scripts:/scripts:ro
+    networks:
+      - pid-network
+    command: >
+      sh -c "
+        apk add --no-cache sqlite &&
+        while true; do
+          echo '[$(date)] Starting backup...' &&
+          sqlite3 /data/app.db '.backup /backups/backup-$(date +%Y%m%d_%H%M%S).db' &&
+          echo '[$(date)] Backup completed' &&
+          find /backups -name 'backup-*.db' -mtime +$$BACKUP_RETENTION_DAYS -delete &&
+          echo '[$(date)] Old backups cleaned up' &&
+          sleep $$BACKUP_INTERVAL
+        done
+      "
+
+# Volumes for persistent data
+volumes:
+  pid-data:
+    name: pid-digitizer-data
+    driver: local
+  pid-uploads:
+    name: pid-digitizer-uploads  
+    driver: local
+  pid-backups:
+    name: pid-digitizer-backups
+    driver: local
+
+# Network for service communication
+networks:
+  pid-network:
+    name: pid-digitizer-network
+    driver: bridge

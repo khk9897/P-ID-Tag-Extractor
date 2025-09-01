@@ -33,7 +33,8 @@
       "Bash(npm run dev:*)",
       "Bash(rg:*)",
       "Bash(gh workflow:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

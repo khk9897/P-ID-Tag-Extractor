@@ -56,6 +56,27 @@ export interface VisibilitySettings {
   };
 }
 
+// Color settings interface
+export interface ColorSettings {
+  tags: {
+    equipment: string;
+    line: string;
+    instrument: string;
+    drawingNumber: string;
+    notesAndHolds: string;
+    uncategorized: string;
+  };
+  relationships: {
+    connection: string;
+    installation: string;
+    annotation: string;
+    note: string;
+    noteRelated: string; // Color for tags related to notes
+    description: string;
+    equipmentShortSpec: string;
+  };
+}
+
 // Core data structure interfaces
 export interface BoundingBox {
   x1: number;

@@ -1,4 +1,4 @@
-import { Category } from './types.ts';
+import { Category, ColorSettings } from './types.ts';
 
 export const DEFAULT_PATTERNS = {
   [Category.Equipment]: '^([^-]*-){2}[^-]*$',
@@ -53,5 +53,25 @@ export const CATEGORY_COLORS = {
     border: 'border-slate-500',
     bg: 'bg-slate-500/20',
     text: 'text-slate-400',
+  },
+};
+
+export const DEFAULT_COLORS: ColorSettings = {
+  tags: {
+    equipment: '#38bdf8',      // Sky blue
+    line: '#fb7185',           // Rose
+    instrument: '#fbbf24',     // Amber
+    drawingNumber: '#818cf8',  // Indigo
+    notesAndHolds: '#14b8a6',  // Teal
+    uncategorized: '#94a3b8',  // Slate
+  },
+  relationships: {
+    connection: '#38bdf8',      // Sky blue
+    installation: '#facc15',    // Yellow
+    annotation: '#8b5cf6',      // Violet
+    note: '#14b8a6',           // Teal (same as NotesAndHolds)
+    noteRelated: '#6366f1',    // Indigo-500 (different from note color)
+    description: '#f472b6',     // Pink
+    equipmentShortSpec: '#10b981', // Emerald
   },
 };

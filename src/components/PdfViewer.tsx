@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { RelationshipType, Category } from '../types.ts';
-import { CATEGORY_COLORS } from '../constants.ts';
+import { CATEGORY_COLORS, DEFAULT_COLORS } from '../constants.ts';
 import { v4 as uuidv4 } from 'uuid';
 
 export const PdfViewer = ({
@@ -42,6 +42,7 @@ export const PdfViewer = ({
   pingedDescriptionId,
   pingedEquipmentShortSpecId,
   pingedRelationshipId,
+  colorSettings,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -62,6 +63,47 @@ export const PdfViewer = ({
         .map(r => r.to)
     );
   }, [relationships]);
+
+  // Use colorSettings with fallback to DEFAULT_COLORS
+  const colors = colorSettings || DEFAULT_COLORS;
+
+  // Helper function to get tag color
+  const getTagColor = useCallback((category) => {
+    switch (category) {
+      case Category.Equipment:
+        return colors.tags.equipment;
+      case Category.Line:
+        return colors.tags.line;
+      case Category.Instrument:
+        return colors.tags.instrument;
+      case Category.DrawingNumber:
+        return colors.tags.drawingNumber;
+      case Category.NotesAndHolds:
+        return colors.tags.notesAndHolds;
+      default:
+        return colors.tags.uncategorized;
+    }
+  }, [colors]);
+
+  // Helper function to get relationship color
+  const getRelationshipColor = useCallback((type) => {
+    switch (type) {
+      case RelationshipType.Connection:
+        return colors.relationships.connection;
+      case RelationshipType.Installation:
+        return colors.relationships.installation;
+      case RelationshipType.Annotation:
+        return colors.relationships.annotation;
+      case RelationshipType.Note:
+        return colors.relationships.note;
+      case RelationshipType.Description:
+        return colors.relationships.description;
+      case RelationshipType.EquipmentShortSpec:
+        return colors.relationships.equipmentShortSpec;
+      default:
+        return '#94a3b8'; // Default slate color
+    }
+  }, [colors]);
 
   // Helper function to check if a tag should be visible
   const isTagVisible = useCallback((tag) => {
@@ -833,8 +875,8 @@ export const PdfViewer = ({
                 {viewport && (
                 <svg className="absolute top-0 left-0" width={viewport.width} height={viewport.height} style={{ overflow: 'visible' }}>
                     <defs>
-                    <marker id="arrowhead-connect" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#38bdf8" /></marker>
-                    <marker id="arrowhead-install" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#facc15" /></marker>
+                    <marker id="arrowhead-connect" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={colors.relationships.connection} /></marker>
+                    <marker id="arrowhead-install" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={colors.relationships.installation} /></marker>
                     </defs>
 
                     {currentRawTextItems.map(item => {
@@ -883,24 +925,20 @@ export const PdfViewer = ({
                             const toItem = rawTextItems.find(i => i.id === rel.to);
                             if (!toItem) return null;
                             end = getAnnotationTargetCenter(rel.to);
-                            strokeColor = '#94a3b8'; // slate-400
+                            strokeColor = getRelationshipColor(rel.type);
                             marker = '';
                         } else {
                             const toTag = tags.find(t => t.id === rel.to);
                             if (!toTag) return null;
                             end = getTagCenter(toTag);
                             
+                            strokeColor = getRelationshipColor(rel.type);
                             if (rel.type === RelationshipType.Connection) {
-                                strokeColor = '#38bdf8';
                                 marker = 'url(#arrowhead-connect)';
                             } else if (rel.type === RelationshipType.Installation) {
-                                strokeColor = '#facc15';
                                 marker = 'url(#arrowhead-install)';
-                            } else if (rel.type === RelationshipType.Note) {
-                                strokeColor = '#2dd4bf'; // teal-400
-                                marker = '';
                             } else {
-                                return null;
+                                marker = '';
                             }
                         }
 
@@ -961,19 +999,12 @@ export const PdfViewer = ({
                           y={rectY} 
                           width={rectWidth} 
                           height={rectHeight} 
-                          className={`transition-all duration-150 ${
-                            isVisible 
-                              ? `stroke-[3] ${colors.border.replace('border-', 'stroke-')}` 
-                              : 'stroke-[0.5] stroke-transparent'
-                          }`} 
+                          stroke={isVisible ? getTagColor(tag.category) : 'transparent'}
+                          strokeWidth={isVisible ? 3 : 0.5}
+                          className="transition-all duration-150" 
                           fill={
                             isVisible 
-                              ? (colors.bg.includes('sky') ? 'rgb(14 165 233 / 0.4)' : 
-                                 colors.bg.includes('rose') ? 'rgb(244 63 94 / 0.4)' : 
-                                 colors.bg.includes('amber') ? 'rgb(245 158 11 / 0.4)' : 
-                                 colors.bg.includes('indigo') ? 'rgb(99 102 241 / 0.4)' : 
-                                 colors.bg.includes('teal') ? 'rgb(20 184 166 / 0.4)' : 
-                                 'rgb(100 116 139 / 0.4)') 
+                              ? `${getTagColor(tag.category)}66` // Add 40% opacity (66 in hex)
                               : 'rgba(255, 255, 255, 0.003)'
                           } 
                           strokeDasharray={isRelStart ? "4 2" : "none"}
@@ -998,8 +1029,8 @@ export const PdfViewer = ({
                             y={rectY} 
                             width={rectWidth} 
                             height={rectHeight} 
-                            fill="rgb(139 69 255 / 0.4)" 
-                            className="stroke-violet-500" 
+                            fill={`${colors.relationships.noteRelated}66`} 
+                            stroke={colors.relationships.noteRelated}
                             strokeWidth="3"
                             />
                         )}

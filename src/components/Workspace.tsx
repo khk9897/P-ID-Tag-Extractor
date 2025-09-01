@@ -59,6 +59,8 @@ export const Workspace = ({
   onUpdateComment,
   onDeleteComment,
   getCommentsForTarget,
+  // Color settings
+  colorSettings,
 }) => {
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
@@ -255,6 +257,7 @@ export const Workspace = ({
           pingedDescriptionId={pingedDescriptionId}
           pingedEquipmentShortSpecId={pingedEquipmentShortSpecId}
           pingedRelationshipId={pingedRelationshipId}
+          colorSettings={colorSettings}
         />
       </div>
       <SelectionPanel

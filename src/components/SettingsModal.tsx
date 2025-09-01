@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Category, AppSettings } from '../types.ts';
-import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES, DEFAULT_SETTINGS } from '../constants.ts';
+import { Category, AppSettings, ColorSettings } from '../types.ts';
+import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES, DEFAULT_SETTINGS, DEFAULT_COLORS } from '../constants.ts';
 
 const RegexHelp = () => {
   const cheatSheet = [
@@ -37,11 +37,13 @@ const RegexHelp = () => {
   );
 };
 
-export const SettingsModal = ({ patterns, tolerances, appSettings, onSave, onClose }) => {
+export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings, onSave, onClose }) => {
   const [localPatterns, setLocalPatterns] = useState(patterns);
   const [localTolerances, setLocalTolerances] = useState(tolerances);
   const [localAppSettings, setLocalAppSettings] = useState(appSettings);
+  const [localColorSettings, setLocalColorSettings] = useState(colorSettings || DEFAULT_COLORS);
   const [showRegexHelp, setShowRegexHelp] = useState(false);
+  const [activeTab, setActiveTab] = useState('patterns'); // 'patterns' or 'colors'
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -54,13 +56,17 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, onSave, onClo
   }, [onClose]);
 
   const handleSave = () => {
-    onSave(localPatterns, localTolerances, localAppSettings);
+    onSave(localPatterns, localTolerances, localAppSettings, localColorSettings);
   };
   
   const handleReset = () => {
-    setLocalPatterns(DEFAULT_PATTERNS);
-    setLocalTolerances(DEFAULT_TOLERANCES);
-    setLocalAppSettings(DEFAULT_SETTINGS);
+    if (activeTab === 'patterns') {
+      setLocalPatterns(DEFAULT_PATTERNS);
+      setLocalTolerances(DEFAULT_TOLERANCES);
+      setLocalAppSettings(DEFAULT_SETTINGS);
+    } else {
+      setLocalColorSettings(DEFAULT_COLORS);
+    }
   }
 
   const handlePatternChange = (category, value) => {
@@ -129,14 +135,41 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, onSave, onClo
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-          <h2 className="text-lg font-bold">Extraction Settings</h2>
+          <h2 className="text-lg font-bold">Settings</h2>
           <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:bg-slate-700">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </button>
         </div>
+        
+        {/* Tab Navigation */}
+        <div className="flex border-b border-slate-700">
+          <button
+            onClick={() => setActiveTab('patterns')}
+            className={`px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'patterns' 
+                ? 'text-white border-b-2 border-sky-500 bg-slate-900/30' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Extraction Patterns
+          </button>
+          <button
+            onClick={() => setActiveTab('colors')}
+            className={`px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'colors' 
+                ? 'text-white border-b-2 border-sky-500 bg-slate-900/30' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Colors
+          </button>
+        </div>
+        
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {activeTab === 'patterns' ? (
+            <>
             <div className="space-y-2 text-sm text-slate-400 bg-slate-900/50 p-3 rounded-md border border-slate-700">
                 <p>
                     Define the Regular Expression (Regex) patterns for finding tags. You can add multiple patterns for one category by using the pipe symbol <code>|</code>.
@@ -290,6 +323,96 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, onSave, onClo
                 </div>
               </div>
             </div>
+            </>
+          ) : (
+            /* Color Settings Tab */
+            <div className="space-y-6">
+              <div className="space-y-2 text-sm text-slate-400 bg-slate-900/50 p-3 rounded-md border border-slate-700">
+                <p>
+                  Customize colors for different tag categories and relationship types. Click on a color to change it.
+                </p>
+              </div>
+              
+              {/* Tag Colors */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-slate-200">Tag Colors</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries({
+                    equipment: 'Equipment',
+                    line: 'Line',
+                    instrument: 'Instrument',
+                    drawingNumber: 'Drawing Number',
+                    notesAndHolds: 'Notes & Holds',
+                    uncategorized: 'Uncategorized'
+                  }).map(([key, label]) => (
+                    <div key={key} className="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg">
+                      <label className="text-sm text-slate-200">{label}</label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="color"
+                          value={localColorSettings.tags[key]}
+                          onChange={(e) => setLocalColorSettings(prev => ({
+                            ...prev,
+                            tags: { ...prev.tags, [key]: e.target.value }
+                          }))}
+                          className="w-10 h-10 rounded cursor-pointer border border-slate-600"
+                        />
+                        <input
+                          type="text"
+                          value={localColorSettings.tags[key]}
+                          onChange={(e) => setLocalColorSettings(prev => ({
+                            ...prev,
+                            tags: { ...prev.tags, [key]: e.target.value }
+                          }))}
+                          className="w-24 bg-slate-900 border border-slate-600 rounded-md px-2 py-1 text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Relationship Colors */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-slate-200">Relationship Colors</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries({
+                    connection: 'Connection',
+                    installation: 'Installation',
+                    annotation: 'Annotation',
+                    note: 'Note',
+                    noteRelated: 'Note-Related Tags',
+                    description: 'Description',
+                    equipmentShortSpec: 'Equipment Short Spec'
+                  }).map(([key, label]) => (
+                    <div key={key} className="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg">
+                      <label className="text-sm text-slate-200">{label}</label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="color"
+                          value={localColorSettings.relationships[key]}
+                          onChange={(e) => setLocalColorSettings(prev => ({
+                            ...prev,
+                            relationships: { ...prev.relationships, [key]: e.target.value }
+                          }))}
+                          className="w-10 h-10 rounded cursor-pointer border border-slate-600"
+                        />
+                        <input
+                          type="text"
+                          value={localColorSettings.relationships[key]}
+                          onChange={(e) => setLocalColorSettings(prev => ({
+                            ...prev,
+                            relationships: { ...prev.relationships, [key]: e.target.value }
+                          }))}
+                          className="w-24 bg-slate-900 border border-slate-600 rounded-md px-2 py-1 text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         <div className="p-4 border-t border-slate-700 flex justify-between items-center">
             <button

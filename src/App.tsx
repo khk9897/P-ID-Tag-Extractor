@@ -7,7 +7,7 @@ import { Header } from './components/Header.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import { extractTags } from './services/taggingService.ts';
-import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES, DEFAULT_SETTINGS } from './constants.ts';
+import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES, DEFAULT_SETTINGS, DEFAULT_COLORS } from './constants.ts';
 import { 
   Category, 
   RelationshipType, 
@@ -29,7 +29,8 @@ import {
   VisibilitySettings,
   Comment,
   CommentTargetType,
-  CommentPriority
+  CommentPriority,
+  ColorSettings
 } from './types.ts';
 
 // Set PDF.js worker source - use local worker to avoid CORS issues
@@ -198,6 +199,16 @@ const App: React.FC = () => {
     }
   });
 
+  const [colorSettings, setColorSettings] = useState<ColorSettings>(() => {
+    try {
+      const saved = localStorage.getItem('pid-tagger-color-settings');
+      return saved ? JSON.parse(saved) : DEFAULT_COLORS;
+    } catch (error) {
+      console.error("Failed to load color settings from localStorage", error);
+      return DEFAULT_COLORS;
+    }
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem('pid-tagger-patterns', JSON.stringify(patterns));
@@ -222,6 +233,14 @@ const App: React.FC = () => {
       console.error("Failed to save app settings to localStorage", error);
     }
   }, [appSettings]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pid-tagger-color-settings', JSON.stringify(colorSettings));
+    } catch (error) {
+      console.error("Failed to save color settings to localStorage", error);
+    }
+  }, [colorSettings]);
   
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -311,10 +330,11 @@ const App: React.FC = () => {
     }
   }, [patterns, tolerances, appSettings, processPdf]);
 
-  const handleSaveSettings = async (newPatterns: PatternConfig, newTolerances: ToleranceConfig, newAppSettings: AppSettings): Promise<void> => {
+  const handleSaveSettings = async (newPatterns: PatternConfig, newTolerances: ToleranceConfig, newAppSettings: AppSettings, newColorSettings: ColorSettings): Promise<void> => {
     setPatterns(newPatterns);
     setTolerances(newTolerances);
     setAppSettings(newAppSettings);
+    setColorSettings(newColorSettings);
     setIsSettingsOpen(false);
     if (pdfDoc) {
       await processPdf(pdfDoc, newPatterns, newTolerances, newAppSettings);
@@ -1756,6 +1776,7 @@ const App: React.FC = () => {
             onDeleteComment={handleDeleteComment}
             getCommentsForTarget={getCommentsForTarget}
             isSidePanelVisible={isSidePanelVisible}
+            colorSettings={colorSettings}
           />
         </ErrorBoundary>
       );
@@ -1840,6 +1861,7 @@ const App: React.FC = () => {
             patterns={patterns}
             tolerances={tolerances}
             appSettings={appSettings}
+            colorSettings={colorSettings}
             onSave={handleSaveSettings}
             onClose={() => setIsSettingsOpen(false)}
           />

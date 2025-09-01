@@ -74,6 +74,151 @@ const HotkeyHelp = ({ onClose }) => {
   );
 };
 
+const VisibilityPanel = ({ onClose, visibilitySettings, toggleTagVisibility, toggleRelationshipVisibility, toggleAllTags, toggleAllRelationships, updateVisibilitySettings }) => {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        onClose();
+      }
+    };
+    setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 0);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  const allTagsVisible = Object.values(visibilitySettings.tags).every(Boolean);
+  const allRelationshipsVisible = Object.values(visibilitySettings.relationships).every(Boolean);
+
+  const ToggleSwitch = ({ checked, onChange, label }) => (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-slate-300">{label}</span>
+      <button
+        onClick={onChange}
+        className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${
+          checked ? 'bg-sky-600' : 'bg-slate-600'
+        }`}
+      >
+        <span
+          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+            checked ? 'translate-x-4' : 'translate-x-0.5'
+          }`}
+        />
+      </button>
+    </div>
+  );
+
+  return (
+    <div ref={ref} className="absolute top-16 right-4 z-20 w-80 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl p-4 text-white animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
+      <h3 className="text-md font-bold mb-3 border-b border-slate-600 pb-2">Visibility Controls</h3>
+      
+      <div className="space-y-4">
+        {/* Tags Section */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold text-sm text-slate-400">Tags</h4>
+            <button
+              onClick={toggleAllTags}
+              className="text-xs text-sky-400 hover:text-sky-300"
+            >
+              {allTagsVisible ? 'Hide All' : 'Show All'}
+            </button>
+          </div>
+          <div className="space-y-2 text-sm">
+            <ToggleSwitch
+              checked={visibilitySettings.tags.equipment}
+              onChange={() => toggleTagVisibility('equipment')}
+              label="Equipment"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.tags.line}
+              onChange={() => toggleTagVisibility('line')}
+              label="Line"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.tags.instrument}
+              onChange={() => toggleTagVisibility('instrument')}
+              label="Instrument"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.tags.drawingNumber}
+              onChange={() => toggleTagVisibility('drawingNumber')}
+              label="Drawing Number"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.tags.notesAndHolds}
+              onChange={() => toggleTagVisibility('notesAndHolds')}
+              label="Notes & Holds"
+            />
+          </div>
+        </div>
+
+        {/* Other Elements Section */}
+        <div>
+          <h4 className="font-semibold text-sm text-slate-400 mb-2">Other Elements</h4>
+          <div className="space-y-2 text-sm">
+            <ToggleSwitch
+              checked={visibilitySettings.descriptions}
+              onChange={() => updateVisibilitySettings({ descriptions: !visibilitySettings.descriptions })}
+              label="Descriptions"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.equipmentShortSpecs}
+              onChange={() => updateVisibilitySettings({ equipmentShortSpecs: !visibilitySettings.equipmentShortSpecs })}
+              label="Equipment Short Specs"
+            />
+          </div>
+        </div>
+
+        {/* Relationships Section */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold text-sm text-slate-400">Relationships</h4>
+            <button
+              onClick={toggleAllRelationships}
+              className="text-xs text-sky-400 hover:text-sky-300"
+            >
+              {allRelationshipsVisible ? 'Hide All' : 'Show All'}
+            </button>
+          </div>
+          <div className="space-y-2 text-sm">
+            <ToggleSwitch
+              checked={visibilitySettings.relationships.connection}
+              onChange={() => toggleRelationshipVisibility('connection')}
+              label="Connection"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.relationships.installation}
+              onChange={() => toggleRelationshipVisibility('installation')}
+              label="Installation"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.relationships.annotation}
+              onChange={() => toggleRelationshipVisibility('annotation')}
+              label="Annotation"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.relationships.note}
+              onChange={() => toggleRelationshipVisibility('note')}
+              label="Note"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.relationships.description}
+              onChange={() => toggleRelationshipVisibility('description')}
+              label="Description"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.relationships.equipmentShortSpec}
+              onChange={() => toggleRelationshipVisibility('equipmentShortSpec')}
+              label="Equipment Short Spec"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 export const Header = ({
   onReset,
@@ -93,11 +238,16 @@ export const Header = ({
   onAutoLinkEquipmentShortSpecs,
   onAutoLinkAll,
   onRemoveWhitespace,
-  showRelationships,
-  setShowRelationships,
+  visibilitySettings,
+  updateVisibilitySettings,
+  toggleTagVisibility,
+  toggleRelationshipVisibility,
+  toggleAllTags,
+  toggleAllRelationships,
 }) => {
   const importInputRef = useRef(null);
   const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
+  const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -159,7 +309,7 @@ export const Header = ({
                 title="Show hotkeys and controls"
                 className="p-1.5 rounded-full transition-colors bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
               </button>
             </div>
           </div>
@@ -177,22 +327,18 @@ export const Header = ({
             
             <div className="h-6 w-px bg-slate-600"></div>
             
-            {/* Relationship lines toggle */}
+            {/* Enhanced Visibility Controls */}
             <button
-              onClick={() => setShowRelationships(!showRelationships)}
+              onClick={() => setShowVisibilityPanel(prev => !prev)}
               className={`px-2 py-0.5 rounded transition-colors ${
-                showRelationships 
+                showVisibilityPanel 
                   ? 'bg-sky-600 text-white hover:bg-sky-500' 
                   : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
               }`}
-              title="Toggle relationship lines visibility (V)"
+              title="Toggle visibility controls (V)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                {showRelationships ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                )}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
             </button>
           </div>
@@ -304,6 +450,17 @@ export const Header = ({
       </div>
 
       {showHotkeyHelp && <HotkeyHelp onClose={() => setShowHotkeyHelp(false)} />}
+      {showVisibilityPanel && (
+        <VisibilityPanel
+          onClose={() => setShowVisibilityPanel(false)}
+          visibilitySettings={visibilitySettings}
+          toggleTagVisibility={toggleTagVisibility}
+          toggleRelationshipVisibility={toggleRelationshipVisibility}
+          toggleAllTags={toggleAllTags}
+          toggleAllRelationships={toggleAllRelationships}
+          updateVisibilitySettings={updateVisibilitySettings}
+        />
+      )}
     </header>
   );
 };

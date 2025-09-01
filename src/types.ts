@@ -20,6 +20,27 @@ export const RelationshipType = {
 
 export type RelationshipTypeValue = typeof RelationshipType[keyof typeof RelationshipType];
 
+// Visibility settings interface
+export interface VisibilitySettings {
+  tags: {
+    equipment: boolean;
+    line: boolean;
+    instrument: boolean;
+    drawingNumber: boolean;
+    notesAndHolds: boolean;
+  };
+  descriptions: boolean;
+  equipmentShortSpecs: boolean;
+  relationships: {
+    connection: boolean;
+    installation: boolean;
+    annotation: boolean;
+    note: boolean;
+    description: boolean;
+    equipmentShortSpec: boolean;
+  };
+}
+
 // Core data structure interfaces
 export interface BoundingBox {
   x1: number;

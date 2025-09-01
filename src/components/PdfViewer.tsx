@@ -36,8 +36,8 @@ export const PdfViewer = ({
   setMode,
   relationshipStartTag,
   setRelationshipStartTag,
-  showRelationships,
-  setShowRelationships,
+  visibilitySettings,
+  updateVisibilitySettings,
   pingedTagId,
   pingedDescriptionId,
   pingedEquipmentShortSpecId,
@@ -62,6 +62,44 @@ export const PdfViewer = ({
         .map(r => r.to)
     );
   }, [relationships]);
+
+  // Helper function to check if a tag should be visible
+  const isTagVisible = useCallback((tag) => {
+    switch (tag.category) {
+      case Category.Equipment:
+        return visibilitySettings.tags.equipment;
+      case Category.Line:
+        return visibilitySettings.tags.line;
+      case Category.Instrument:
+        return visibilitySettings.tags.instrument;
+      case Category.DrawingNumber:
+        return visibilitySettings.tags.drawingNumber;
+      case Category.NotesAndHolds:
+        return visibilitySettings.tags.notesAndHolds;
+      default:
+        return true;
+    }
+  }, [visibilitySettings.tags]);
+
+  // Helper function to check if a relationship should be visible
+  const isRelationshipVisible = useCallback((relationship) => {
+    switch (relationship.type) {
+      case RelationshipType.Connection:
+        return visibilitySettings.relationships.connection;
+      case RelationshipType.Installation:
+        return visibilitySettings.relationships.installation;
+      case RelationshipType.Annotation:
+        return visibilitySettings.relationships.annotation;
+      case RelationshipType.Note:
+        return visibilitySettings.relationships.note;
+      case RelationshipType.Description:
+        return visibilitySettings.relationships.description;
+      case RelationshipType.EquipmentShortSpec:
+        return visibilitySettings.relationships.equipmentShortSpec;
+      default:
+        return true;
+    }
+  }, [visibilitySettings.relationships]);
 
   const isMoved = useRef(false);
   const [isPanning, setIsPanning] = useState(false);
@@ -370,7 +408,19 @@ export const PdfViewer = ({
           console.warn('To create a loop, please select at least 2 instrument tags.');
         }
       } else if (e.key.toLowerCase() === 'v') {
-        setShowRelationships(prev => !prev);
+        // Toggle all relationships visibility
+        const allRelationshipsVisible = Object.values(visibilitySettings.relationships).every(Boolean);
+        const newState = !allRelationshipsVisible;
+        updateVisibilitySettings({
+          relationships: {
+            connection: newState,
+            installation: newState,
+            annotation: newState,
+            note: newState,
+            description: newState,
+            equipmentShortSpec: newState,
+          },
+        });
       } else if (e.key.toLowerCase() === 'q' && pdfDoc) {
         // Previous page
         setCurrentPage(prev => Math.max(1, prev - 1));
@@ -381,7 +431,7 @@ export const PdfViewer = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, setSelectedRawTextItemIds, onDeleteTags, onManualCreateLoop, setMode, setRelationshipStartTag, setScale, setShowRelationships, pdfDoc, setCurrentPage]);
+  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, setSelectedRawTextItemIds, onDeleteTags, onManualCreateLoop, setMode, setRelationshipStartTag, setScale, pdfDoc, setCurrentPage]);
   
   useLayoutEffect(() => {
     if (selectedTagIds.length === 1 && scrollContainerRef.current && viewport) {
@@ -563,7 +613,7 @@ export const PdfViewer = ({
     }
   };
 
-  const currentTags = tags.filter(t => t.page === currentPage);
+  const currentTags = tags.filter(t => t.page === currentPage && isTagVisible(t));
   const currentRawTextItems = rawTextItems.filter(t => t.page === currentPage);
 
  const handleViewerMouseDown = (e) => {
@@ -736,6 +786,9 @@ export const PdfViewer = ({
   };
 
   const currentRelationships = relationships.filter(r => {
+    // First check if this relationship type should be visible
+    if (!isRelationshipVisible(r)) return false;
+    
     const fromTag = tags.find(t => t.id === r.from);
     // Annotations can link to raw text items which don't have a page property in the same way
     if (r.type === RelationshipType.Annotation) {
@@ -818,7 +871,7 @@ export const PdfViewer = ({
                          )
                     })}
                     
-                    {showRelationships && currentRelationships.map(rel => {
+                    {currentRelationships.map(rel => {
                         const fromTag = tags.find(t => t.id === rel.from);
                         if (!fromTag) return null;
                         

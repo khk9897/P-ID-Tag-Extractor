@@ -25,7 +25,8 @@ import {
   ToleranceConfig,
   AppSettings,
   ViewMode,
-  ManualTagData
+  ManualTagData,
+  VisibilitySettings
 } from './types.ts';
 
 // Set PDF.js worker source - use local worker to avoid CORS issues
@@ -91,7 +92,29 @@ const App: React.FC = () => {
   const [scale, setScale] = useState<number>(1.5);
   const [mode, setMode] = useState<ViewMode>('select');
   const [relationshipStartTag, setRelationshipStartTag] = useState<Tag | null>(null);
-  const [showRelationships, setShowRelationships] = useState<boolean>(true);
+  // Replace simple boolean with comprehensive visibility settings
+  const [visibilitySettings, setVisibilitySettings] = useState<VisibilitySettings>({
+    tags: {
+      equipment: true,
+      line: true,
+      instrument: true,
+      drawingNumber: true,
+      notesAndHolds: true,
+    },
+    descriptions: true,
+    equipmentShortSpecs: true,
+    relationships: {
+      connection: true,
+      installation: true,
+      annotation: true,
+      note: true,
+      description: true,
+      equipmentShortSpec: true,
+    },
+  });
+  
+  // Keep backward compatibility - derive showRelationships from relationships settings
+  const showRelationships = Object.values(visibilitySettings.relationships).some(Boolean);
   const [isSidePanelVisible, setIsSidePanelVisible] = useState<boolean>(true);
 
   
@@ -304,6 +327,67 @@ const App: React.FC = () => {
     setScale(1.5);
     setMode('select');
   };
+
+  // Helper functions for visibility settings
+  const updateVisibilitySettings = useCallback((updates: Partial<VisibilitySettings>) => {
+    setVisibilitySettings(prev => ({
+      ...prev,
+      ...updates,
+      tags: updates.tags ? { ...prev.tags, ...updates.tags } : prev.tags,
+      relationships: updates.relationships ? { ...prev.relationships, ...updates.relationships } : prev.relationships,
+    }));
+  }, []);
+
+  const toggleTagVisibility = useCallback((tagType: keyof VisibilitySettings['tags']) => {
+    setVisibilitySettings(prev => ({
+      ...prev,
+      tags: {
+        ...prev.tags,
+        [tagType]: !prev.tags[tagType],
+      },
+    }));
+  }, []);
+
+  const toggleRelationshipVisibility = useCallback((relType: keyof VisibilitySettings['relationships']) => {
+    setVisibilitySettings(prev => ({
+      ...prev,
+      relationships: {
+        ...prev.relationships,
+        [relType]: !prev.relationships[relType],
+      },
+    }));
+  }, []);
+
+  const toggleAllTags = useCallback(() => {
+    const allTagsVisible = Object.values(visibilitySettings.tags).every(Boolean);
+    const newState = !allTagsVisible;
+    setVisibilitySettings(prev => ({
+      ...prev,
+      tags: {
+        equipment: newState,
+        line: newState,
+        instrument: newState,
+        drawingNumber: newState,
+        notesAndHolds: newState,
+      },
+    }));
+  }, [visibilitySettings.tags]);
+
+  const toggleAllRelationships = useCallback(() => {
+    const allRelationshipsVisible = Object.values(visibilitySettings.relationships).every(Boolean);
+    const newState = !allRelationshipsVisible;
+    setVisibilitySettings(prev => ({
+      ...prev,
+      relationships: {
+        connection: newState,
+        installation: newState,
+        annotation: newState,
+        note: newState,
+        description: newState,
+        equipmentShortSpec: newState,
+      },
+    }));
+  }, [visibilitySettings.relationships]);
   
   const handleCreateTag = useCallback((itemsToConvert: RawTextItem[], category: CategoryType): void => {
     if (!itemsToConvert || itemsToConvert.length === 0) return;
@@ -1603,8 +1687,12 @@ const App: React.FC = () => {
             setMode={setMode}
             relationshipStartTag={relationshipStartTag}
             setRelationshipStartTag={setRelationshipStartTag}
-            showRelationships={showRelationships}
-            setShowRelationships={setShowRelationships}
+            visibilitySettings={visibilitySettings}
+            updateVisibilitySettings={updateVisibilitySettings}
+            toggleTagVisibility={toggleTagVisibility}
+            toggleRelationshipVisibility={toggleRelationshipVisibility}
+            toggleAllTags={toggleAllTags}
+            toggleAllRelationships={toggleAllRelationships}
             isSidePanelVisible={isSidePanelVisible}
           />
         </ErrorBoundary>
@@ -1659,8 +1747,12 @@ const App: React.FC = () => {
           onAutoLinkEquipmentShortSpecs={handleAutoLinkEquipmentShortSpecs}
           onAutoLinkAll={handleAutoLinkAll}
           onRemoveWhitespace={handleRemoveWhitespace}
-          showRelationships={showRelationships}
-          setShowRelationships={setShowRelationships}
+          visibilitySettings={visibilitySettings}
+          updateVisibilitySettings={updateVisibilitySettings}
+          toggleTagVisibility={toggleTagVisibility}
+          toggleRelationshipVisibility={toggleRelationshipVisibility}
+          toggleAllTags={toggleAllTags}
+          toggleAllRelationships={toggleAllRelationships}
         />
       </ErrorBoundary>
       <main className="flex-grow overflow-hidden">

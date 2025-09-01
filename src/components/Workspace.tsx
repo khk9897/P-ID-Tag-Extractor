@@ -46,8 +46,12 @@ export const Workspace = ({
   setMode,
   relationshipStartTag,
   setRelationshipStartTag,
-  showRelationships,
-  setShowRelationships,
+  visibilitySettings,
+  updateVisibilitySettings,
+  toggleTagVisibility,
+  toggleRelationshipVisibility,
+  toggleAllTags,
+  toggleAllRelationships,
   isSidePanelVisible,
 }) => {
   const [selectedTagIds, setSelectedTagIds] = useState([]);
@@ -193,8 +197,12 @@ export const Workspace = ({
         onPingDescription={handlePingDescription}
         onPingEquipmentShortSpec={handlePingEquipmentShortSpec}
         onPingRelationship={handlePingRelationship}
-        showRelationships={showRelationships}
-        setShowRelationships={setShowRelationships}
+        visibilitySettings={visibilitySettings}
+        updateVisibilitySettings={updateVisibilitySettings}
+        toggleTagVisibility={toggleTagVisibility}
+        toggleRelationshipVisibility={toggleRelationshipVisibility}
+        toggleAllTags={toggleAllTags}
+        toggleAllRelationships={toggleAllRelationships}
       />}
       <div className="flex-grow h-full overflow-auto bg-slate-800/30">
         <PdfViewer
@@ -230,8 +238,8 @@ export const Workspace = ({
           setMode={setMode}
           relationshipStartTag={relationshipStartTag}
           setRelationshipStartTag={setRelationshipStartTag}
-          showRelationships={showRelationships}
-          setShowRelationships={setShowRelationships}
+          visibilitySettings={visibilitySettings}
+          updateVisibilitySettings={updateVisibilitySettings}
           pingedTagId={pingedTagId}
           pingedDescriptionId={pingedDescriptionId}
           pingedEquipmentShortSpecId={pingedEquipmentShortSpecId}

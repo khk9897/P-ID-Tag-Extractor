@@ -613,7 +613,8 @@ export const PdfViewer = ({
     }
   };
 
-  const currentTags = tags.filter(t => t.page === currentPage && isTagVisible(t));
+  // Show all tags for interaction, but apply different styling based on visibility
+  const currentTags = tags.filter(t => t.page === currentPage);
   const currentRawTextItems = rawTextItems.filter(t => t.page === currentPage);
 
  const handleViewerMouseDown = (e) => {
@@ -950,13 +951,48 @@ export const PdfViewer = ({
                     const isSelected = selectedTagIds.includes(tag.id);
                     const isRelStart = tag.id === relationshipStartTag;
                     const isRelated = relatedTagIds.has(tag.id);
+                    const isVisible = isTagVisible(tag);
                     const colors = CATEGORY_COLORS[tag.category];
 
                     return (
                         <g key={tag.id} data-tag-id={tag.id} onMouseDown={(e) => handleTagMouseDown(e, tag.id)} className="cursor-pointer">
-                        <rect x={rectX} y={rectY} width={rectWidth} height={rectHeight} className={`stroke-[3] transition-all duration-150 ${colors.border.replace('border-', 'stroke-')}`} fill={colors.bg.includes('sky') ? 'rgb(14 165 233 / 0.4)' : colors.bg.includes('rose') ? 'rgb(244 63 94 / 0.4)' : colors.bg.includes('amber') ? 'rgb(245 158 11 / 0.4)' : colors.bg.includes('indigo') ? 'rgb(99 102 241 / 0.4)' : colors.bg.includes('teal') ? 'rgb(20 184 166 / 0.4)' : 'rgb(100 116 139 / 0.4)'} strokeDasharray={isRelStart ? "4 2" : "none"} />
-                        {isSelected && <rect x={rectX - 4} y={rectY - 4} width={rectWidth + 8} height={rectHeight + 8} className="fill-none stroke-red-500" strokeWidth="4" rx="2" />}
-                        {isRelated && !isSelected && (
+                        <rect 
+                          x={rectX} 
+                          y={rectY} 
+                          width={rectWidth} 
+                          height={rectHeight} 
+                          className={`transition-all duration-150 ${
+                            isVisible 
+                              ? `stroke-[3] ${colors.border.replace('border-', 'stroke-')}` 
+                              : 'stroke-[0.5] stroke-transparent'
+                          }`} 
+                          fill={
+                            isVisible 
+                              ? (colors.bg.includes('sky') ? 'rgb(14 165 233 / 0.4)' : 
+                                 colors.bg.includes('rose') ? 'rgb(244 63 94 / 0.4)' : 
+                                 colors.bg.includes('amber') ? 'rgb(245 158 11 / 0.4)' : 
+                                 colors.bg.includes('indigo') ? 'rgb(99 102 241 / 0.4)' : 
+                                 colors.bg.includes('teal') ? 'rgb(20 184 166 / 0.4)' : 
+                                 'rgb(100 116 139 / 0.4)') 
+                              : 'rgba(255, 255, 255, 0.003)'
+                          } 
+                          strokeDasharray={isRelStart ? "4 2" : "none"}
+                          style={{ pointerEvents: 'all' }}
+                        />
+                        {isSelected && (
+                          <rect 
+                            x={rectX - 4} 
+                            y={rectY - 4} 
+                            width={rectWidth + 8} 
+                            height={rectHeight + 8} 
+                            className="fill-none stroke-red-500" 
+                            strokeWidth={isVisible ? "4" : "2"} 
+                            strokeDasharray={isVisible ? "none" : "4 4"}
+                            opacity={isVisible ? "1" : "0.7"}
+                            rx="2" 
+                          />
+                        )}
+                        {isRelated && !isSelected && isVisible && (
                             <rect 
                             x={rectX} 
                             y={rectY} 

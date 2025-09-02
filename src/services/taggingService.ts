@@ -80,8 +80,19 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
                         y: (num.bbox.y1 + num.bbox.y2) / 2,
                     };
 
-                    // Function part must be strictly above the number part.
-                    if (funcCenter.y <= numCenter.y) {
+                    // Function part positioning logic based on rotation
+                    const rotation = viewport.rotation;
+                    let isValidPosition = false;
+                    
+                    if (rotation === 90) {
+                        // In 90-degree rotation, function should be to the left of number (smaller X)
+                        isValidPosition = funcCenter.x < numCenter.x;
+                    } else {
+                        // Normal case: function should be above number (larger Y in PDF coords)
+                        isValidPosition = funcCenter.y > numCenter.y;
+                    }
+                    
+                    if (!isValidPosition) {
                         continue;
                     }
 

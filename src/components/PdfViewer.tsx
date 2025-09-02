@@ -44,6 +44,8 @@ export const PdfViewer = ({
   pingedEquipmentShortSpecId,
   pingedRelationshipId,
   colorSettings,
+  scrollToCenter,
+  setScrollToCenter,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -52,6 +54,7 @@ export const PdfViewer = ({
   const isClickOnItem = useRef(false); // Ref to track if mousedown was on an item
   
   const [viewport, setViewport] = useState(null);
+  const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false); // For selection rect
   const [selectionRect, setSelectionRect] = useState(null);
   const [relatedTagIds, setRelatedTagIds] = useState(new Set());
@@ -154,20 +157,24 @@ export const PdfViewer = ({
   const renderPage = useCallback(async (pageNumber) => {
     if (!pdfDoc) return;
 
-    // If already rendering, wait for current render to finish
-    if (isRendering.current) {
-      // Cancel existing render task
-      if (renderTaskRef.current) {
-        try {
-          renderTaskRef.current.cancel();
-        } catch (e) {
-          // Ignore cancel errors
-        }
-        renderTaskRef.current = null;
+    // Cancel any existing render task first
+    if (renderTaskRef.current) {
+      try {
+        renderTaskRef.current.cancel();
+      } catch (e) {
+        // Ignore cancel errors
       }
-      
-      // Wait a bit for the cancellation to take effect
-      await new Promise(resolve => setTimeout(resolve, 10));
+      renderTaskRef.current = null;
+    }
+
+    // If already rendering, wait for it to complete
+    if (isRendering.current) {
+      // Wait for the rendering flag to be cleared
+      let waitCount = 0;
+      while (isRendering.current && waitCount < 50) { // Max 500ms wait
+        await new Promise(resolve => setTimeout(resolve, 10));
+        waitCount++;
+      }
     }
 
     // Set rendering flag
@@ -175,7 +182,16 @@ export const PdfViewer = ({
 
     try {
       const page = await pdfDoc.getPage(pageNumber);
+      
+      // Get viewport with original rotation preserved
       const vp = page.getViewport({ scale });
+      
+      console.log('PDF page info:', {
+        rotation: vp.rotation,
+        width: vp.width,
+        height: vp.height,
+        transform: vp.transform
+      });
 
       const canvas = canvasRef.current;
       if (!canvas) {
@@ -189,11 +205,12 @@ export const PdfViewer = ({
         return;
       }
 
-      // Clear the canvas before rendering
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      
+      // Set canvas dimensions first
       canvas.height = vp.height;
       canvas.width = vp.width;
+      
+      // Clear the canvas after setting dimensions
+      context.clearRect(0, 0, canvas.width, canvas.height);
 
       const renderContext = {
         canvasContext: context,
@@ -206,6 +223,7 @@ export const PdfViewer = ({
       
       // Only set viewport after successful rendering
       setViewport(vp);
+      setRotation(vp.rotation);
       
     } catch (error) {
       if (error.name !== 'RenderingCancelledException') {
@@ -263,6 +281,71 @@ export const PdfViewer = ({
     setRelatedTagIds(newRelatedTagIds);
     setHighlightedRawTextItemIds(newHighlightedNoteIds);
   }, [selectedTagIds, relationships, tags]);
+
+
+  // Handle scrollToCenter requests
+  useEffect(() => {
+    if (scrollToCenter && viewport && scrollContainerRef.current) {
+      const { tagId, descriptionId, equipmentShortSpecId, x, y } = scrollToCenter;
+      
+      // Find the item to get its coordinates if not provided
+      let centerX = x;
+      let centerY = y;
+      
+      if (tagId && (!x || !y)) {
+        const tag = tags.find(t => t.id === tagId);
+        if (tag) {
+          const { x1, y1, x2, y2 } = tag.bbox;
+          const pdfCenterX = (x1 + x2) / 2;
+          const pdfCenterY = (y1 + y2) / 2;
+          
+          // Transform PDF coordinates to screen coordinates
+          const screenCenter = transformPdfCoordinates(pdfCenterX, pdfCenterY);
+          centerX = screenCenter.x;
+          centerY = screenCenter.y;
+        }
+      } else if (descriptionId && (!x || !y)) {
+        const description = descriptions.find(d => d.id === descriptionId);
+        if (description) {
+          const { x1, y1, x2, y2 } = description.bbox;
+          const pdfCenterX = (x1 + x2) / 2;
+          const pdfCenterY = (y1 + y2) / 2;
+          
+          // Transform PDF coordinates to screen coordinates
+          const screenCenter = transformPdfCoordinates(pdfCenterX, pdfCenterY);
+          centerX = screenCenter.x;
+          centerY = screenCenter.y;
+        }
+      } else if (equipmentShortSpecId && (!x || !y)) {
+        const spec = equipmentShortSpecs.find(s => s.id === equipmentShortSpecId);
+        if (spec) {
+          const { x1, y1, x2, y2 } = spec.bbox;
+          const pdfCenterX = (x1 + x2) / 2;
+          const pdfCenterY = (y1 + y2) / 2;
+          
+          // Transform PDF coordinates to screen coordinates
+          const screenCenter = transformPdfCoordinates(pdfCenterX, pdfCenterY);
+          centerX = screenCenter.x;
+          centerY = screenCenter.y;
+        }
+      }
+      
+      if (centerX !== undefined && centerY !== undefined) {
+        const container = scrollContainerRef.current;
+        const containerRect = container.getBoundingClientRect();
+        
+        // Calculate scroll position to center the target
+        const targetScrollLeft = centerX - containerRect.width / 2;
+        const targetScrollTop = centerY - containerRect.height / 2;
+        
+        container.scrollTo({
+          left: Math.max(0, targetScrollLeft),
+          top: Math.max(0, targetScrollTop),
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [scrollToCenter, viewport, tags, descriptions, equipmentShortSpecs]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -549,63 +632,17 @@ export const PdfViewer = ({
       const tag = tags.find(t => t.id === tagId);
 
       if (tag && tag.page === currentPage) {
-        const { x1, y1, x2, y2 } = tag.bbox;
-        const tagCenterX = ((x1 + x2) / 2) * scale;
-        const tagCenterY = viewport.height - (((y1 + y2) / 2) * scale);
-
-        const container = scrollContainerRef.current;
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        
-        const canvasWrapper = viewerRef.current;
-        if (!canvasWrapper) return;
-        
-        const canvasRect = canvasWrapper.getBoundingClientRect();
-        const scrollContainerRect = container.getBoundingClientRect();
-
-        const wrapperLeftOffset = (canvasRect.left - scrollContainerRect.left) + container.scrollLeft;
-        const wrapperTopOffset = (canvasRect.top - scrollContainerRect.top) + container.scrollTop;
-
-        container.scrollTo({
-          left: (wrapperLeftOffset + tagCenterX) - containerWidth / 2,
-          top: (wrapperTopOffset + tagCenterY) - containerHeight / 2,
-          behavior: 'smooth'
-        });
+        // Use the unified scrollToCenter approach with proper rotation handling
+        setTimeout(() => {
+          setScrollToCenter({ tagId: tag.id, timestamp: Date.now() });
+          setTimeout(() => setScrollToCenter(null), 100);
+        }, 50);
       }
     }
-  }, [selectedTagIds, currentPage, viewport, tags, scale]);
+  }, [selectedTagIds, currentPage, viewport, tags, scale, setScrollToCenter]);
 
-  // Auto-scroll to pinged tag
-  useLayoutEffect(() => {
-    if (pingedTagId && scrollContainerRef.current && viewport) {
-      const tag = tags.find(t => t.id === pingedTagId);
-
-      if (tag && tag.page === currentPage) {
-        const { x1, y1, x2, y2 } = tag.bbox;
-        const tagCenterX = ((x1 + x2) / 2) * scale;
-        const tagCenterY = viewport.height - (((y1 + y2) / 2) * scale);
-
-        const container = scrollContainerRef.current;
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        
-        const canvasWrapper = viewerRef.current;
-        if (!canvasWrapper) return;
-        
-        const canvasRect = canvasWrapper.getBoundingClientRect();
-        const scrollContainerRect = container.getBoundingClientRect();
-
-        const wrapperLeftOffset = (canvasRect.left - scrollContainerRect.left) + container.scrollLeft;
-        const wrapperTopOffset = (canvasRect.top - scrollContainerRect.top) + container.scrollTop;
-
-        container.scrollTo({
-          left: (wrapperLeftOffset + tagCenterX) - containerWidth / 2,
-          top: (wrapperTopOffset + tagCenterY) - containerHeight / 2,
-          behavior: 'smooth'
-        });
-      }
-    }
-  }, [pingedTagId, currentPage, viewport, tags, scale]);
+  // Auto-scroll to pinged tag - now handled by scrollToCenter in Workspace
+  // This useLayoutEffect is no longer needed as pinged tag scrolling is handled by scrollToCenter
 
   // Auto-scroll to selected description
   useLayoutEffect(() => {
@@ -613,31 +650,14 @@ export const PdfViewer = ({
       const descriptionId = selectedDescriptionIds[0];
       const description = descriptions.find(d => d.id === descriptionId);
       if (description && description.page === currentPage) {
-        const { x1, y1, x2, y2 } = description.bbox;
-        const descriptionCenterX = ((x1 + x2) / 2) * scale;
-        const descriptionCenterY = viewport.height - (((y1 + y2) / 2) * scale);
-
-        const container = scrollContainerRef.current;
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        
-        const canvasWrapper = viewerRef.current?.firstChild;
-        if (!canvasWrapper) return;
-        
-        const canvasRect = canvasWrapper.getBoundingClientRect();
-        const scrollContainerRect = container.getBoundingClientRect();
-
-        const wrapperLeftOffset = (canvasRect.left - scrollContainerRect.left) + container.scrollLeft;
-        const wrapperTopOffset = (canvasRect.top - scrollContainerRect.top) + container.scrollTop;
-
-        container.scrollTo({
-          left: (wrapperLeftOffset + descriptionCenterX) - containerWidth / 2,
-          top: (wrapperTopOffset + descriptionCenterY) - containerHeight / 2,
-          behavior: 'smooth'
-        });
+        // Use the unified scrollToCenter approach with proper rotation handling
+        setTimeout(() => {
+          setScrollToCenter({ descriptionId: description.id, timestamp: Date.now() });
+          setTimeout(() => setScrollToCenter(null), 100);
+        }, 50);
       }
     }
-  }, [selectedDescriptionIds, descriptions, currentPage, viewport, scale]);
+  }, [selectedDescriptionIds, descriptions, currentPage, viewport, scale, setScrollToCenter]);
 
   // Auto-scroll to selected equipment short spec
   useLayoutEffect(() => {
@@ -645,31 +665,14 @@ export const PdfViewer = ({
       const specId = selectedEquipmentShortSpecIds[0];
       const spec = equipmentShortSpecs.find(s => s.id === specId);
       if (spec && spec.page === currentPage) {
-        const { x1, y1, x2, y2 } = spec.bbox;
-        const specCenterX = ((x1 + x2) / 2) * scale;
-        const specCenterY = viewport.height - (((y1 + y2) / 2) * scale);
-
-        const container = scrollContainerRef.current;
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        
-        const canvasWrapper = viewerRef.current?.firstChild;
-        if (!canvasWrapper) return;
-        
-        const canvasRect = canvasWrapper.getBoundingClientRect();
-        const scrollContainerRect = container.getBoundingClientRect();
-
-        const wrapperLeftOffset = (canvasRect.left - scrollContainerRect.left) + container.scrollLeft;
-        const wrapperTopOffset = (canvasRect.top - scrollContainerRect.top) + container.scrollTop;
-
-        container.scrollTo({
-          left: (wrapperLeftOffset + specCenterX) - containerWidth / 2,
-          top: (wrapperTopOffset + specCenterY) - containerHeight / 2,
-          behavior: 'smooth'
-        });
+        // Use the unified scrollToCenter approach with proper rotation handling
+        setTimeout(() => {
+          setScrollToCenter({ equipmentShortSpecId: spec.id, timestamp: Date.now() });
+          setTimeout(() => setScrollToCenter(null), 100);
+        }, 50);
       }
     }
-  }, [selectedEquipmentShortSpecIds, equipmentShortSpecs, currentPage, viewport, scale]);
+  }, [selectedEquipmentShortSpecIds, equipmentShortSpecs, currentPage, viewport, scale, setScrollToCenter]);
 
   const handleTagMouseDown = (e, tagId) => {
     e.stopPropagation();
@@ -899,10 +902,35 @@ export const PdfViewer = ({
   };
   
   const getTagCenter = (tag) => {
-    if (!viewport) return { x: 0, y: 0 };
-    const centerX = ((tag.bbox.x1 + tag.bbox.x2) / 2) * scale;
-    const centerY = ((tag.bbox.y1 + tag.bbox.y2) / 2) * scale;
-    return { x: centerX, y: viewport.height - centerY };
+    if (!viewport || !tag || !tag.bbox) return { x: 0, y: 0 };
+    
+    // Get the center coordinates in PDF coordinate system
+    const pdfCenterX = (tag.bbox.x1 + tag.bbox.x2) / 2;
+    const pdfCenterY = (tag.bbox.y1 + tag.bbox.y2) / 2;
+    
+    // Transform based on rotation
+    let screenX, screenY;
+    
+    switch (rotation) {
+      case 90:
+        screenX = pdfCenterY * scale;
+        screenY = pdfCenterX * scale;
+        break;
+      case 180:
+        screenX = (viewport.width / scale - pdfCenterX) * scale;
+        screenY = (viewport.height / scale - pdfCenterY) * scale;
+        break;
+      case 270:
+        screenX = (viewport.height / scale - pdfCenterY) * scale;
+        screenY = pdfCenterX * scale;
+        break;
+      default: // 0 degrees
+        screenX = pdfCenterX * scale;
+        screenY = viewport.height - (pdfCenterY * scale);
+        break;
+    }
+    
+    return { x: screenX, y: screenY };
   };
 
   const currentRelationships = relationships.filter(r => {
@@ -923,10 +951,99 @@ export const PdfViewer = ({
       if (!viewport) return { x: 0, y: 0 };
       const item = rawTextItems.find(i => i.id === rawTextItemId);
       if (!item) return { x: 0, y: 0 };
-      const centerX = ((item.bbox.x1 + item.bbox.x2) / 2) * scale;
-      const centerY = ((item.bbox.y1 + item.bbox.y2) / 2) * scale;
-      return { x: centerX, y: viewport.height - centerY };
+      
+      // Get the center coordinates in PDF coordinate system
+      const pdfCenterX = (item.bbox.x1 + item.bbox.x2) / 2;
+      const pdfCenterY = (item.bbox.y1 + item.bbox.y2) / 2;
+      
+      // Transform based on rotation
+      let screenX, screenY;
+      
+      switch (rotation) {
+        case 90:
+          screenX = pdfCenterY * scale;
+          screenY = pdfCenterX * scale;
+          break;
+        case 180:
+          screenX = (viewport.width / scale - pdfCenterX) * scale;
+          screenY = (viewport.height / scale - pdfCenterY) * scale;
+          break;
+        case 270:
+          screenX = (viewport.height / scale - pdfCenterY) * scale;
+          screenY = pdfCenterX * scale;
+          break;
+        default: // 0 degrees
+          screenX = pdfCenterX * scale;
+          screenY = viewport.height - (pdfCenterY * scale);
+          break;
+      }
+      
+      return { x: screenX, y: screenY };
   }
+
+  // Helper function to transform PDF coordinates to screen coordinates
+  const transformPdfCoordinates = (pdfCenterX, pdfCenterY) => {
+    if (!viewport) return { x: 0, y: 0 };
+    
+    let screenX, screenY;
+    
+    switch (rotation) {
+      case 90:
+        screenX = pdfCenterY * scale;
+        screenY = pdfCenterX * scale;
+        break;
+      case 180:
+        screenX = (viewport.width / scale - pdfCenterX) * scale;
+        screenY = (viewport.height / scale - pdfCenterY) * scale;
+        break;
+      case 270:
+        screenX = (viewport.height / scale - pdfCenterY) * scale;
+        screenY = viewport.width - (pdfCenterX * scale);
+        break;
+      default: // 0 degrees
+        screenX = pdfCenterX * scale;
+        screenY = viewport.height - (pdfCenterY * scale);
+        break;
+    }
+    
+    return { x: screenX, y: screenY };
+  }
+
+  // Helper function to transform PDF coordinates to screen coordinates
+  const transformCoordinates = (x1, y1, x2, y2) => {
+    if (!viewport) return { rectX: 0, rectY: 0, rectWidth: 0, rectHeight: 0 };
+    
+    let rectX, rectY, rectWidth, rectHeight;
+    
+    switch (rotation) {
+      case 90:
+        rectX = y1 * scale;
+        rectY = x1 * scale;
+        rectWidth = (y2 - y1) * scale;
+        rectHeight = (x2 - x1) * scale;
+        break;
+      case 180:
+        rectX = (viewport.width / scale - x2) * scale;
+        rectY = (viewport.height / scale - y2) * scale;
+        rectWidth = (x2 - x1) * scale;
+        rectHeight = (y2 - y1) * scale;
+        break;
+      case 270:
+        rectX = (viewport.height / scale - y2) * scale;
+        rectY = x1 * scale;
+        rectWidth = (y2 - y1) * scale;
+        rectHeight = (x2 - x1) * scale;
+        break;
+      default: // 0 degrees
+        rectX = x1 * scale;
+        rectY = viewport.height - (y2 * scale);
+        rectWidth = (x2 - x1) * scale;
+        rectHeight = (y2 - y1) * scale;
+        break;
+    }
+    
+    return { rectX, rectY, rectWidth, rectHeight };
+  };
 
   const getModeStyles = () => {
     switch(mode){
@@ -958,12 +1075,7 @@ export const PdfViewer = ({
 
                     {currentRawTextItems.map(item => {
                          const { x1, y1, x2, y2 } = item.bbox;
-                         const rectX = x1 * scale;
-                         // PDF coordinate system has origin at bottom-left, SVG at top-left
-                         // So we need to flip Y coordinates
-                         const rectY = viewport.height - (y2 * scale);
-                         const rectWidth = (x2 - x1) * scale;
-                         const rectHeight = (y2 - y1) * scale;
+                         const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                          const isSelected = selectedRawTextItemIds.includes(item.id);
                          const isHighlighted = highlightedRawTextItemIds.has(item.id);
                          const isLinked = linkedRawTextItemIds.has(item.id);
@@ -1080,12 +1192,7 @@ export const PdfViewer = ({
                     
                     {currentTags.map(tag => {
                     const { x1, y1, x2, y2 } = tag.bbox;
-                    const rectX = x1 * scale;
-                    // PDF coordinate system has origin at bottom-left, SVG at top-left
-                    // So we need to flip Y coordinates
-                    const rectY = viewport.height - (y2 * scale);
-                    const rectWidth = (x2 - x1) * scale;
-                    const rectHeight = (y2 - y1) * scale;
+                    const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                     const isSelected = selectedTagIds.includes(tag.id);
                     const isRelStart = tag.id === relationshipStartTag;
                     const isRelated = relatedTagIds.has(tag.id);
@@ -1144,10 +1251,7 @@ export const PdfViewer = ({
                       if (!tagToPing) return null;
 
                       const { x1, y1, x2, y2 } = tagToPing.bbox;
-                      const rectX = x1 * scale;
-                      const rectY = viewport.height - (y2 * scale);
-                      const rectWidth = (x2 - x1) * scale;
-                      const rectHeight = (y2 - y1) * scale;
+                      const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                       
                       const paddings = [10, 20, 30];
 
@@ -1171,10 +1275,7 @@ export const PdfViewer = ({
                     {/* Descriptions */}
                     {descriptions.filter(desc => desc.page === currentPage).map(desc => {
                       const { x1, y1, x2, y2 } = desc.bbox;
-                      const rectX = x1 * scale;
-                      const rectY = viewport.height - (y2 * scale);
-                      const rectWidth = (x2 - x1) * scale;
-                      const rectHeight = (y2 - y1) * scale;
+                      const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                       const isSelected = selectedDescriptionIds.includes(desc.id);
 
                       return (
@@ -1215,10 +1316,7 @@ export const PdfViewer = ({
                       }
 
                       const { x1, y1, x2, y2 } = descToPing.bbox;
-                      const rectX = x1 * scale;
-                      const rectY = viewport.height - (y2 * scale);
-                      const rectWidth = (x2 - x1) * scale;
-                      const rectHeight = (y2 - y1) * scale;
+                      const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                       
                       const paddings = [10, 20, 30];
 
@@ -1258,10 +1356,7 @@ export const PdfViewer = ({
                       }
 
                       const { x1, y1, x2, y2 } = specToPing.bbox;
-                      const rectX = x1 * scale;
-                      const rectY = viewport.height - (y2 * scale);
-                      const rectWidth = (x2 - x1) * scale;
-                      const rectHeight = (y2 - y1) * scale;
+                      const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                       
                       const paddings = [10, 20, 30];
 
@@ -1296,10 +1391,7 @@ export const PdfViewer = ({
                     {/* Equipment Short Specs */}
                     {equipmentShortSpecs.filter(spec => spec.page === currentPage).map(spec => {
                       const { x1, y1, x2, y2 } = spec.bbox;
-                      const rectX = x1 * scale;
-                      const rectY = viewport.height - (y2 * scale);
-                      const rectWidth = (x2 - x1) * scale;
-                      const rectHeight = (y2 - y1) * scale;
+                      const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                       const isSelected = selectedEquipmentShortSpecIds.includes(spec.id);
 
                       return (

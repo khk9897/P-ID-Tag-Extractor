@@ -283,14 +283,66 @@ export const PdfViewer = ({
           setSelectedTagIds([]);
         }
       } else if (e.key.toLowerCase() === 'c') {
-        if (mode === 'connect') {
-          setMode('select');
-          setRelationshipStartTag(null);
-        } else {
-          setMode('connect');
-          setRelationshipStartTag(null);
+        // If multiple tags are selected (2 or more), create sequential connections
+        if (selectedTagIds.length >= 2) {
+          e.preventDefault();
+          
+          console.log('Creating sequential connections for:', selectedTagIds.length, 'tags');
+          
+          // Get selected tags in selection order (not sorted)
+          const selectedTags = selectedTagIds
+            .map(id => tags.find(tag => tag.id === id))
+            .filter(tag => !!tag);
+          
+          console.log('Found tags:', selectedTags.map(t => `${t.text} (page ${t.page})`));
+          
+          // Create sequential relationships: A→B, B→C, C→D, etc.
+          const newRelationships = [];
+          for (let i = 0; i < selectedTags.length - 1; i++) {
+            const fromTag = selectedTags[i];
+            const toTag = selectedTags[i + 1];
+            
+            console.log(`Creating connection: ${fromTag.text} (page ${fromTag.page}) → ${toTag.text} (page ${toTag.page})`);
+            
+            // Check if relationship already exists
+            const existsAlready = relationships.some(r => 
+              r.from === fromTag.id && r.to === toTag.id && r.type === RelationshipType.Connection
+            );
+            
+            if (!existsAlready) {
+              newRelationships.push({
+                id: uuidv4(),
+                from: fromTag.id,
+                to: toTag.id,
+                type: RelationshipType.Connection,
+              });
+            } else {
+              console.log('Relationship already exists');
+            }
+          }
+          
+          console.log('New relationships to create:', newRelationships.length);
+          
+          if (newRelationships.length > 0) {
+            setRelationships(prev => [...prev, ...newRelationships]);
+            console.log('Sequential connections created successfully');
+          }
+          
+          // Clear selection after creating relationships
           setSelectedTagIds([]);
           setSelectedRawTextItemIds([]);
+        } else {
+          // Original behavior for 0-1 selected tags: toggle connect mode
+          console.log('Toggling connect mode, selected tags:', selectedTagIds.length);
+          if (mode === 'connect') {
+            setMode('select');
+            setRelationshipStartTag(null);
+          } else {
+            setMode('connect');
+            setRelationshipStartTag(null);
+            setSelectedTagIds([]);
+            setSelectedRawTextItemIds([]);
+          }
         }
       } else if (e.key.toLowerCase() === 'k') {
         if (mode === 'manualCreate') {
@@ -621,8 +673,14 @@ export const PdfViewer = ({
       }
     } else if (mode === 'connect') {
       if (!relationshipStartTag) {
+        const startTag = tags.find(t => t.id === tagId);
+        console.log('Setting relationship start tag:', startTag?.text, '(page', startTag?.page, ')');
         setRelationshipStartTag(tagId);
       } else if (relationshipStartTag !== tagId) {
+        const startTag = tags.find(t => t.id === relationshipStartTag);
+        const endTag = tags.find(t => t.id === tagId);
+        console.log(`Creating connection in connect mode: ${startTag?.text} (page ${startTag?.page}) → ${endTag?.text} (page ${endTag?.page})`);
+        
         setRelationships(prev => [
           ...prev,
           {
@@ -632,6 +690,7 @@ export const PdfViewer = ({
             type: RelationshipType.Connection,
           },
         ]);
+        console.log('Connection created successfully');
         // For continuous connection, the destination tag becomes the new start tag.
         setRelationshipStartTag(tagId);
       }

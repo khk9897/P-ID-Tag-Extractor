@@ -1228,7 +1228,9 @@ export const SidePanel = ({
       const fromPage = fromTag?.page || fromDesc?.page || fromRawItem?.page;
       const toPage = toTag?.page || toDesc?.page || toRawItem?.page;
       
-      return fromPage === currentPage && toPage === currentPage;
+      // Show relationships if at least one entity is on the current page
+      // or if showCurrentPageOnly is false (show all relationships)
+      return !showCurrentPageOnly || fromPage === currentPage || toPage === currentPage;
     });
   }, [relationships, showCurrentPageOnly, currentPage, tags, descriptions, rawTextItems]);
 
@@ -1620,8 +1622,7 @@ export const SidePanel = ({
                                   className="ml-2"
                                 />
                             </div>
-                            <DeleteRelationshipButton onClick={(e) => {
-                              e.stopPropagation();
+                            <DeleteRelationshipButton onClick={() => {
                               handleDeleteRelationship(rel.id);
                             }} />
                         </li>

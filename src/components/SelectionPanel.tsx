@@ -17,6 +17,7 @@ export const SelectionPanel = ({
   onClearManualCreation,
 }) => {
   const [manualTagText, setManualTagText] = useState('');
+  const [isAlphabeticalSort, setIsAlphabeticalSort] = useState(false);
 
   useEffect(() => {
     if (manualCreationData) {
@@ -83,9 +84,14 @@ export const SelectionPanel = ({
         <div className="flex flex-col space-y-3 max-h-72 overflow-y-auto pr-1">
           {/* Section for Raw Text Items */}
           {hasSelectedRawItems && (() => {
-            const selectedRawItems = selectedRawTextItemIds
+            let selectedRawItems = selectedRawTextItemIds
               .map(id => rawTextItems.find(item => item.id === id))
               .filter(Boolean);
+
+            // Sort based on toggle state
+            if (isAlphabeticalSort) {
+              selectedRawItems = [...selectedRawItems].sort((a, b) => a.text.localeCompare(b.text));
+            }
 
             const handleCreate = (category) => {
               onCreateTag(selectedRawItems, category);
@@ -95,7 +101,22 @@ export const SelectionPanel = ({
             return (
               <div className={hasSelectedTags ? 'pb-3 mb-3 border-b border-slate-700' : ''}>
                 <div className="flex justify-between items-center mb-2 px-1">
-                  <h3 className="font-bold text-md text-white">{selectedRawItems.length} text piece(s) selected</h3>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-bold text-md text-white">{selectedRawItems.length} text piece(s) selected</h3>
+                    <button
+                      onClick={() => setIsAlphabeticalSort(!isAlphabeticalSort)}
+                      className={`p-1.5 rounded-md transition-colors ${
+                        isAlphabeticalSort 
+                          ? 'bg-sky-600 text-white hover:bg-sky-500' 
+                          : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
+                      }`}
+                      title={`Sort: ${isAlphabeticalSort ? 'Alphabetical' : 'Selection Order'}`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                      </svg>
+                    </button>
+                  </div>
                   {/* Only show clear button if tags aren't also selected (tag section has its own) */}
                   {!hasSelectedTags && (
                     <button
@@ -144,19 +165,22 @@ export const SelectionPanel = ({
 
           {/* Section for Selected Tags */}
           {hasSelectedTags && (() => {
-            const categorySortOrder = {
-              [Category.Equipment]: 0,
-              [Category.Line]: 1,
-              [Category.Instrument]: 2,
-              [Category.DrawingNumber]: 3,
-              [Category.NotesAndHolds]: 4,
-              [Category.Uncategorized]: 5,
-            };
-
-            const selectedTags = selectedTagIds
+            let selectedTags = selectedTagIds
               .map(id => allTags.find(tag => tag.id === id))
-              .filter((tag) => !!tag)
-              .sort((a, b) => {
+              .filter((tag) => !!tag);
+
+            // Sort based on toggle state
+            if (isAlphabeticalSort) {
+              const categorySortOrder = {
+                [Category.Equipment]: 0,
+                [Category.Line]: 1,
+                [Category.Instrument]: 2,
+                [Category.DrawingNumber]: 3,
+                [Category.NotesAndHolds]: 4,
+                [Category.Uncategorized]: 5,
+              };
+
+              selectedTags = [...selectedTags].sort((a, b) => {
                 const orderA = categorySortOrder[a.category] ?? 99;
                 const orderB = categorySortOrder[b.category] ?? 99;
                 if (orderA !== orderB) {
@@ -164,6 +188,7 @@ export const SelectionPanel = ({
                 }
                 return a.text.localeCompare(b.text);
               });
+            }
 
             const singleSelectedTag = selectedTagIds.length === 1 ? allTags.find(t => t.id === selectedTagIds[0]) : null;
             let installedInstruments = [];
@@ -188,7 +213,22 @@ export const SelectionPanel = ({
             return (
               <div>
                 <div className="flex justify-between items-center mb-2 px-1">
-                  <h3 className="font-bold text-md text-white">{selectedTags.length} tag(s) selected</h3>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-bold text-md text-white">{selectedTags.length} tag(s) selected</h3>
+                    <button
+                      onClick={() => setIsAlphabeticalSort(!isAlphabeticalSort)}
+                      className={`p-1.5 rounded-md transition-colors ${
+                        isAlphabeticalSort 
+                          ? 'bg-sky-600 text-white hover:bg-sky-500' 
+                          : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
+                      }`}
+                      title={`Sort: ${isAlphabeticalSort ? 'Alphabetical' : 'Selection Order'}`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                      </svg>
+                    </button>
+                  </div>
                   <button
                     onClick={onClear}
                     className="text-sm font-semibold text-sky-400 hover:text-sky-300 transition-colors"

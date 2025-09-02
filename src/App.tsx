@@ -309,10 +309,9 @@ const App: React.FC = () => {
     setTags([]);
     setRawTextItems([]);
     setRelationships([]);
-    setDescriptions([]);
-    setEquipmentShortSpecs([]);
     setComments([]);
     setLoops([]);
+    // Note: Keep descriptions and equipmentShortSpecs as they are user-created content
     setProgress({ current: 0, total: doc.numPages });
     setCurrentPage(1); // Reset to first page on new process
 
@@ -377,13 +376,22 @@ const App: React.FC = () => {
       const hasManualData = relationships.length > 0 || 
                            comments.length > 0 || 
                            loops.length > 0 ||
-                           tags.some(tag => tag.isReviewed) ||
-                           descriptions.length > 0 ||
-                           equipmentShortSpecs.length > 0;
+                           tags.some(tag => tag.isReviewed);
 
       if (hasManualData) {
         showConfirmation(
-          "패턴 설정이 변경되어 PDF를 재스캔해야 합니다.\n\n⚠️ 재스캔 시 다음 수동 작업 내용이 모두 삭제됩니다:\n\n• 태그 간 연결 관계 (Connection, Installation, Note 등)\n• 사용자 댓글 및 메모\n• 수동 생성한 루프\n• 태그 리뷰 상태 (✓ 체크 표시)\n• Note & Hold 설명 텍스트\n• Equipment Short Spec 데이터\n\n중요한 작업이 있다면 먼저 Export로 백업하세요.\n\n계속하시겠습니까?",
+          `패턴 설정이 변경되어 PDF를 재스캔해야 합니다.
+
+⚠️ 재스캔 시 다음 수동 작업 내용이 모두 삭제됩니다:
+
+• 태그 간 연결 관계 (Connection, Installation, Note 등)
+• 사용자 댓글 및 메모  
+• 수동 생성한 루프
+• 태그 리뷰 상태 (✓ 체크 표시)
+
+💡 중요한 작업이 있다면 먼저 Export로 백업하세요.
+
+계속하시겠습니까?`,
           () => processPdf(pdfDoc, newPatterns, newTolerances, newAppSettings)
         );
       } else {

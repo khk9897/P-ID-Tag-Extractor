@@ -64,7 +64,7 @@ export const DEFAULT_COLORS: ColorSettings = {
     drawingNumber: '#818cf8',  // Indigo
     notesAndHolds: '#14b8a6',  // Teal
     uncategorized: '#94a3b8',  // Slate
-    description: '#f472b6',     // Pink (for Note & Hold descriptions)
+    description: '#a855f7',     // Purple (for Note & Hold descriptions)
     equipmentShortSpec: '#f97316', // Orange (for equipment short specs)
   },
   relationships: {

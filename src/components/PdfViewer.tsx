@@ -1040,7 +1040,7 @@ export const PdfViewer = ({
                             width={rectWidth + 8} 
                             height={rectHeight + 8} 
                             fill="none"
-                            stroke={colors.highlights.selected} 
+                            stroke={colors.highlights?.selected || DEFAULT_COLORS.highlights.selected} 
                             strokeWidth={isVisible ? "4" : "2"} 
                             strokeDasharray={isVisible ? "none" : "4 4"}
                             opacity={isVisible ? "1" : "0.7"}
@@ -1053,8 +1053,8 @@ export const PdfViewer = ({
                             y={rectY} 
                             width={rectWidth} 
                             height={rectHeight} 
-                            fill={`${colors.highlights.noteRelated}66`} 
-                            stroke={colors.highlights.noteRelated}
+                            fill={`${colors.highlights?.noteRelated || DEFAULT_COLORS.highlights.noteRelated}66`} 
+                            stroke={colors.highlights?.noteRelated || DEFAULT_COLORS.highlights.noteRelated}
                             strokeWidth="3"
                             />
                         )}

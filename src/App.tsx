@@ -46,12 +46,12 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm,
         onClick={onCancel}
     >
       <div 
-        className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm text-white"
+        className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md text-white"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
           <h3 className="text-lg font-bold mb-2">Confirm Action</h3>
-          <p className="text-slate-300">{message}</p>
+          <div className="text-slate-300 whitespace-pre-line">{message}</div>
         </div>
         <div className="p-4 bg-slate-900/50 rounded-b-xl border-t border-slate-700 flex justify-end items-center space-x-2">
           <button

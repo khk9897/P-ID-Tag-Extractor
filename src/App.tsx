@@ -360,13 +360,15 @@ const App: React.FC = () => {
     }
   }, [patterns, tolerances, appSettings, processPdf]);
 
-  const handleSaveSettings = async (newPatterns: PatternConfig, newTolerances: ToleranceConfig, newAppSettings: AppSettings, newColorSettings: ColorSettings): Promise<void> => {
+  const handleSaveSettings = async (newPatterns: PatternConfig, newTolerances: ToleranceConfig, newAppSettings: AppSettings, newColorSettings: ColorSettings, activeTab: string): Promise<void> => {
     setPatterns(newPatterns);
     setTolerances(newTolerances);
     setAppSettings(newAppSettings);
     setColorSettings(newColorSettings);
     setIsSettingsOpen(false);
-    if (pdfDoc) {
+    
+    // Only rescan if patterns/tolerances/settings changed (not for color changes)
+    if (activeTab === 'patterns' && pdfDoc) {
       await processPdf(pdfDoc, newPatterns, newTolerances, newAppSettings);
     }
   };

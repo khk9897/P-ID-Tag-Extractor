@@ -56,7 +56,7 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
   }, [onClose]);
 
   const handleSave = () => {
-    onSave(localPatterns, localTolerances, localAppSettings, localColorSettings);
+    onSave(localPatterns, localTolerances, localAppSettings, localColorSettings, activeTab);
   };
   
   const handleReset = () => {

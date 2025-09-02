@@ -78,3 +78,7 @@ export const DEFAULT_COLORS: ColorSettings = {
     selected: '#ef4444',       // Red (selected items)
   },
 };
+
+export const EXTERNAL_LINKS = {
+  NOTION_GUIDE: 'https://www.notion.so/gs-enc/P-ID-Smart-Digitizer-262e12e04a1080f49111c88cd60a32dc',
+};

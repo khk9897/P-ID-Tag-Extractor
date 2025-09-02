@@ -272,10 +272,10 @@ export const PdfViewer = ({
       }
       
       if (e.key === '1') {
-        setScale(s => Math.min(10, s + 0.25));
+        setScale(s => Math.max(0.25, s - 0.25));
         e.preventDefault();
       } else if (e.key === '2') {
-        setScale(s => Math.max(0.25, s - 0.25));
+        setScale(s => Math.min(10, s + 0.25));
         e.preventDefault();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedTagIds.length > 0) {
@@ -522,8 +522,27 @@ export const PdfViewer = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, setSelectedRawTextItemIds, onDeleteTags, onMergeRawTextItems, onManualCreateLoop, setMode, setRelationshipStartTag, setScale, pdfDoc, setCurrentPage]);
+  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, setSelectedRawTextItemIds, onDeleteTags, onMergeRawTextItems, onManualCreateLoop, setMode, setRelationshipStartTag, scale, pdfDoc, setCurrentPage]);
   
+  // Add wheel event listener with passive: false to allow preventDefault
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    const handleWheelEvent = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const zoomDelta = e.deltaY > 0 ? -0.25 : 0.25;
+        setScale(prevScale => Math.min(10, Math.max(0.25, prevScale + zoomDelta)));
+      }
+    };
+
+    viewer.addEventListener('wheel', handleWheelEvent, { passive: false });
+    return () => {
+      viewer.removeEventListener('wheel', handleWheelEvent);
+    };
+  }, [scale]);
+
   useLayoutEffect(() => {
     if (selectedTagIds.length === 1 && scrollContainerRef.current && viewport) {
       const tagId = selectedTagIds[0];
@@ -756,6 +775,8 @@ export const PdfViewer = ({
         e.preventDefault();
     }
   };
+
+
 
   const handleMouseMove = (e) => {
     if (isPanning || isDragging) {

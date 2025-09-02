@@ -68,8 +68,8 @@ const HotkeyHelp = ({ onClose }) => {
             <h4 className="font-semibold text-sm text-slate-400 mb-2">Navigation & Selection</h4>
             <dl className="space-y-2 text-sm text-slate-300">
                 <div className="flex justify-between items-center"><dt>Pan View</dt><dd><Key text="Drag" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Zoom In</dt><dd><Key text="1" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Zoom Out</dt><dd><Key text="2" /></dd></div>
+                <div className="flex justify-between items-center"><dt>Zoom Out</dt><dd><Key text="1" /></dd></div>
+                <div className="flex justify-between items-center"><dt>Zoom In</dt><dd><Key text="2" /></dd></div>
                 <div className="flex justify-between items-center"><dt>Previous Page</dt><dd><Key text="Q" /></dd></div>
                 <div className="flex justify-between items-center"><dt>Next Page</dt><dd><Key text="W" /></dd></div>
                 <div className="flex justify-between items-center"><dt>Area Select</dt><dd><Key text="Ctrl" /> + <Key text="Drag" /></dd></div>

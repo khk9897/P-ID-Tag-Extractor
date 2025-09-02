@@ -2,8 +2,9 @@ import React, { useState, useCallback } from 'react';
 import { PdfViewer } from './PdfViewer.tsx';
 import { SidePanel } from './SidePanel.tsx';
 import { SelectionPanel } from './SelectionPanel.tsx';
+import { WorkspaceProps } from '../types.ts';
 
-export const Workspace = ({
+export const Workspace: React.FC<WorkspaceProps> = ({
   pdfDoc,
   tags,
   setTags,
@@ -27,6 +28,7 @@ export const Workspace = ({
   onUpdateDescription,
   onDeleteEquipmentShortSpecs,
   onUpdateEquipmentShortSpec,
+  onMergeRawTextItems,
   onDeleteRawTextItems,
   onUpdateRawTextItemText,
   onAutoLinkDescriptions,
@@ -191,6 +193,7 @@ export const Workspace = ({
         onUpdateDescription={onUpdateDescription}
         onDeleteEquipmentShortSpecs={onDeleteEquipmentShortSpecs}
         onUpdateEquipmentShortSpec={onUpdateEquipmentShortSpec}
+        onMergeRawTextItems={onMergeRawTextItems}
         onDeleteRawTextItems={onDeleteRawTextItems}
         onUpdateRawTextItemText={onUpdateRawTextItemText}
         onAutoLinkDescriptions={onAutoLinkDescriptions}
@@ -242,6 +245,7 @@ export const Workspace = ({
           selectedRawTextItemIds={selectedRawTextItemIds}
           setSelectedRawTextItemIds={setSelectedRawTextItemIds}
           onDeleteTags={onDeleteTags}
+          onMergeRawTextItems={onMergeRawTextItems}
           onManualCreateLoop={onManualCreateLoop}
           onManualAreaSelect={handleManualAreaSelect}
           // Pass down viewer state

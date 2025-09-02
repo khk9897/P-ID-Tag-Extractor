@@ -382,21 +382,21 @@ const App: React.FC = () => {
 
       if (hasManualData) {
         showConfirmation(
-          `패턴 설정이 변경되어 PDF를 재스캔해야 합니다.
+          `Pattern settings have been changed and require PDF rescanning.
 
-⚠️ 재스캔 시 다음 수동 작업 내용이 모두 삭제됩니다:
+⚠️ Rescanning will delete all manually created content:
 
-• 태그 간 연결 관계 (Connection, Installation, Note 등)
-• 사용자 댓글 및 메모  
-• 수동 생성한 루프
-• 태그 리뷰 상태 (✓ 체크 표시)
-• Equipment Short Spec 데이터
+• Tag relationships (Connection, Installation, Note, etc.)
+• User comments and notes
+• Manually created loops
+• Tag review status (✓ checkmarks)
+• Equipment Short Spec data
 
-✅ Note & Hold 설명은 보존됩니다.
+✅ Note & Hold descriptions will be preserved.
 
-💡 중요한 작업이 있다면 먼저 Export로 백업하세요.
+💡 If you have important work, please Export your project as backup first.
 
-계속하시겠습니까?`,
+Do you want to continue?`,
           () => processPdf(pdfDoc, newPatterns, newTolerances, newAppSettings)
         );
       } else {
@@ -492,7 +492,21 @@ const App: React.FC = () => {
       return;
     }
 
-    const combinedText = itemsToConvert.map(item => item.text).join('-');
+    // Sort items by position (top to bottom, then left to right)
+    const sortedItems = [...itemsToConvert].sort((a, b) => {
+      // First sort by vertical position (top to bottom, higher y values first in PDF coordinates)
+      const yDiff = b.bbox.y1 - a.bbox.y1;
+      if (Math.abs(yDiff) > 5) { // Allow small vertical tolerance for alignment
+        return yDiff;
+      }
+      // If vertically aligned, sort by horizontal position (left to right)
+      return a.bbox.x1 - b.bbox.x1;
+    });
+    
+    // Combine text with appropriate separator
+    const combinedText = category === Category.Instrument 
+      ? sortedItems.map(item => item.text).join('-')
+      : sortedItems.map(item => item.text).join('');
     
     const combinedBbox = itemsToConvert.reduce((acc, item) => {
       return {
@@ -549,15 +563,30 @@ const App: React.FC = () => {
     for (const tag of tagsToRevert) {
       if (tag.sourceItems && tag.sourceItems.length > 0) {
         // It was a manually created tag, restore the original source items
-        itemsToRestore.push(...tag.sourceItems);
+        console.log('Restoring sourceItems:', tag.sourceItems);
+        // Convert source items to proper RawTextItem format
+        const convertedItems = tag.sourceItems.map(item => ({
+          id: uuidv4(),
+          text: item.str || item.text, // Handle both formats
+          page: tag.page,
+          bbox: item.bbox || {
+            x1: item.transform[4],
+            y1: item.transform[5] - item.height,
+            x2: item.transform[4] + item.width,
+            y2: item.transform[5],
+          },
+        }));
+        itemsToRestore.push(...convertedItems);
       } else {
         // It was an originally detected tag. Revert to a single raw item.
-        itemsToRestore.push({
-          id: tag.id, // Reuse the tag's unique ID for the new raw item
+        const restoredItem = {
+          id: uuidv4(), // Generate new unique ID for the raw item
           text: tag.text,
           page: tag.page,
           bbox: tag.bbox,
-        });
+        };
+        console.log('Restoring tag as raw item:', restoredItem);
+        itemsToRestore.push(restoredItem);
       }
     }
 
@@ -571,6 +600,62 @@ const App: React.FC = () => {
     setComments(prev => prev.filter(comment => !idsToDelete.has(comment.targetId)));
   }, [tags]);
   
+  const handleMergeRawTextItems = useCallback((itemIdsToMerge: string[]): void => {
+    if (!itemIdsToMerge || itemIdsToMerge.length < 2) return;
+
+    const itemsToMerge = rawTextItems.filter(item => itemIdsToMerge.includes(item.id));
+    if (itemsToMerge.length < 2) return;
+
+    // All items must be on the same page
+    const page = itemsToMerge[0].page;
+    if (itemsToMerge.some(item => item.page !== page)) {
+      console.error("Cannot merge items from different pages.");
+      return;
+    }
+
+    // Sort items by position (top to bottom, then left to right)
+    const sortedItems = [...itemsToMerge].sort((a, b) => {
+      // First sort by vertical position (top to bottom, higher y values first in PDF coordinates)
+      const yDiff = b.bbox.y1 - a.bbox.y1;
+      if (Math.abs(yDiff) > 5) { // Allow small vertical tolerance for alignment
+        return yDiff;
+      }
+      // If vertically aligned, sort by horizontal position (left to right)
+      return a.bbox.x1 - b.bbox.x1;
+    });
+
+    // Combine text with spaces
+    const combinedText = sortedItems.map(item => item.text).join(' ');
+    
+    // Calculate combined bounding box
+    const combinedBbox = itemsToMerge.reduce((acc, item) => {
+      return {
+        x1: Math.min(acc.x1, item.bbox.x1),
+        y1: Math.min(acc.y1, item.bbox.y1),
+        x2: Math.max(acc.x2, item.bbox.x2),
+        y2: Math.max(acc.y2, item.bbox.y2),
+      };
+    }, { x1: Infinity, y1: Infinity, x2: -Infinity, y2: -Infinity });
+
+    // Create new merged item
+    const mergedItem: RawTextItem = {
+      id: uuidv4(),
+      text: combinedText,
+      page,
+      bbox: combinedBbox,
+    };
+
+    // Remove original items and add merged item
+    const idsToRemove = new Set(itemIdsToMerge);
+    setRawTextItems(prev => [
+      ...prev.filter(item => !idsToRemove.has(item.id)),
+      mergedItem
+    ]);
+
+    // Clean up any relationships pointing to the removed items
+    setRelationships(prev => prev.filter(rel => !idsToRemove.has(rel.to)));
+  }, [rawTextItems]);
+
   const handleDeleteRawTextItems = useCallback((itemIdsToDelete: string[]): void => {
     const idsToDelete = new Set(itemIdsToDelete);
     setRawTextItems(prev => prev.filter(item => !idsToDelete.has(item.id)));
@@ -778,7 +863,7 @@ const App: React.FC = () => {
 
     // Auto-link with Equipment tags using the same logic as handleAutoLinkEquipmentShortSpecs
     const extractBasePattern = (tagText: string): { base: string; suffix?: string } => {
-      const abPattern = tagText.match(/^(.+?)([A-Z]\/[A-Z]|[A-Z])$/);
+      const abPattern = tagText.match(/^(.+?)([A-Z](?:\/[A-Z])+|[A-Z])$/);
       if (abPattern) {
         const base = abPattern[1];
         const suffix = abPattern[2];
@@ -1367,8 +1452,8 @@ const App: React.FC = () => {
   const handleAutoLinkEquipmentShortSpecs = useCallback(() => {
     const extractBasePattern = (tagText: string): { base: string; suffix?: string } => {
       // Extract base pattern and suffix (A, B, C, etc.)
-      // Handle cases like "D44-G-7201A/B" and "D44-G-7201A"
-      const abPattern = tagText.match(/^(.+?)([A-Z]\/[A-Z]|[A-Z])$/);
+      // Handle complex cases like "D44-EM-7209A/B/C/D/E/F/H/G" and simple "D44-G-7201A"
+      const abPattern = tagText.match(/^(.+?)([A-Z](?:\/[A-Z])+|[A-Z])$/);
       if (abPattern) {
         const base = abPattern[1];
         const suffix = abPattern[2];
@@ -1918,6 +2003,7 @@ const App: React.FC = () => {
             onUpdateDescription={handleUpdateDescription}
             onDeleteEquipmentShortSpecs={handleDeleteEquipmentShortSpecs}
             onUpdateEquipmentShortSpec={handleUpdateEquipmentShortSpec}
+            onMergeRawTextItems={handleMergeRawTextItems}
             onDeleteRawTextItems={handleDeleteRawTextItems}
             onUpdateRawTextItemText={handleUpdateRawTextItemText}
             onAutoLinkDescriptions={handleAutoLinkDescriptions}
@@ -2009,6 +2095,7 @@ const App: React.FC = () => {
           toggleRelationshipVisibility={toggleRelationshipVisibility}
           toggleAllTags={toggleAllTags}
           toggleAllRelationships={toggleAllRelationships}
+          showConfirmation={showConfirmation}
         />
       </ErrorBoundary>
       <main className="flex-grow overflow-hidden">

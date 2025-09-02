@@ -200,6 +200,7 @@ export interface WorkspaceProps {
   onUpdateDescription: (id: string, text: string, metadata: Description['metadata']) => void;
   onDeleteEquipmentShortSpecs: (equipmentShortSpecIds: string[]) => void;
   onUpdateEquipmentShortSpec: (id: string, text: string, metadata?: EquipmentShortSpec['metadata']) => void;
+  onMergeRawTextItems: (itemIds: string[]) => void;
   onDeleteRawTextItems: (itemIds: string[]) => void;
   onUpdateRawTextItemText: (itemId: string, newText: string) => void;
   onAutoLinkDescriptions: () => void;

@@ -39,7 +39,7 @@ const HotkeyHelp = ({ onClose }) => {
     { key: 'Esc', desc: <><span className="text-sky-300 font-bold">Esc</span> Mode / Clear Selection</> },
   ];
   const actions = [
-    { key: 'M', desc: <><span className="text-sky-300 font-bold">M</span>erge two text items to an Instrument</> },
+    { key: 'M', desc: <><span className="text-sky-300 font-bold">M</span>erge multiple text items into one</> },
     { key: 'N', desc: <>Make <span className="text-sky-300 font-bold">N</span>ote Description from selected items</> },
     { key: 'H', desc: <>Make <span className="text-sky-300 font-bold">H</span>old Description from selected items</> },
     { key: 'P', desc: <>Make Equipment Short S<span className="text-sky-300 font-bold">p</span>ec</> },
@@ -262,6 +262,7 @@ export const Header = ({
   toggleRelationshipVisibility,
   toggleAllTags,
   toggleAllRelationships,
+  showConfirmation,
 }) => {
   const importInputRef = useRef(null);
   const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
@@ -494,9 +495,14 @@ export const Header = ({
           </a>
           {hasData && (
             <button
-              onClick={onReset}
+              onClick={() => {
+                showConfirmation(
+                  'Are you sure you want to reset everything? This will remove all extracted tags, relationships, comments, and project data. This action cannot be undone.',
+                  onReset
+                );
+              }}
               className="p-2 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
-              title="Reset"
+              title="Reset All Data"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

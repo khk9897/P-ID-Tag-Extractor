@@ -27,6 +27,7 @@ export const PdfViewer = ({
   selectedRawTextItemIds,
   setSelectedRawTextItemIds,
   onDeleteTags,
+  onMergeRawTextItems,
   onManualCreateLoop,
   onManualAreaSelect,
   // Viewer state from props
@@ -359,15 +360,11 @@ export const PdfViewer = ({
         setSelectedTagIds([]);
         setSelectedRawTextItemIds([]);
       } else if (e.key.toLowerCase() === 'm') {
-        const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
-        if (selectedRawItems.length === 2) {
-          // Sort to ensure consistent naming, e.g., "PIC-101" instead of "101-PIC"
-          // Assume vertical alignment means top part comes first (higher Y values are at the top in PDF coordinates).
-          selectedRawItems.sort((a, b) => b.bbox.y1 - a.bbox.y1);
-          onCreateTag(selectedRawItems, Category.Instrument);
+        if (selectedRawTextItemIds.length >= 2) {
+          onMergeRawTextItems(selectedRawTextItemIds);
           setSelectedRawTextItemIds([]);
         } else {
-            alert("The 'M' hotkey creates an Instrument tag from exactly TWO selected text items. For other cases, use the action panel at the bottom.");
+          alert("The 'M' hotkey merges multiple selected text items into one. Select at least 2 text items first.");
         }
       } else if (e.key.toLowerCase() === 'n') {
         const selectedTags = tags.filter(tag => selectedTagIds.includes(tag.id));
@@ -525,7 +522,7 @@ export const PdfViewer = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, setSelectedRawTextItemIds, onDeleteTags, onManualCreateLoop, setMode, setRelationshipStartTag, setScale, pdfDoc, setCurrentPage]);
+  }, [mode, selectedTagIds, tags, relationships, setRelationships, setSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, setSelectedRawTextItemIds, onDeleteTags, onMergeRawTextItems, onManualCreateLoop, setMode, setRelationshipStartTag, setScale, pdfDoc, setCurrentPage]);
   
   useLayoutEffect(() => {
     if (selectedTagIds.length === 1 && scrollContainerRef.current && viewport) {

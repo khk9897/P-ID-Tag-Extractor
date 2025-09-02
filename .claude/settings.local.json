@@ -34,7 +34,8 @@
       "Bash(rg:*)",
       "Bash(gh workflow:*)",
       "Bash(git config:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(npx surge:*)"
     ],
     "deny": [],
     "ask": []

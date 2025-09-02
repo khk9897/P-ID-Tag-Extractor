@@ -15,13 +15,18 @@ const HotkeyHelp = ({ onClose }) => {
   const ref = useRef(null);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (ref.current && !ref.current.contains(event.target)) {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
         onClose();
       }
     };
-    setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 0);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [onClose]);
 
   const modes = [
@@ -29,6 +34,7 @@ const HotkeyHelp = ({ onClose }) => {
     { key: 'C', desc: <>Toggle <span className="text-sky-300 font-bold">C</span>onnect Mode</> },
     { key: 'K', desc: <>Toggle Manual Ma<span className="text-sky-300 font-bold">k</span>e Mode</> },
     { key: 'V', desc: <>Toggle <span className="text-sky-300 font-bold">V</span>isibility Panel</> },
+    { key: '/', desc: <>Show Hotkey Help <span className="text-sky-300 font-bold">/</span></> },
     { key: 'Esc', desc: <><span className="text-sky-300 font-bold">Esc</span> Mode / Clear Selection</> },
   ];
   const actions = [
@@ -44,7 +50,18 @@ const HotkeyHelp = ({ onClose }) => {
 
   return (
     <div ref={ref} className="absolute top-16 right-4 z-20 w-96 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl p-4 text-white animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
-      <h3 className="text-md font-bold mb-3 border-b border-slate-600 pb-2">Hotkeys & Controls</h3>
+      <div className="flex justify-between items-center mb-3 border-b border-slate-600 pb-2">
+        <h3 className="text-md font-bold">Hotkeys & Controls</h3>
+        <button
+          onClick={onClose}
+          className="p-1 rounded-full hover:bg-slate-700 transition-colors"
+          title="Close (Esc)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
       <div className="space-y-4">
         <div>
             <h4 className="font-semibold text-sm text-slate-400 mb-2">Navigation & Selection</h4>
@@ -254,8 +271,25 @@ export const Header = ({
       setShowVisibilityPanel(prev => !prev);
     };
 
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        return;
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        setShowHotkeyHelp(prev => !prev);
+      }
+    };
+
     window.addEventListener('toggleVisibilityPanel', handleToggleVisibilityPanel);
-    return () => window.removeEventListener('toggleVisibilityPanel', handleToggleVisibilityPanel);
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    
+    return () => {
+      window.removeEventListener('toggleVisibilityPanel', handleToggleVisibilityPanel);
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
   }, []);
 
   const handleFileChange = (e) => {
@@ -313,13 +347,6 @@ export const Header = ({
             <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-1">
               <span className="text-xs text-slate-300 hidden sm:inline">Mode:</span>
               <span className={`px-2 py-0.5 rounded text-xs font-semibold ${mode === 'select' ? 'bg-slate-600' : mode === 'connect' ? 'bg-blue-500' : 'bg-green-500'}`}>{mode}</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowHotkeyHelp(prev => !prev); }}
-                title="Show hotkeys and controls"
-                className="p-1.5 rounded-full transition-colors bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
-              </button>
             </div>
           </div>
         )}
@@ -442,6 +469,15 @@ export const Header = ({
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowHotkeyHelp(prev => !prev); }}
+            className="p-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+            title="Help & Hotkeys (/)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </button>
           {hasData && (

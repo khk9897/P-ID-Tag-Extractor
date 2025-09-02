@@ -65,7 +65,7 @@ export const DEFAULT_COLORS: ColorSettings = {
     notesAndHolds: '#14b8a6',  // Teal
     uncategorized: '#94a3b8',  // Slate
     description: '#f472b6',     // Pink (for Note & Hold descriptions)
-    equipmentShortSpec: '#10b981', // Emerald (for equipment short specs)
+    equipmentShortSpec: '#f97316', // Orange (for equipment short specs)
   },
   relationships: {
     connection: '#38bdf8',      // Sky blue (arrow line)

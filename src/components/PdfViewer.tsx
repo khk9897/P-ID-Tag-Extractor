@@ -1230,7 +1230,10 @@ export const PdfViewer = ({
                             y={rectY}
                             width={rectWidth}
                             height={rectHeight}
-                            className={`cursor-pointer stroke-2 ${isSelected ? 'fill-orange-500/30 stroke-orange-400' : 'fill-orange-500/15 stroke-orange-500'} hover:fill-orange-500/25`}
+                            fill={isSelected ? `${colors.entities?.equipmentShortSpec || DEFAULT_COLORS.entities.equipmentShortSpec}4D` : `${colors.entities?.equipmentShortSpec || DEFAULT_COLORS.entities.equipmentShortSpec}26`}
+                            stroke={colors.entities?.equipmentShortSpec || DEFAULT_COLORS.entities.equipmentShortSpec}
+                            strokeWidth="2"
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={(e) => {
                               e.stopPropagation();
                               const isMultiSelect = e.ctrlKey || e.metaKey;

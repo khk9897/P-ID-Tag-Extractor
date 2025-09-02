@@ -64,8 +64,12 @@ export const PdfViewer = ({
     );
   }, [relationships]);
 
-  // Use colorSettings with fallback to DEFAULT_COLORS
-  const colors = colorSettings || DEFAULT_COLORS;
+  // Use colorSettings with fallback to DEFAULT_COLORS and ensure all properties exist
+  const colors = {
+    entities: { ...DEFAULT_COLORS.entities, ...(colorSettings?.entities || {}) },
+    relationships: { ...DEFAULT_COLORS.relationships, ...(colorSettings?.relationships || {}) },
+    highlights: { ...DEFAULT_COLORS.highlights, ...(colorSettings?.highlights || {}) }
+  };
 
   // Helper function to get entity color
   const getEntityColor = useCallback((category) => {

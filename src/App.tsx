@@ -630,6 +630,53 @@ const App: React.FC = () => {
 
     setDescriptions(prev => [...prev, newDescription]);
 
+    // Auto-link with Note/Hold tags (same as in handleAutoLinkNotesAndHolds)
+    const extractNumbers = (tagText: string): number[] => {
+      const numberMatches = tagText.match(/\d+/g);
+      return numberMatches ? numberMatches.map(num => parseInt(num, 10)) : [];
+    };
+
+    const detectNoteHoldType = (tagText: string): 'Note' | 'Hold' | null => {
+      const lowerText = tagText.toLowerCase();
+      if (lowerText.includes('note')) return 'Note';
+      if (lowerText.includes('hold')) return 'Hold';
+      return null;
+    };
+
+    // Find Note/Hold tags on the same page that match this description
+    const noteHoldTags = tags.filter(t => 
+      t.category === Category.NotesAndHolds && 
+      t.page === currentPage
+    );
+
+    const newRelationships = [];
+    for (const tag of noteHoldTags) {
+      const tagType = detectNoteHoldType(tag.text);
+      if (!tagType || tagType !== descriptionType) continue;
+
+      const numbers = extractNumbers(tag.text);
+      if (numbers.includes(nextNumber)) {
+        // Check if relationship doesn't already exist
+        const relationshipKey = `${tag.id}-${newDescription.id}`;
+        const existsAlready = relationships.some(r => 
+          r.from === tag.id && r.to === newDescription.id && r.type === RelationshipType.Description
+        );
+        
+        if (!existsAlready) {
+          newRelationships.push({
+            id: uuidv4(),
+            from: tag.id,
+            to: newDescription.id,
+            type: RelationshipType.Description
+          });
+        }
+      }
+    }
+
+    if (newRelationships.length > 0) {
+      setRelationships(prev => [...prev, ...newRelationships]);
+    }
+
     // Remove tags that were converted to description
     const tagIdsToRemove = selectedItems
       .filter(item => 'category' in item) // Only tags have category
@@ -647,7 +694,7 @@ const App: React.FC = () => {
     if (rawItemIdsToRemove.length > 0) {
       setRawTextItems(prev => prev.filter(item => !rawItemIdsToRemove.includes(item.id)));
     }
-  }, [descriptions]);
+  }, [descriptions, tags, relationships]);
 
   const handleCreateHoldDescription = useCallback((selectedItems: (Tag | RawTextItem)[]): void => {
     handleCreateDescription(selectedItems, 'Hold');
@@ -729,6 +776,78 @@ const App: React.FC = () => {
 
     setEquipmentShortSpecs(prev => [...prev, newEquipmentShortSpec]);
 
+    // Auto-link with Equipment tags using the same logic as handleAutoLinkEquipmentShortSpecs
+    const extractBasePattern = (tagText: string): { base: string; suffix?: string } => {
+      const abPattern = tagText.match(/^(.+?)([A-Z]\/[A-Z]|[A-Z])$/);
+      if (abPattern) {
+        const base = abPattern[1];
+        const suffix = abPattern[2];
+        return { base, suffix };
+      }
+      return { base: tagText };
+    };
+
+    const findMatchingEquipmentTags = (shortSpec: EquipmentShortSpec, equipmentTags: Tag[]): Tag[] => {
+      const originalTag = shortSpec.metadata.originalEquipmentTag;
+      const { base: originalBase, suffix: originalSuffix } = extractBasePattern(originalTag.text);
+      
+      const originalHasABPattern = originalSuffix && originalSuffix.includes('/');
+      const textHasABPattern = /[A-Z]\/[A-Z]|[A-Z],[A-Z]|[A-Z]\s*&\s*[A-Z]/.test(shortSpec.text);
+      const hasABPattern = originalHasABPattern || textHasABPattern;
+      
+      const matchingTags = [];
+      
+      for (const tag of equipmentTags) {
+        const { base: tagBase, suffix: tagSuffix } = extractBasePattern(tag.text);
+        
+        // Exact match
+        if (tag.text === originalTag.text) {
+          matchingTags.push(tag);
+          continue;
+        }
+        
+        // Base pattern match (same page only)
+        if (tagBase === originalBase && tag.page === shortSpec.page) {
+          if (hasABPattern) {
+            matchingTags.push(tag);
+          } else if (!tagSuffix) {
+            matchingTags.push(tag);
+          }
+        }
+      }
+      return matchingTags;
+    };
+
+    // Find all Equipment tags on the page that match the pattern
+    const allEquipmentTags = tags.filter(t => t.category === Category.Equipment);
+    const matchingTags = findMatchingEquipmentTags(newEquipmentShortSpec, allEquipmentTags);
+
+    // Track existing relationships to avoid duplicates
+    const existingRelationshipKeys = new Set(
+      relationships
+        .filter(r => r.type === RelationshipType.EquipmentShortSpec)
+        .map(r => `${r.from}-${r.to}`)
+    );
+
+    // Create relationships with all matching Equipment tags
+    const newRelationships = [];
+    for (const tag of matchingTags) {
+      const relationshipKey = `${tag.id}-${newEquipmentShortSpec.id}`;
+      if (!existingRelationshipKeys.has(relationshipKey)) {
+        newRelationships.push({
+          id: uuidv4(),
+          from: tag.id,
+          to: newEquipmentShortSpec.id,
+          type: RelationshipType.EquipmentShortSpec,
+        });
+        existingRelationshipKeys.add(relationshipKey);
+      }
+    }
+
+    if (newRelationships.length > 0) {
+      setRelationships(prev => [...prev, ...newRelationships]);
+    }
+
     // Remove all selected Equipment tags from tags
     const equipmentTagIds = equipmentTags.map(tag => tag.id);
     setTags(prev => prev.filter(tag => !equipmentTagIds.includes(tag.id)));
@@ -741,17 +860,7 @@ const App: React.FC = () => {
     if (rawItemIdsToRemove.length > 0) {
       setRawTextItems(prev => prev.filter(item => !rawItemIdsToRemove.includes(item.id)));
     }
-
-    // Create relationships between all Equipment tags and the Equipment Short Spec
-    const newRelationships = equipmentTags.map(equipmentTag => ({
-      id: uuidv4(),
-      from: equipmentTag.id,
-      to: newEquipmentShortSpec.id,
-      type: RelationshipType.EquipmentShortSpec,
-    }));
-
-    setRelationships(prev => [...prev, ...newRelationships]);
-  }, [equipmentShortSpecs]);
+  }, [equipmentShortSpecs, tags, relationships]);
 
   const handleDeleteEquipmentShortSpecs = useCallback((equipmentShortSpecIds: string[]): void => {
     // Find specs to be deleted to restore their source items

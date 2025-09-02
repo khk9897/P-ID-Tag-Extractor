@@ -311,7 +311,8 @@ const App: React.FC = () => {
     setRelationships([]);
     setComments([]);
     setLoops([]);
-    // Note: Keep descriptions and equipmentShortSpecs as they are user-created content
+    setEquipmentShortSpecs([]); // Equipment Short Specs are deleted
+    // Note: Keep descriptions as they are user-created content that persists
     setProgress({ current: 0, total: doc.numPages });
     setCurrentPage(1); // Reset to first page on new process
 
@@ -376,7 +377,8 @@ const App: React.FC = () => {
       const hasManualData = relationships.length > 0 || 
                            comments.length > 0 || 
                            loops.length > 0 ||
-                           tags.some(tag => tag.isReviewed);
+                           tags.some(tag => tag.isReviewed) ||
+                           equipmentShortSpecs.length > 0;
 
       if (hasManualData) {
         showConfirmation(
@@ -388,6 +390,9 @@ const App: React.FC = () => {
 • 사용자 댓글 및 메모  
 • 수동 생성한 루프
 • 태그 리뷰 상태 (✓ 체크 표시)
+• Equipment Short Spec 데이터
+
+✅ Note & Hold 설명은 보존됩니다.
 
 💡 중요한 작업이 있다면 먼저 Export로 백업하세요.
 

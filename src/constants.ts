@@ -5,7 +5,7 @@ export const DEFAULT_PATTERNS = {
   [Category.Line]: '^(?=.{10,25}$)(?=.*")([^-]*-){3,}[^-]*$',
   [Category.Instrument]: {
     func: '[A-Z]{2,4}',
-    num: '\\d{4}(?:\\s?[A-Z])?'
+    num: '\\d{3,4}(?:\\s?[A-Z])?'
   },
   [Category.DrawingNumber]: '[A-Z\\d-]{5,}-[A-Z\\d-]{5,}-\\d{3,}',
   [Category.NotesAndHolds]: '^(NOTE|HOLD).*',

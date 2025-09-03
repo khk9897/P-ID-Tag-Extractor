@@ -721,6 +721,27 @@ export const PdfViewer = ({
     isClickOnItem.current = true;
     const isMultiSelect = e.ctrlKey || e.metaKey;
 
+    // Find the clicked item and log its coordinates for instrument tag debugging
+    const clickedItem = rawTextItems.find(item => item.id === rawTextItemId);
+    if (clickedItem) {
+        console.log(`🎯 [INSTRUMENT DEBUG] Selected text: "${clickedItem.text}"`);
+        console.log(`📍 Coordinates: X=${clickedItem.bbox.x1.toFixed(1)}-${clickedItem.bbox.x2.toFixed(1)}, Y=${clickedItem.bbox.y1.toFixed(1)}-${clickedItem.bbox.y2.toFixed(1)}`);
+        console.log(`📄 Page: ${clickedItem.page}`);
+        
+        // Check if it matches instrument patterns
+        const funcPattern = /^[A-Z]{2,4}$/;
+        const numPattern = /^\d{3,4}(?:\s?[A-Z])?$/;
+        
+        if (funcPattern.test(clickedItem.text)) {
+            console.log(`🔤 Type: FUNCTION pattern (${clickedItem.text})`);
+        } else if (numPattern.test(clickedItem.text)) {
+            console.log(`🔢 Type: NUMBER pattern (${clickedItem.text})`);
+        } else {
+            console.log(`❓ Type: OTHER (doesn't match instrument patterns)`);
+        }
+        console.log(`────────────────────────────────`);
+    }
+
     if (isMultiSelect) {
         // Add to or remove from raw text selection without affecting tag selection
         setSelectedRawTextItemIds(prev =>
@@ -1017,10 +1038,12 @@ export const PdfViewer = ({
     
     switch (rotation) {
       case 90:
-        rectX = y1 * scale;
-        rectY = x1 * scale;
-        rectWidth = (y2 - y1) * scale;
-        rectHeight = (x2 - x1) * scale;
+        // For 90-degree rotation, coordinates are already swapped in taggingService
+        // Use them directly without additional transformation
+        rectX = x1 * scale;
+        rectY = y1 * scale;
+        rectWidth = (x2 - x1) * scale;
+        rectHeight = (y2 - y1) * scale;
         break;
       case 180:
         rectX = (viewport.width / scale - x2) * scale;

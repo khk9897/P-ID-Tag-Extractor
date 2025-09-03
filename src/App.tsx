@@ -494,8 +494,8 @@ Do you want to continue?`,
 
     // Sort items by position (top to bottom, then left to right)
     const sortedItems = [...itemsToConvert].sort((a, b) => {
-      // First sort by vertical position (top to bottom, higher y values first in PDF coordinates)
-      const yDiff = b.bbox.y1 - a.bbox.y1;
+      // First sort by vertical position (top to bottom, smaller y values first in screen coordinates)
+      const yDiff = a.bbox.y1 - b.bbox.y1;
       if (Math.abs(yDiff) > 5) { // Allow small vertical tolerance for alignment
         return yDiff;
       }
@@ -613,10 +613,11 @@ Do you want to continue?`,
       return;
     }
 
+
     // Sort items by position (top to bottom, then left to right)
     const sortedItems = [...itemsToMerge].sort((a, b) => {
-      // First sort by vertical position (top to bottom, higher y values first in PDF coordinates)
-      const yDiff = b.bbox.y1 - a.bbox.y1;
+      // First sort by vertical position (top to bottom, smaller y values first in screen coordinates)
+      const yDiff = a.bbox.y1 - b.bbox.y1;
       if (Math.abs(yDiff) > 5) { // Allow small vertical tolerance for alignment
         return yDiff;
       }
@@ -678,8 +679,8 @@ Do you want to continue?`,
   const handleCreateDescription = useCallback((selectedItems: (Tag | RawTextItem)[], type: 'Note' | 'Hold' = 'Note'): void => {
     if (!selectedItems || selectedItems.length === 0) return;
 
-    // Sort by Y coordinate (top to bottom) - in PDF coordinate system, higher Y values are at the top
-    const sortedItems = [...selectedItems].sort((a, b) => b.bbox.y1 - a.bbox.y1);
+    // Sort by Y coordinate (top to bottom) - in screen coordinate system, smaller Y values are at the top
+    const sortedItems = [...selectedItems].sort((a, b) => a.bbox.y1 - b.bbox.y1);
     
     // Merge text content
     const text = sortedItems.map(item => item.text).join(' ');
@@ -806,10 +807,10 @@ Do you want to continue?`,
     }
 
     // Sort all items by Y coordinate (top to bottom)
-    const sortedItems = [...selectedItems].sort((a, b) => b.bbox.y1 - a.bbox.y1);
+    const sortedItems = [...selectedItems].sort((a, b) => a.bbox.y1 - b.bbox.y1);
     
     // Sort non-tag items by Y coordinate (top to bottom)
-    const sortedNonTagItems = nonTagItems.sort((a, b) => b.bbox.y1 - a.bbox.y1);
+    const sortedNonTagItems = nonTagItems.sort((a, b) => a.bbox.y1 - b.bbox.y1);
     
     // Get the topmost non-Equipment item for Service metadata
     const serviceItem = sortedNonTagItems[0];

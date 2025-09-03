@@ -1189,17 +1189,17 @@ const PdfViewerComponent = ({
       // Different relationship types link to different entity types
       if (r.type === RelationshipType.Annotation) {
         toItem = rawTextMap.get(r.to);
-        if (toItem?.page !== currentPage) continue;
+        if (!toItem || toItem.page !== currentPage) continue;
         isAnnotation = true;
       } else if (r.type === RelationshipType.Description) {
         toItem = descriptionsMap.get(r.to);
-        if (toItem?.page !== currentPage) continue;
+        if (!toItem || toItem.page !== currentPage) continue;
       } else if (r.type === RelationshipType.EquipmentShortSpec) {
         toItem = equipmentShortSpecsMap.get(r.to);
-        if (toItem?.page !== currentPage) continue;
+        if (!toItem || toItem.page !== currentPage) continue;
       } else {
         toItem = tagsMap.get(r.to);
-        if (toItem?.page !== currentPage) continue;
+        if (!toItem || toItem.page !== currentPage) continue;
       }
       
       // Smart filtering for selected entities only

@@ -30,15 +30,49 @@ const calculateBbox = (item, viewBoxOffsetX = 0, viewBoxOffsetY = 0, viewport = 
     
     // Handle different PDF rotations and coordinate system transformations
     if (viewport && rotation === 90) {
-        // 90-degree rotation: swap X and Y coordinates to match screen layout
+        // 90-degree rotation: swap X and Y coordinates with proper flipping
+        const viewBox = viewport.viewBox || [0, 0, viewport.width, viewport.height];
+        const viewBoxWidth = viewBox[2];
+        const viewBoxHeight = viewBox[3];
+        
         return {
-            x1: pdfBbox.y1,
-            y1: pdfBbox.x1, 
-            x2: pdfBbox.y2,
-            y2: pdfBbox.x2,
+            x1: pdfBbox.y1,                      // Y becomes X (no flip)
+            y1: pdfBbox.x1,                      // X becomes Y (no flip)
+            x2: pdfBbox.y2,                      // Y becomes X (no flip)
+            y2: pdfBbox.x2,                      // X becomes Y (no flip)
+        };
+    } else if (viewport && rotation === 270) {
+        // 270-degree rotation: Final coordinate transformation
+        // Transform: [0, -1, -1, 0, 2880, 2016] shows proper rotation
+        // ViewBox: [0, 0, 2016, 2880] - width/height are swapped as expected
+        
+        // PROBLEM: Many coordinates are negative, meaning our transformation is wrong
+        // For 270° rotation (clockwise), we need: original_x -> new_y, original_y -> new_x (with flips)
+        // But we need to use ViewBox dimensions, not viewport dimensions
+        
+        const viewBox = viewport.viewBox || [0, 0, viewport.width, viewport.height];
+        const viewBoxWidth = viewBox[2];   // 2016
+        const viewBoxHeight = viewBox[3];  // 2880
+        
+        // Correct 270° rotation using ViewBox dimensions
+        return {
+            x1: viewBoxHeight - pdfBbox.y2,    // Y becomes X (flipped from viewBox height)
+            y1: viewBoxWidth - pdfBbox.x2,     // X becomes Y (flipped from viewBox width)
+            x2: viewBoxHeight - pdfBbox.y1,    // Y becomes X (flipped from viewBox height)
+            y2: viewBoxWidth - pdfBbox.x1,     // X becomes Y (flipped from viewBox width)
+        };
+    } else if (viewport && rotation === 180) {
+        // 180-degree rotation: flip both X and Y
+        const pageWidth = viewport.width;
+        const pageHeight = viewport.height;
+        return {
+            x1: pageWidth - pdfBbox.x2,
+            y1: pageHeight - pdfBbox.y2,
+            x2: pageWidth - pdfBbox.x1, 
+            y2: pageHeight - pdfBbox.y1,
         };
     } else if (viewport) {
-        // Non-rotated documents: flip Y coordinates to match screen coordinate system
+        // Non-rotated documents (0 degrees): flip Y coordinates to match screen coordinate system
         // PDF uses bottom-left origin (0,0), screen uses top-left origin (0,0)
         const pageHeight = viewport.height;
         return {

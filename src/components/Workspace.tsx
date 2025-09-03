@@ -347,6 +347,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           onMergeRawTextItems={onMergeRawTextItems}
           onManualCreateLoop={onManualCreateLoop}
           onManualAreaSelect={handleManualAreaSelect}
+          onUpdateTagText={onUpdateTagText}
+          onUpdateRawTextItemText={onUpdateRawTextItemText}
           // Pass down viewer state
           scale={scale}
           setScale={setScale}

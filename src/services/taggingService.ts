@@ -1,6 +1,14 @@
 import { Category } from '../types.ts';
 import { v4 as uuidv4 } from 'uuid';
 
+// Helper function to remove whitespace from tag text (except for NotesAndHolds)
+const removeWhitespace = (text, category, shouldRemoveWhitespace) => {
+    if (!shouldRemoveWhitespace || category === Category.NotesAndHolds) {
+        return text;
+    }
+    return text.replace(/\s+/g, '');
+};
+
 
 // Helper function to calculate bounding box with screen coordinate transformation
 const calculateBbox = (item, viewBoxOffsetX = 0, viewBoxOffsetY = 0, viewport = null, rotation = 0) => {
@@ -88,7 +96,7 @@ const calculateBbox = (item, viewBoxOffsetX = 0, viewBoxOffsetY = 0, viewport = 
 };
 
 
-export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
+export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSettings = { autoRemoveWhitespace: true }) => {
     const page = await pdfDoc.getPage(pageNum);
     const textContent = await page.getTextContent();
     const viewport = page.getViewport({ scale: 1.0 });
@@ -208,7 +216,8 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
                 if (bestPartner) {
                     // Function part should always come first (it's above the number part)
                     // We already verified func is above bestPartner in the matching logic
-                    const combinedText = `${func.item.str}-${bestPartner.item.str}`;
+                    const rawCombinedText = `${func.item.str}-${bestPartner.item.str}`;
+                    const combinedText = removeWhitespace(rawCombinedText, Category.Instrument, appSettings.autoRemoveWhitespace);
 
                     const combinedBbox = {
                         x1: Math.min(func.bbox.x1, bestPartner.bbox.x1),
@@ -262,9 +271,10 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
                 if (matches) {
                     itemHasBeenTagged = true;
                     for (const matchText of matches) {
+                        const cleanedText = removeWhitespace(matchText, pattern.category, appSettings.autoRemoveWhitespace);
                         foundTags.push({
                             id: uuidv4(),
-                            text: matchText,
+                            text: cleanedText,
                             page: pageNum,
                             bbox: calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY, viewport, rotation),
                             category: pattern.category,
@@ -313,9 +323,10 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
             }
 
             if (bestCandidate) {
+                const cleanedText = removeWhitespace(bestCandidate.text, Category.DrawingNumber, appSettings.autoRemoveWhitespace);
                 foundTags.push({
                     id: uuidv4(),
-                    text: bestCandidate.text,
+                    text: cleanedText,
                     page: pageNum,
                     bbox: bestCandidate.bbox,
                     category: Category.DrawingNumber,

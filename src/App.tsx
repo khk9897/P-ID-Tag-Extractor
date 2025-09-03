@@ -321,7 +321,7 @@ const App: React.FC = () => {
       let allTags = [];
       let allRawTextItems = [];
       for (let i = 1; i <= doc.numPages; i++) {
-        const { tags: pageTags, rawTextItems: pageRawTextItems } = await extractTags(doc, i, patternsToUse, tolerancesToUse);
+        const { tags: pageTags, rawTextItems: pageRawTextItems } = await extractTags(doc, i, patternsToUse, tolerancesToUse, appSettings);
         allTags = [...allTags, ...pageTags];
         allRawTextItems = [...allRawTextItems, ...pageRawTextItems];
         setProgress(p => ({ ...p, current: i }));
@@ -505,9 +505,14 @@ Do you want to continue?`,
     });
     
     // Combine text with appropriate separator
-    const combinedText = category === Category.Instrument 
+    const rawCombinedText = category === Category.Instrument 
       ? sortedItems.map(item => item.text).join('-')
       : sortedItems.map(item => item.text).join('');
+    
+    // Apply whitespace removal based on settings (except for NotesAndHolds)
+    const combinedText = (appSettings.autoRemoveWhitespace && category !== Category.NotesAndHolds) 
+      ? rawCombinedText.replace(/\s+/g, '') 
+      : rawCombinedText;
     
     const combinedBbox = itemsToConvert.reduce((acc, item) => {
       return {
@@ -532,7 +537,7 @@ Do you want to continue?`,
     setRawTextItems(prev => prev.filter(item => !idsToConvert.has(item.id)));
     // Clean up any annotation relationships involving the now-converted raw items
     setRelationships(prev => prev.filter(rel => !(rel.type === RelationshipType.Annotation && idsToConvert.has(rel.to))));
-  }, []);
+  }, [appSettings.autoRemoveWhitespace]);
 
   const handleCreateManualTag = useCallback((tagData: ManualTagData): void => {
     const { text, bbox, page, category } = tagData;
@@ -541,9 +546,14 @@ Do you want to continue?`,
         return;
     }
 
+    // Apply whitespace removal based on settings (except for NotesAndHolds)
+    const cleanedText = (appSettings.autoRemoveWhitespace && category !== Category.NotesAndHolds) 
+      ? text.replace(/\s+/g, '') 
+      : text;
+
     const newTag = {
       id: uuidv4(),
-      text,
+      text: cleanedText,
       page,
       bbox,
       category,
@@ -551,7 +561,7 @@ Do you want to continue?`,
     };
 
     setTags(prev => [...prev, newTag]);
-  }, []);
+  }, [appSettings.autoRemoveWhitespace]);
 
   const handleDeleteTags = useCallback((tagIdsToDelete: string[]): void => {
     const idsToDelete = new Set(tagIdsToDelete);

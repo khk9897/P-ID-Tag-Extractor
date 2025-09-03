@@ -98,28 +98,22 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
   
   const categoryInfo = {
     [Category.Equipment]: {
-        description: "Finds equipment tags, typically containing two hyphens.",
-        example: "P-101-A, V-200-B"
+        description: "Regular expression pattern for matching equipment tags."
     },
     [Category.Line]: {
-        description: "Finds piping line tags, typically containing three or more hyphens.",
-        example: `4"-P-1501-C1, 10"-CW-203-A2`
+        description: "Regular expression pattern for matching piping line tags."
     },
     [Category.Instrument]: {
-        description: "Finds two-part instrument tags (Function and Number) that may or may not be separated by a space.",
-        example: "PI 1001, FIT1002A, TIC 1004 B"
+        description: "Two-part pattern for matching instrument tags consisting of function and number components."
     },
     [Category.DrawingNumber]: {
-        description: "Finds drawing identifiers like drawing number, sheet number, etc. One per page, searched from bottom-right.",
-        example: "PID-1234-001"
+        description: "Pattern for identifying drawing numbers. Only one match per page, selected from bottom-right corner."
     },
     [Category.NotesAndHolds]: {
-        description: "Finds notes or holds, typically starting with 'NOTE' or 'HOLD'.",
-        example: "NOTE 1, HOLD FOR REVIEW"
+        description: "Pattern for matching note and hold annotations."
     },
     [Category.SpecialItem]: {
-        description: "Finds special items, similar to equipment but without short specs. Uses custom pattern.",
-        example: "Custom pattern defined by user"
+        description: "Custom pattern for matching special items."
     }
   };
 
@@ -135,7 +129,7 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
         onClick={onClose}
     >
       <div 
-        className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl text-white"
+        className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-7xl text-white"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 border-b border-slate-700 flex justify-between items-center">
@@ -194,138 +188,258 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
             
             {showRegexHelp && <RegexHelp />}
 
-            {categories.map(category => {
-                const info = categoryInfo[category];
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            
+            {/* Left Column - Regex Patterns */}
+            <div className="lg:col-span-2">
+              <h3 className="text-lg font-semibold mb-4 text-slate-200">Regex Patterns</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
-                if (category === Category.Instrument) {
-                  return (
-                    <div key={category} className="p-3 bg-slate-900/30 rounded-lg">
-                      <label className="block text-sm font-semibold mb-2 text-slate-200">{category}</label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label htmlFor="pattern-inst-func" className="block text-xs font-medium text-slate-400 mb-1">Function Part</label>
-                          <input
-                            id="pattern-inst-func"
-                            type="text"
-                            value={localPatterns[Category.Instrument]?.func || ''}
-                            onChange={(e) => handleInstrumentPartChange('func', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="pattern-inst-num" className="block text-xs font-medium text-slate-400 mb-1">Number Part</label>
-                          <input
-                            id="pattern-inst-num"
-                            type="text"
-                            value={localPatterns[Category.Instrument]?.num || ''}
-                            onChange={(e) => handleInstrumentPartChange('num', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
-                          />
-                        </div>
+                {/* Left sub-column */}
+                <div className="space-y-4">
+                  {/* Equipment */}
+                  {(() => {
+                      const info = categoryInfo[Category.Equipment];
+                      return (
+                          <div key={Category.Equipment} className="p-3 bg-slate-900/30 rounded-lg">
+                              <label htmlFor={`pattern-${Category.Equipment}`} className="block text-sm font-semibold mb-2 text-slate-200">Equipment</label>
+                              <input
+                                  id={`pattern-${Category.Equipment}`}
+                                  type="text"
+                                  value={localPatterns[Category.Equipment]}
+                                  onChange={(e) => handlePatternChange(Category.Equipment, e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-600 rounded-md p-3 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
+                                  placeholder="Enter regex pattern for Equipment..."
+                              />
+                              {info && (
+                                  <div className="mt-2 text-xs text-slate-400">
+                                      <p>{info.description}</p>
+                                  </div>
+                              )}
+                          </div>
+                      )
+                  })()}
+
+                  {/* Line and Special Item combined card */}
+                  <div className="p-3 bg-slate-900/30 rounded-lg">
+                    <h4 className="text-sm font-semibold mb-3 text-slate-200">Line & Special Item Patterns</h4>
+                    
+                    {/* Line Section */}
+                    <div className="mb-4">
+                      <label htmlFor="pattern-Line" className="block text-xs font-medium text-slate-300 mb-1">Line</label>
+                      <input
+                        id="pattern-Line"
+                        type="text"
+                        value={localPatterns[Category.Line]}
+                        onChange={(e) => handlePatternChange(Category.Line, e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
+                        placeholder="Enter regex pattern for Line..."
+                      />
+                      <div className="mt-1 text-xs text-slate-400">
+                        <p>{categoryInfo[Category.Line].description}</p>
                       </div>
-                      {info && (
-                        <div className="mt-2 text-xs text-slate-400 space-y-1 pl-1">
-                          <p>{info.description}</p>
-                          <p>
-                            <span className="font-semibold">Example Match:</span>{' '}
-                            <code className="bg-slate-700/50 px-1 py-0.5 rounded">{info.example}</code>
-                          </p>
-                        </div>
-                      )}
-                        <div className="mt-4 pt-3 border-t border-slate-700">
-                          <h4 className="text-xs font-medium text-slate-400 mb-2">Part Combination Tolerances</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                               <label htmlFor="tolerance-vertical" className="block text-xs text-slate-400 mb-1">
-                                Max Vertical Distance ({instrumentCurrentTolerances.vertical}px)
-                              </label>
-                              <div className="flex items-center space-x-2">
-                                <input id="tolerance-vertical" type="range" min="0" max="100"
-                                    value={instrumentCurrentTolerances.vertical}
-                                    onChange={(e) => handleToleranceChange('vertical', e.target.value)}
-                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
-                                <input type="number" value={instrumentCurrentTolerances.vertical} onChange={(e) => handleToleranceChange('vertical', e.target.value)} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
+                    </div>
+
+                    {/* Special Item Section */}
+                    <div>
+                      <label htmlFor="pattern-SpecialItem" className="block text-xs font-medium text-slate-300 mb-1">Special Item</label>
+                      <input
+                        id="pattern-SpecialItem"
+                        type="text"
+                        value={localPatterns[Category.SpecialItem]}
+                        onChange={(e) => handlePatternChange(Category.SpecialItem, e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
+                        placeholder="Enter regex pattern for Special Item..."
+                      />
+                      <div className="mt-1 text-xs text-slate-400">
+                        <p>{categoryInfo[Category.SpecialItem].description}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right sub-column */}
+                <div className="space-y-4">
+                  {/* Instrument */}
+                  {(() => {
+                      const info = categoryInfo[Category.Instrument];
+                      
+                      return (
+                          <div key={Category.Instrument} className="p-3 bg-slate-900/30 rounded-lg">
+                            <label className="block text-sm font-semibold mb-2 text-slate-200">Instrument</label>
+                            <div className="space-y-3">
+                              <div>
+                                <label htmlFor="pattern-inst-func" className="block text-xs font-medium text-slate-400 mb-1">Function Part</label>
+                                <input
+                                  id="pattern-inst-func"
+                                  type="text"
+                                  value={localPatterns[Category.Instrument]?.func || ''}
+                                  onChange={(e) => handleInstrumentPartChange('func', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor="pattern-inst-num" className="block text-xs font-medium text-slate-400 mb-1">Number Part</label>
+                                <input
+                                  id="pattern-inst-num"
+                                  type="text"
+                                  value={localPatterns[Category.Instrument]?.num || ''}
+                                  onChange={(e) => handleInstrumentPartChange('num', e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
+                                />
                               </div>
                             </div>
-                            <div>
-                               <label htmlFor="tolerance-horizontal" className="block text-xs text-slate-400 mb-1">
-                                Max Horizontal Distance ({instrumentCurrentTolerances.horizontal}px)
-                               </label>
-                               <div className="flex items-center space-x-2">
-                                <input id="tolerance-horizontal" type="range" min="0" max="100"
-                                    value={instrumentCurrentTolerances.horizontal}
-                                    onChange={(e) => handleToleranceChange('horizontal', e.target.value)}
-                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
-                                <input type="number" value={instrumentCurrentTolerances.horizontal} onChange={(e) => handleToleranceChange('horizontal', e.target.value)} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
-                               </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-700">
-                          <h4 className="text-xs font-medium text-slate-400 mb-2">Automatic Annotation Linking</h4>
-                           <div>
-                               <label htmlFor="tolerance-autolink" className="block text-xs text-slate-400 mb-1">
-                                Max Link Distance ({instrumentCurrentTolerances.autoLinkDistance}px)
-                               </label>
-                               <div className="flex items-center space-x-2">
-                                <input id="tolerance-autolink" type="range" min="0" max="200"
-                                    value={instrumentCurrentTolerances.autoLinkDistance}
-                                    onChange={(e) => handleToleranceChange('autoLinkDistance', e.target.value)}
-                                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
-                                <input type="number" min="0" max="200" value={instrumentCurrentTolerances.autoLinkDistance} onChange={(e) => handleToleranceChange('autoLinkDistance', e.target.value)} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
-                               </div>
-                            </div>
-                        </div>
-                    </div>
-                  );
-                }
-
-                return (
-                    <div key={category}>
-                        <label htmlFor={`pattern-${category}`} className="block text-sm font-semibold mb-1 text-slate-200">{category}</label>
-                        <textarea
-                            id={`pattern-${category}`}
-                            value={localPatterns[category]}
-                            onChange={(e) => handlePatternChange(category, e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
-                            rows={2}
-                        />
-                        {info && (
-                            <div className="mt-2 text-xs text-slate-400 space-y-1 pl-1">
+                            {info && (
+                              <div className="mt-3 text-xs text-slate-400">
                                 <p>{info.description}</p>
-                                <p>
-                                    <span className="font-semibold">Example Match:</span>{' '}
-                                    <code className="bg-slate-700/50 px-1 py-0.5 rounded">{info.example}</code>
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )
-            })}
-            
-            {/* App Settings Section */}
-            <div className="pt-4 mt-4 border-t border-slate-700">
-              <h3 className="text-sm font-semibold mb-3 text-slate-200">Application Settings</h3>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <input
-                    id="auto-generate-loops"
-                    type="checkbox"
-                    checked={localAppSettings.autoGenerateLoops}
-                    onChange={(e) => setLocalAppSettings(prev => ({
-                      ...prev,
-                      autoGenerateLoops: e.target.checked
-                    }))}
-                    className="w-4 h-4 text-sky-600 bg-slate-900 border-slate-600 rounded focus:ring-sky-500 focus:ring-2"
-                  />
-                  <label htmlFor="auto-generate-loops" className="text-sm text-slate-200">
-                    Auto-generate loops after tag extraction
-                  </label>
-                </div>
-                <div className="text-xs text-slate-400 pl-7">
-                  Automatically create loops from instrument tags based on function prefix and number matching after PDF processing completes.
+                              </div>
+                            )}
+                          </div>
+                      )
+                  })()}
+
+                  {/* Notes And Holds */}
+                  {(() => {
+                      const info = categoryInfo[Category.NotesAndHolds];
+                      return (
+                          <div key={Category.NotesAndHolds} className="p-3 bg-slate-900/30 rounded-lg">
+                              <label htmlFor={`pattern-${Category.NotesAndHolds}`} className="block text-sm font-semibold mb-2 text-slate-200">Notes And Holds</label>
+                              <input
+                                  id={`pattern-${Category.NotesAndHolds}`}
+                                  type="text"
+                                  value={localPatterns[Category.NotesAndHolds]}
+                                  onChange={(e) => handlePatternChange(Category.NotesAndHolds, e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-600 rounded-md p-3 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
+                                  placeholder="Enter regex pattern for Notes And Holds..."
+                              />
+                              {info && (
+                                  <div className="mt-2 text-xs text-slate-400">
+                                      <p>{info.description}</p>
+                                  </div>
+                              )}
+                          </div>
+                      )
+                  })()}
+
+                  {/* Drawing Number */}
+                  {(() => {
+                      const info = categoryInfo[Category.DrawingNumber];
+                      return (
+                          <div key={Category.DrawingNumber} className="p-3 bg-slate-900/30 rounded-lg">
+                              <label htmlFor={`pattern-${Category.DrawingNumber}`} className="block text-sm font-semibold mb-2 text-slate-200">Drawing Number</label>
+                              <input
+                                  id={`pattern-${Category.DrawingNumber}`}
+                                  type="text"
+                                  value={localPatterns[Category.DrawingNumber]}
+                                  onChange={(e) => handlePatternChange(Category.DrawingNumber, e.target.value)}
+                                  className="w-full bg-slate-900 border border-slate-600 rounded-md p-3 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
+                                  placeholder="Enter regex pattern for Drawing Number..."
+                              />
+                              {info && (
+                                  <div className="mt-2 text-xs text-slate-400">
+                                      <p>{info.description}</p>
+                                  </div>
+                              )}
+                          </div>
+                      )
+                  })()}
                 </div>
               </div>
+            </div>
+            
+            {/* Right Column - Application Settings & Instrument Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold mb-4 text-slate-200">Application Settings</h3>
+              <div className="space-y-4">
+                <div className="p-5 bg-slate-900/40 rounded-lg border border-slate-700/50">
+                  <div className="flex items-start space-x-3 mb-3">
+                    <input
+                      id="auto-generate-loops"
+                      type="checkbox"
+                      checked={localAppSettings.autoGenerateLoops}
+                      onChange={(e) => setLocalAppSettings(prev => ({
+                        ...prev,
+                        autoGenerateLoops: e.target.checked
+                      }))}
+                      className="w-5 h-5 mt-0.5 text-sky-600 bg-slate-900 border-slate-600 rounded focus:ring-sky-500 focus:ring-2"
+                    />
+                    <div>
+                      <label htmlFor="auto-generate-loops" className="text-sm font-semibold text-slate-200 block">
+                        Auto-generate loops
+                      </label>
+                      <div className="text-xs text-slate-400 mt-1">
+                        Automatically create loops from instrument tags based on function prefix and number matching after PDF processing completes.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-5 bg-slate-900/40 rounded-lg border border-slate-700/50">
+                  <div className="flex items-start space-x-3 mb-3">
+                    <input
+                      id="auto-remove-whitespace"
+                      type="checkbox"
+                      checked={localAppSettings.autoRemoveWhitespace}
+                      onChange={(e) => setLocalAppSettings(prev => ({
+                        ...prev,
+                        autoRemoveWhitespace: e.target.checked
+                      }))}
+                      className="w-5 h-5 mt-0.5 text-sky-600 bg-slate-900 border-slate-600 rounded focus:ring-sky-500 focus:ring-2"
+                    />
+                    <div>
+                      <label htmlFor="auto-remove-whitespace" className="text-sm font-semibold text-slate-200 block">
+                        Auto-remove whitespace
+                      </label>
+                      <div className="text-xs text-slate-400 mt-1">
+                        Automatically removes all whitespace from extracted tags (except Notes & Holds tags which preserve original formatting).
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-900/30 rounded-lg">
+                  <h4 className="text-sm font-medium text-slate-200 mb-3">Instrument Tolerances</h4>
+                  <div className="space-y-4">
+                    <div>
+                       <label htmlFor="tolerance-vertical" className="block text-xs text-slate-400 mb-1">
+                        Max Vertical Distance ({instrumentCurrentTolerances.vertical}px)
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <input id="tolerance-vertical" type="range" min="0" max="100"
+                            value={instrumentCurrentTolerances.vertical}
+                            onChange={(e) => handleToleranceChange('vertical', e.target.value)}
+                            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                        <input type="number" value={instrumentCurrentTolerances.vertical} onChange={(e) => handleToleranceChange('vertical', e.target.value)} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
+                      </div>
+                    </div>
+                    <div>
+                       <label htmlFor="tolerance-horizontal" className="block text-xs text-slate-400 mb-1">
+                        Max Horizontal Distance ({instrumentCurrentTolerances.horizontal}px)
+                       </label>
+                       <div className="flex items-center space-x-2">
+                        <input id="tolerance-horizontal" type="range" min="0" max="100"
+                            value={instrumentCurrentTolerances.horizontal}
+                            onChange={(e) => handleToleranceChange('horizontal', e.target.value)}
+                            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                        <input type="number" value={instrumentCurrentTolerances.horizontal} onChange={(e) => handleToleranceChange('horizontal', e.target.value)} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
+                       </div>
+                    </div>
+                    <div>
+                       <label htmlFor="tolerance-autolink" className="block text-xs text-slate-400 mb-1">
+                        Max Link Distance ({instrumentCurrentTolerances.autoLinkDistance}px)
+                       </label>
+                       <div className="flex items-center space-x-2">
+                        <input id="tolerance-autolink" type="range" min="0" max="200"
+                            value={instrumentCurrentTolerances.autoLinkDistance}
+                            onChange={(e) => handleToleranceChange('autoLinkDistance', e.target.value)}
+                            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                        <input type="number" min="0" max="200" value={instrumentCurrentTolerances.autoLinkDistance} onChange={(e) => handleToleranceChange('autoLinkDistance', e.target.value)} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             </div>
             </>
           ) : (

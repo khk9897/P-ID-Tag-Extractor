@@ -22,6 +22,7 @@ export const DEFAULT_TOLERANCES = {
 
 export const DEFAULT_SETTINGS = {
     autoGenerateLoops: true, // Auto-generate loops after tag extraction
+    autoRemoveWhitespace: true, // Auto-remove whitespace from tags (except NotesAndHolds)
 };
 
 export const CATEGORY_COLORS = {

@@ -2,6 +2,124 @@
 
 ## 🚀 **즉시 개선 가능한 영역**
 
+### 0. **📊 작업 이력 추적 시스템** *(최우선 - 품질 관리)*
+**목표**: 자동/수동 작업의 완전한 추적과 기록을 통해 프로젝트 진행 상황과 품질 관리 개선
+
+#### Phase 1: 핵심 데이터 구조 설계
+- [ ] **ActivityLog 인터페이스 생성**
+```typescript
+interface ActivityLog {
+  id: string;
+  timestamp: number;
+  author: 'System' | 'User' | string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'MERGE' | 'LINK' | 'REVIEW' | 'IMPORT' | 'EXPORT';
+  targetType: 'tag' | 'relationship' | 'description' | 'rawText' | 'loop' | 'project';
+  targetId: string;
+  details: {
+    before?: any; // 변경 전 값
+    after?: any;  // 변경 후 값
+    reason?: string; // 변경 이유
+  };
+  metadata: {
+    method: 'auto' | 'manual' | 'import';
+    confidence?: number; // 자동 작업의 신뢰도 (0-1)
+    source?: string; // 데이터 출처 (extractTags, F2Edit, autoLink 등)
+    duration?: number; // 작업 소요 시간 (ms)
+    userAgent?: string;
+  };
+}
+```
+
+- [ ] **TrackingInfo를 모든 엔티티에 추가**
+```typescript
+interface TrackingInfo {
+  createdAt: number;
+  createdBy: string;
+  createdMethod: 'auto' | 'manual' | 'import';
+  updatedAt?: number;
+  updatedBy?: string;
+  version: number;
+  confidence?: number;
+}
+```
+
+- [ ] **ProjectData에 통계 및 이력 추가**
+```typescript
+interface ProjectStatistics {
+  totalTags: { auto: number; manual: number; f2Edited: number };
+  totalRelationships: { auto: number; manual: number };
+  totalUpdates: { manual: number; f2Edit: number };
+  workSessions: Array<{
+    startTime: number;
+    endTime: number;
+    author: string;
+    activities: number;
+    efficiency: number; // activities per minute
+  }>;
+  qualityMetrics: {
+    accuracyRate: number; // 검토를 통과한 항목 비율
+    editRate: number; // 수정된 항목 비율
+    autoLinkSuccessRate: number;
+  };
+}
+```
+
+#### Phase 2: 로깅 시스템 구현
+- [ ] **ActivityLogger 서비스 클래스 생성**
+  - 모든 CRUD 작업에 통합 가능한 중앙화된 로깅
+  - 성능 영향 최소화를 위한 배치 처리
+  - localStorage 백업 및 복원 기능
+
+- [ ] **기존 함수들에 로깅 통합**
+  - `extractTags` → CREATE (auto)
+  - `onCreateTag` → CREATE (manual)
+  - F2 편집 → UPDATE (manual, source: 'f2Edit')
+  - `onUpdateTagText` → UPDATE (manual)
+  - Auto-Link 함수들 → LINK (auto)
+  - 수동 관계 생성 → LINK (manual)
+  - 댓글 시스템 → CREATE/UPDATE/DELETE (manual)
+
+#### Phase 3: UI 통합 및 시각화
+- [ ] **활동 히스토리 패널** (SidePanel 확장)
+  - 시간순 활동 피드
+  - 필터링: 작업자별, 시간별, 유형별, 소스별
+  - 검색 기능
+  - 실행 취소/다시 실행 후보 표시
+
+- [ ] **통계 대시보드**
+  - 작업 효율성 차트 (시간당 처리량)
+  - 자동/수동 작업 비율 파이차트
+  - 품질 메트릭 표시
+  - 작업자별 기여도 분석
+
+- [ ] **실시간 활동 피드**
+  - 우측 상단 작은 알림 영역
+  - 최근 활동 미니 피드
+  - 중요한 변경사항 하이라이트
+
+#### Phase 4: 고급 분석 기능
+- [ ] **품질 분석 도구**
+  - 자동 태그 vs 수동 태그 정확도 비교
+  - F2 편집 패턴 분석 (어떤 태그가 자주 수정되는지)
+  - Auto-Link 성공률 분석
+
+- [ ] **작업 패턴 인사이트**
+  - 가장 효율적인 작업 시간대 분석
+  - 실수가 많이 발생하는 패턴 식별
+  - 워크플로우 개선 제안
+
+- [ ] **감사 및 규정 준수**
+  - 완전한 변경 이력 추적
+  - 데이터 무결성 검증
+  - 규정 준수 리포트 생성
+
+#### 예상 이점
+- **품질 관리**: 자동/수동 작업 정확도 비교 및 개선점 파악
+- **작업 효율성**: 실시간 생산성 모니터링 및 최적화
+- **협업 개선**: 팀 단위 작업 시 기여도 및 책임 추적
+- **감사 추적**: 모든 변경사항 완전 기록으로 신뢰성 확보
+- **프로세스 개선**: 데이터 기반 워크플로우 최적화
+
 ### 1. **인식 정확도 향상**
 - [🔥] **OpenCV 기반 Valve 심볼 인식**: 컴퓨터 비전으로 밸브 심볼 자동 감지 *(최우선)*
 - [ ] **AI/ML 기반 태그 인식**: 현재 정규식 기반을 OpenCV나 컴퓨터 비전으로 보완
@@ -155,11 +273,16 @@
 ## 📋 **진행 상황 추적**
 
 ### ✅ **완료된 기능들**
-- [x] **댓글 시스템** - 우선순위별 댓글 및 해결상태 추적 (**NEW!**)
-- [x] **스마트 필터 UI** - 검토 & 댓글 상태 통합 필터링 (✅ ☐ 💬+ 💬-) (**NEW!**)
-- [x] **조절 가능한 사이드바** - 드래그로 크기 조절 및 localStorage 저장 (**NEW!**)
-- [x] **향상된 검색** - 검색 입력창에 X 버튼 추가 (**NEW!**)
-- [x] **컴팩트 UI** - View Options 섹션 압축 디자인 (**NEW!**)
+- [x] **F2 인라인 편집** - 선택된 태그/텍스트 직접 편집, 저장/취소 버튼 포함 (**NEW! 2025-01-03**)
+- [x] **Special Item 카테고리** - 수동 생성 전용 특수 아이템 카테고리 추가 (**NEW! 2025-01-03**)
+- [x] **핫키 시스템 개선** - 1-5번 키로 카테고리별 태그 생성, 기존 줌 핫키 대체 (**NEW! 2025-01-03**)
+- [x] **색상 시스템 통일** - Equipment/ShortSpec 오렌지 테마로 통일, 색상 충돌 해결 (**NEW! 2025-01-03**)
+- [x] **PDF 렌더링 안정성** - 렌더 큐 시스템으로 canvas 충돌 방지 (**NEW! 2025-01-03**)
+- [x] **댓글 시스템** - 우선순위별 댓글 및 해결상태 추적 (**2025-01-09**)
+- [x] **스마트 필터 UI** - 검토 & 댓글 상태 통합 필터링 (✅ ☐ 💬+ 💬-) (**2025-01-09**)
+- [x] **조절 가능한 사이드바** - 드래그로 크기 조절 및 localStorage 저장 (**2025-01-09**)
+- [x] **향상된 검색** - 검색 입력창에 X 버튼 추가 (**2025-01-09**)
+- [x] **컴팩트 UI** - View Options 섹션 압축 디자인 (**2025-01-09**)
 - [x] 고급 표시 제어 시스템 (태그/관계별 세밀한 제어)
 - [x] 숨겨진 요소 상호작용 보존
 - [x] 반응형 헤더 레이아웃
@@ -201,6 +324,7 @@
 
 ---
 
-*마지막 업데이트: 2025-01-09*
-*댓글 시스템 추가 완료: 2025-01-09*
+*마지막 업데이트: 2025-09-03*
+*작업 이력 추적 시스템 계획 추가: 2025-09-03*
+*F2 인라인 편집 기능 완료: 2025-09-03*
 *다음 리뷰 예정: 매주 금요일*

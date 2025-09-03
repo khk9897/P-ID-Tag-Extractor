@@ -39,6 +39,7 @@ const HotkeyHelp = ({ onClose }) => {
     { key: 'Esc', desc: <><span className="text-sky-300 font-bold">Esc</span> Mode / Clear Selection</> },
   ];
   const actions = [
+    { key: 'F2', desc: <>Edit selected tag or text item (<span className="text-sky-300 font-bold">F2</span>)</> },
     { key: 'M', desc: <><span className="text-sky-300 font-bold">M</span>erge multiple text items into one</> },
     { key: 'N', desc: <>Make <span className="text-sky-300 font-bold">N</span>ote Description from selected items</> },
     { key: 'H', desc: <>Make <span className="text-sky-300 font-bold">H</span>old Description from selected items</> },
@@ -160,6 +161,11 @@ const VisibilityPanel = ({ onClose, visibilitySettings, toggleTagVisibility, tog
               checked={visibilitySettings.tags.line}
               onChange={() => toggleTagVisibility('line')}
               label="Line"
+            />
+            <ToggleSwitch
+              checked={visibilitySettings.tags.specialItem}
+              onChange={() => toggleTagVisibility('specialItem')}
+              label="Special Item"
             />
             <ToggleSwitch
               checked={visibilitySettings.tags.instrument}

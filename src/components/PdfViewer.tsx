@@ -30,6 +30,8 @@ export const PdfViewer = ({
   onMergeRawTextItems,
   onManualCreateLoop,
   onManualAreaSelect,
+  onUpdateTagText,
+  onUpdateRawTextItemText,
   // Viewer state from props
   scale,
   setScale,
@@ -59,6 +61,47 @@ export const PdfViewer = ({
   const [selectionRect, setSelectionRect] = useState(null);
   const [relatedTagIds, setRelatedTagIds] = useState(new Set());
   const [highlightedRawTextItemIds, setHighlightedRawTextItemIds] = useState(new Set());
+  
+  // Editing state
+  const [editingTagId, setEditingTagId] = useState(null);
+  const [editingRawTextId, setEditingRawTextId] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const editInputRef = useRef(null);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if ((editingTagId || editingRawTextId) && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingTagId, editingRawTextId]);
+
+  // Handle editing completion
+  const handleEditComplete = useCallback((save = true) => {
+    if (save && editingText.trim()) {
+      if (editingTagId) {
+        onUpdateTagText(editingTagId, editingText.trim());
+      } else if (editingRawTextId) {
+        onUpdateRawTextItemText(editingRawTextId, editingText.trim());
+      }
+    }
+    
+    // Clear editing state
+    setEditingTagId(null);
+    setEditingRawTextId(null);
+    setEditingText('');
+  }, [editingTagId, editingRawTextId, editingText, onUpdateTagText, onUpdateRawTextItemText]);
+
+  // Handle input key events
+  const handleEditInputKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleEditComplete(true);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleEditComplete(false);
+    }
+  }, [handleEditComplete]);
 
   const linkedRawTextItemIds = useMemo(() => {
     return new Set(
@@ -156,88 +199,88 @@ export const PdfViewer = ({
   const panStart = useRef({ scrollX: 0, scrollY: 0, clientX: 0, clientY: 0 });
 
   const renderTaskRef = useRef(null);
-  const isRendering = useRef(false);
+  const renderIdRef = useRef(0);
+  const renderQueueRef = useRef(Promise.resolve());
 
   const renderPage = useCallback(async (pageNumber) => {
     if (!pdfDoc) return;
 
-    // Cancel any existing render task first
-    if (renderTaskRef.current) {
-      try {
-        renderTaskRef.current.cancel();
-      } catch (e) {
-        // Ignore cancel errors
+    // Generate unique render ID for this operation
+    const currentRenderId = ++renderIdRef.current;
+    
+    // Queue this render operation to prevent concurrent renders
+    renderQueueRef.current = renderQueueRef.current.then(async () => {
+      // Check if this render is still current (not superseded by newer render)
+      if (renderIdRef.current !== currentRenderId) {
+        return; // Skip this render as a newer one has been queued
       }
-      renderTaskRef.current = null;
-    }
 
-    // If already rendering, wait for it to complete
-    if (isRendering.current) {
-      // Wait for the rendering flag to be cleared
-      let waitCount = 0;
-      while (isRendering.current && waitCount < 50) { // Max 500ms wait
+      // Cancel any existing render task
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel();
+        } catch (e) {
+          // Ignore cancel errors
+        }
+        renderTaskRef.current = null;
+        
+        // Small delay to ensure cancellation completes
         await new Promise(resolve => setTimeout(resolve, 10));
-        waitCount++;
-      }
-    }
-
-    // Set rendering flag
-    isRendering.current = true;
-
-    try {
-      const page = await pdfDoc.getPage(pageNumber);
-      
-      // Get viewport with original rotation preserved
-      const vp = page.getViewport({ scale });
-      
-      console.log('PDF page info:', {
-        rotation: vp.rotation,
-        width: vp.width,
-        height: vp.height,
-        transform: vp.transform
-      });
-
-      const canvas = canvasRef.current;
-      if (!canvas) {
-        isRendering.current = false;
-        return;
-      }
-      
-      const context = canvas.getContext('2d');
-      if (!context) {
-        isRendering.current = false;
-        return;
       }
 
-      // Set canvas dimensions first
-      canvas.height = vp.height;
-      canvas.width = vp.width;
-      
-      // Clear the canvas after setting dimensions
-      context.clearRect(0, 0, canvas.width, canvas.height);
+      try {
+        const page = await pdfDoc.getPage(pageNumber);
+        
+        // Check again if this render is still current
+        if (renderIdRef.current !== currentRenderId) {
+          return;
+        }
+        
+        const vp = page.getViewport({ scale });
+        const canvas = canvasRef.current;
+        
+        if (!canvas) return;
+        
+        const context = canvas.getContext('2d');
+        if (!context) return;
 
-      const renderContext = {
-        canvasContext: context,
-        viewport: vp,
-      };
-      
-      // Create new render task
-      renderTaskRef.current = page.render(renderContext);
-      await renderTaskRef.current.promise;
-      
-      // Only set viewport after successful rendering
-      setViewport(vp);
-      setRotation(vp.rotation);
-      
-    } catch (error) {
-      if (error.name !== 'RenderingCancelledException') {
-        console.error('PDF rendering error:', error);
+        // Clear and resize canvas
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.height = vp.height;
+        canvas.width = vp.width;
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Final check before starting render
+        if (renderIdRef.current !== currentRenderId) {
+          return;
+        }
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: vp,
+        };
+        
+        renderTaskRef.current = page.render(renderContext);
+        await renderTaskRef.current.promise;
+        
+        // Only update state if this render is still current
+        if (renderIdRef.current === currentRenderId) {
+          setViewport(vp);
+          setRotation(vp.rotation);
+        }
+        
+      } catch (error) {
+        if (error.name !== 'RenderingCancelledException') {
+          console.error('PDF rendering error:', error);
+        }
+      } finally {
+        if (renderTaskRef.current) {
+          renderTaskRef.current = null;
+        }
       }
-    } finally {
-      // Always clean up
-      renderTaskRef.current = null;
-      isRendering.current = false;
-    }
+    });
+
+    return renderQueueRef.current;
   }, [pdfDoc, scale]);
 
   useLayoutEffect(() => {
@@ -245,6 +288,9 @@ export const PdfViewer = ({
     
     // Cleanup function to cancel render task on unmount or dependency change
     return () => {
+      // Invalidate current render ID to cancel any queued renders
+      renderIdRef.current++;
+      
       if (renderTaskRef.current) {
         try {
           renderTaskRef.current.cancel();
@@ -253,7 +299,6 @@ export const PdfViewer = ({
         }
         renderTaskRef.current = null;
       }
-      isRendering.current = false;
     };
   }, [currentPage, renderPage, scale]); // Rerender on scale change
 
@@ -429,6 +474,26 @@ export const PdfViewer = ({
           onDeleteTags(selectedTagIds);
           setSelectedTagIds([]);
         }
+      } else if (e.key === 'F2') {
+        // Edit selected tag or raw text
+        if (selectedTagIds.length === 1) {
+          const tagId = selectedTagIds[0];
+          const tag = tags.find(t => t.id === tagId);
+          if (tag) {
+            setEditingTagId(tagId);
+            setEditingRawTextId(null);
+            setEditingText(tag.text);
+          }
+        } else if (selectedRawTextItemIds.length === 1) {
+          const rawId = selectedRawTextItemIds[0];
+          const rawItem = rawTextItems.find(r => r.id === rawId);
+          if (rawItem) {
+            setEditingRawTextId(rawId);
+            setEditingTagId(null);
+            setEditingText(rawItem.text);
+          }
+        }
+        e.preventDefault();
       } else if (e.key.toLowerCase() === 'c') {
         // If multiple tags are selected (2 or more), create sequential connections
         if (selectedTagIds.length >= 2) {
@@ -1535,6 +1600,69 @@ export const PdfViewer = ({
                     {selectionRect && <rect x={selectionRect.x} y={selectionRect.y} width={selectionRect.width} height={selectionRect.height} className={`stroke-2 ${mode === 'manualCreate' ? 'fill-green-400/20 stroke-green-400' : 'fill-sky-400/20 stroke-sky-400'}`} />}
                 </svg>
                 )}
+
+                {/* Inline Editing Overlay */}
+                {(editingTagId || editingRawTextId) && (() => {
+                  // Find the item being edited
+                  let editingItem = null;
+                  if (editingTagId) {
+                    editingItem = tags.find(t => t.id === editingTagId && t.page === currentPage);
+                  } else if (editingRawTextId) {
+                    editingItem = rawTextItems.find(r => r.id === editingRawTextId && r.page === currentPage);
+                  }
+
+                  if (!editingItem || !viewport) return null;
+
+                  const { x1, y1, x2, y2 } = editingItem.bbox;
+                  const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
+
+                  return (
+                    <div
+                      className="absolute bg-white border-2 border-blue-500 rounded shadow-lg z-50 flex items-center gap-1 px-2 py-1"
+                      style={{
+                        left: rectX,
+                        top: rectY - 35, // Position above the item
+                        minWidth: Math.max(rectWidth, 120),
+                      }}
+                    >
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        onKeyDown={handleEditInputKeyDown}
+                        className="flex-1 border-none outline-none bg-white text-gray-800 text-sm font-mono px-1 py-0.5"
+                        style={{ 
+                          fontSize: '13px',
+                          color: '#1f2937',
+                          backgroundColor: '#ffffff'
+                        }}
+                        autoComplete="off"
+                        spellCheck="false"
+                      />
+                      <button
+                        onClick={() => handleEditComplete(true)}
+                        className="p-1 hover:bg-green-100 rounded text-green-600 hover:text-green-700 transition-colors"
+                        title="저장 (Enter)"
+                        onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleEditComplete(false)}
+                        className="p-1 hover:bg-red-100 rounded text-red-500 hover:text-red-600 transition-colors"
+                        title="취소 (Esc)"
+                        onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })()}
             </div>
         </div>
       </div>

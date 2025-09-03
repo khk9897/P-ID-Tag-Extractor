@@ -255,6 +255,7 @@ export interface ToleranceConfig {
 
 export interface AppSettings {
   autoGenerateLoops: boolean;
+  autoRemoveWhitespace: boolean;
 }
 
 export interface SettingsModalProps {

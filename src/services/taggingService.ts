@@ -206,11 +206,9 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
                 }
 
                 if (bestPartner) {
-                    const funcLeft = func.bbox.x1 < bestPartner.bbox.x1;
-                    // Order text based on left-to-right position
-                    const combinedText = funcLeft 
-                        ? `${func.item.str}-${bestPartner.item.str}`
-                        : `${bestPartner.item.str}-${func.item.str}`;
+                    // Function part should always come first (it's above the number part)
+                    // We already verified func is above bestPartner in the matching logic
+                    const combinedText = `${func.item.str}-${bestPartner.item.str}`;
 
                     const combinedBbox = {
                         x1: Math.min(func.bbox.x1, bestPartner.bbox.x1),

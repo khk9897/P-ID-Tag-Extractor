@@ -1202,10 +1202,23 @@ const PdfViewerComponent = ({
         if (toItem?.page !== currentPage) continue;
       }
       
-      // Smart filtering for selected tags only
-      if (showOnlySelectedRelationships && selectedTagIds.length > 0) {
+      // Smart filtering for selected entities only
+      if (showOnlySelectedRelationships && (selectedTagIds.length > 0 || selectedDescriptionIds.length > 0 || selectedEquipmentShortSpecIds.length > 0 || selectedRawTextItemIds.length > 0)) {
         const isFromSelected = selectedTagIds.includes(fromTag.id);
-        const isToSelected = selectedTagIds.includes(toItem.id);
+        
+        let isToSelected = false;
+        if (r.type === RelationshipType.Description) {
+          isToSelected = selectedDescriptionIds.includes(toItem.id);
+        } else if (r.type === RelationshipType.EquipmentShortSpec) {
+          isToSelected = selectedEquipmentShortSpecIds.includes(toItem.id);
+        } else if (r.type === RelationshipType.Annotation) {
+          // For annotations, toItem is a rawTextItem
+          isToSelected = selectedRawTextItemIds.includes(toItem.id);
+        } else {
+          // For other relationship types (Connection, Installation, Note), toItem should be a tag
+          isToSelected = selectedTagIds.includes(toItem.id);
+        }
+        
         if (!isFromSelected && !isToSelected) continue;
       }
       
@@ -1219,7 +1232,7 @@ const PdfViewerComponent = ({
     }
     
     return visibleRelationships;
-  }, [relationships, tagsMap, rawTextMap, descriptionsMap, equipmentShortSpecsMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, selectedTagIds]);
+  }, [relationships, tagsMap, rawTextMap, descriptionsMap, equipmentShortSpecsMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, selectedTagIds, selectedDescriptionIds, selectedEquipmentShortSpecIds, selectedRawTextItemIds]);
   
   const getAnnotationTargetCenter = (rawTextItemId) => {
       if (!viewport) return { x: 0, y: 0 };

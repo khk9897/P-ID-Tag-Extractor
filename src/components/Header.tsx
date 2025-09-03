@@ -121,7 +121,7 @@ const VisibilityPanel = ({ onClose, visibilitySettings, toggleTagVisibility, tog
     <div className="flex items-center justify-between">
       <span className="text-sm text-slate-300">{label}</span>
       <button
-        onClick={onChange}
+        onClick={() => onChange(!checked)}
         className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${
           checked ? 'bg-sky-600' : 'bg-slate-600'
         }`}

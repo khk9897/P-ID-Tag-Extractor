@@ -557,6 +557,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     if (otherTag) {
                       setSelectedTagIds([otherTag.id]);
                       setCurrentPage(otherTag.page);
+                      setTagSelectionSource('panel');
+                      // Ping the tag to scroll and center it in PDF viewer
+                      handlePingTag(otherTag.id);
                     }
                   }}
                   className="text-sky-400 hover:text-sky-300 font-mono cursor-pointer"

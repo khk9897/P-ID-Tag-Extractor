@@ -1316,9 +1316,19 @@ export const SidePanel = ({
     setCurrentPage(tag.page);
     setSelectedTagIds([tag.id]);
     
-    // Don't force virtualization updates to prevent unwanted scrolling in side panel
-    // The virtualization will naturally update when the tag becomes visible
-  }, [setCurrentPage, setSelectedTagIds, activeTab, setActiveTab, tags, showCurrentPageOnly, currentPage, filterCategory, searchQuery, setShowCurrentPageOnly, setFilterCategory, setSearchQuery]);
+    // Ping the tag to scroll and center it in PDF viewer
+    onPingTag(tag.id);
+    
+    // Scroll to the tag in SidePanel after a small delay to ensure DOM is updated
+    setTimeout(() => {
+      if (listRef.current) {
+        const element = listRef.current.querySelector(`[data-tag-id='${tag.id}']`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }, 100);
+  }, [setCurrentPage, setSelectedTagIds, activeTab, setActiveTab, tags, showCurrentPageOnly, currentPage, filterCategory, searchQuery, setShowCurrentPageOnly, setFilterCategory, setSearchQuery, onPingTag]);
 
   const handleBulkDelete = useCallback(() => {
     if (selectedTagIds.length > 0) {

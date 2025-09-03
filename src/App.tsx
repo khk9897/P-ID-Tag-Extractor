@@ -122,6 +122,7 @@ const App: React.FC = () => {
   // Keep backward compatibility - derive showRelationships from relationships settings
   const showRelationships = Object.values(visibilitySettings.relationships).some(Boolean);
   const [isSidePanelVisible, setIsSidePanelVisible] = useState<boolean>(true);
+  const [showAutoLinkRanges, setShowAutoLinkRanges] = useState<boolean>(false);
 
   
   const [patterns, setPatterns] = useState<PatternConfig>(() => {
@@ -299,6 +300,7 @@ const App: React.FC = () => {
   };
   const handleCloseConfirmation = () => {
     setConfirmation({ isOpen: false, message: '', onConfirm: () => {} });
+    setShowAutoLinkRanges(false); // Hide auto-link ranges when closing confirmation
   };
   const handleConfirm = () => {
     confirmation.onConfirm();
@@ -1314,12 +1316,42 @@ Do you want to continue?`,
     URL.revokeObjectURL(url);
   }, [pdfFile, tags, relationships, rawTextItems, patterns, tolerances]);
   
+  // Helper function to calculate minimum distance from point to bbox corners and center
+  const calculateMinDistanceToCorners = (centerX: number, centerY: number, bbox: { x1: number; y1: number; x2: number; y2: number }) => {
+    const points = [
+      [bbox.x1, bbox.y1], // top-left
+      [bbox.x2, bbox.y1], // top-right
+      [bbox.x1, bbox.y2], // bottom-left
+      [bbox.x2, bbox.y2], // bottom-right
+      [(bbox.x1 + bbox.x2) / 2, (bbox.y1 + bbox.y2) / 2] // center
+    ];
+    
+    return Math.min(...points.map(([x, y]) => 
+      Math.sqrt((centerX - x) ** 2 + (centerY - y) ** 2)
+    ));
+  };
+
   const handleAutoLinkDescriptions = useCallback(() => {
     const autoLinkDistance = tolerances[Category.Instrument]?.autoLinkDistance;
     if (typeof autoLinkDistance !== 'number') {
         alert("Auto-link distance is not configured. Please check your settings.");
         return;
     }
+
+    // Show range circles first
+    console.log('DEBUG: Setting showAutoLinkRanges to true');
+    setShowAutoLinkRanges(true);
+    
+    // Show confirmation after a brief delay to display ranges
+    setTimeout(() => {
+      showConfirmation(
+        `This will automatically create description links for all Instrument tags based on the current distance setting (${autoLinkDistance}px). This may create many relationships. Do you want to proceed?`,
+        () => {
+          setShowAutoLinkRanges(false);
+          performLinking();
+        }
+      );
+    }, 500);
 
     const performLinking = () => {
         const instrumentTags = tags.filter(t => t.category === Category.Instrument);
@@ -1331,35 +1363,37 @@ Do you want to continue?`,
         const unlinkedRawItems = rawTextItems.filter(item => !existingAnnotationTargets.has(item.id));
         const newRelationships = [];
 
-        for (const instTag of instrumentTags) {
-            const instCenter = {
-                x: (instTag.bbox.x1 + instTag.bbox.x2) / 2,
-                y: (instTag.bbox.y1 + instTag.bbox.y2) / 2
-            };
+        // For each non-tag item, find the closest instrument tag within distance
+        for (const item of unlinkedRawItems) {
+            if (existingAnnotationTargets.has(item.id)) continue;
 
-            const pageRawItems = unlinkedRawItems.filter(item => item.page === instTag.page);
+            const pageInstrumentTags = instrumentTags.filter(tag => tag.page === item.page);
+            let closestTag = null;
+            let minDistance = Infinity;
 
-            for (const item of pageRawItems) {
-                if (existingAnnotationTargets.has(item.id)) continue; // Already processed in this run
-
-                const itemCenter = {
-                    x: (item.bbox.x1 + item.bbox.x2) / 2,
-                    y: (item.bbox.y1 + item.bbox.y2) / 2
+            for (const instTag of pageInstrumentTags) {
+                const instCenter = {
+                    x: (instTag.bbox.x1 + instTag.bbox.x2) / 2,
+                    y: (instTag.bbox.y1 + instTag.bbox.y2) / 2
                 };
 
-                const dx = instCenter.x - itemCenter.x;
-                const dy = instCenter.y - itemCenter.y;
-                const distance = Math.sqrt(dx*dx + dy*dy);
+                const distance = calculateMinDistanceToCorners(instCenter.x, instCenter.y, item.bbox);
                 
-                if (distance <= autoLinkDistance) {
-                    newRelationships.push({
-                        id: uuidv4(),
-                        from: instTag.id,
-                        to: item.id,
-                        type: RelationshipType.Annotation
-                    });
-                    existingAnnotationTargets.add(item.id); 
+                if (distance <= autoLinkDistance && distance < minDistance) {
+                    minDistance = distance;
+                    closestTag = instTag;
                 }
+            }
+
+            // Create relationship only with the closest instrument tag
+            if (closestTag) {
+                newRelationships.push({
+                    id: uuidv4(),
+                    from: closestTag.id,
+                    to: item.id,
+                    type: RelationshipType.Annotation
+                });
+                existingAnnotationTargets.add(item.id); 
             }
         }
         
@@ -1585,23 +1619,40 @@ Do you want to continue?`,
               );
               
               const newRelationships = [];
-              for (const tag of instrumentTags) {
-                const nearbyItems = rawTextItems
-                  .filter(item => 
-                    item.page === tag.page && 
-                    !existingAnnotationTargets.has(item.id) &&
-                    Math.abs(item.bbox.x1 - tag.bbox.x2) <= autoLinkDistance &&
-                    Math.abs((item.bbox.y1 + item.bbox.y2) / 2 - (tag.bbox.y1 + tag.bbox.y2) / 2) <= autoLinkDistance
-                  );
-                
-                nearbyItems.forEach(item => {
+              const unlinkedRawItems = rawTextItems.filter(item => !existingAnnotationTargets.has(item.id));
+              
+              // For each non-tag item, find the closest instrument tag within distance
+              for (const item of unlinkedRawItems) {
+                if (existingAnnotationTargets.has(item.id)) continue;
+
+                const pageInstrumentTags = instrumentTags.filter(tag => tag.page === item.page);
+                let closestTag = null;
+                let minDistance = Infinity;
+
+                for (const tag of pageInstrumentTags) {
+                  const instCenter = {
+                    x: (tag.bbox.x1 + tag.bbox.x2) / 2,
+                    y: (tag.bbox.y1 + tag.bbox.y2) / 2
+                  };
+
+                  const distance = calculateMinDistanceToCorners(instCenter.x, instCenter.y, item.bbox);
+                  
+                  if (distance <= autoLinkDistance && distance < minDistance) {
+                    minDistance = distance;
+                    closestTag = tag;
+                  }
+                }
+
+                // Create relationship only with the closest instrument tag
+                if (closestTag) {
                   newRelationships.push({
                     id: uuidv4(),
-                    from: tag.id,
+                    from: closestTag.id,
                     to: item.id,
-                    type: RelationshipType.Annotation,
+                    type: RelationshipType.Annotation
                   });
-                });
+                  existingAnnotationTargets.add(item.id); 
+                }
               }
               
               if (newRelationships.length > 0) {
@@ -2037,6 +2088,8 @@ Do you want to continue?`,
             setRelationshipStartTag={setRelationshipStartTag}
             visibilitySettings={visibilitySettings}
             updateVisibilitySettings={updateVisibilitySettings}
+            showAutoLinkRanges={showAutoLinkRanges}
+            tolerances={tolerances}
             toggleTagVisibility={toggleTagVisibility}
             toggleRelationshipVisibility={toggleRelationshipVisibility}
             toggleAllTags={toggleAllTags}

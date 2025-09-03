@@ -48,6 +48,8 @@ export const PdfViewer = ({
   colorSettings,
   scrollToCenter,
   setScrollToCenter,
+  showAutoLinkRanges,
+  tolerances,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -1596,6 +1598,58 @@ export const PdfViewer = ({
                         </g>
                       );
                     })}
+
+                    {/* Auto-link Range Circles */}
+                    {showAutoLinkRanges && 
+                      tolerances && tolerances[Category.Instrument]?.autoLinkDistance && 
+                      tags.filter(tag => tag.category === Category.Instrument && tag.page === currentPage).map(tag => {
+                        const autoLinkDistance = tolerances[Category.Instrument].autoLinkDistance;
+                        const { x1, y1, x2, y2 } = tag.bbox;
+                        const centerX = (x1 + x2) / 2;
+                        const centerY = (y1 + y2) / 2;
+                        
+                        // Simple transformation based on scale only
+                        let displayCenterX, displayCenterY, displayRadius;
+                        
+                        switch (rotation) {
+                          case 90:
+                            displayCenterX = centerX * scale;
+                            displayCenterY = centerY * scale;
+                            displayRadius = autoLinkDistance * scale;
+                            break;
+                          case 180:
+                            displayCenterX = (viewport.width - centerX) * scale;
+                            displayCenterY = (viewport.height - centerY) * scale;
+                            displayRadius = autoLinkDistance * scale;
+                            break;
+                          case 270:
+                            displayCenterX = (viewport.height - centerY) * scale;
+                            displayCenterY = centerX * scale;
+                            displayRadius = autoLinkDistance * scale;
+                            break;
+                          default: // 0 degrees
+                            displayCenterX = centerX * scale;
+                            displayCenterY = centerY * scale;
+                            displayRadius = autoLinkDistance * scale;
+                            break;
+                        }
+                        
+                        return (
+                          <circle
+                            key={`range-${tag.id}`}
+                            cx={displayCenterX}
+                            cy={displayCenterY}
+                            r={displayRadius}
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth="2"
+                            strokeDasharray="5,5"
+                            opacity="0.6"
+                            pointerEvents="none"
+                          />
+                        );
+                      })
+                    }
 
                     {selectionRect && <rect x={selectionRect.x} y={selectionRect.y} width={selectionRect.width} height={selectionRect.height} className={`stroke-2 ${mode === 'manualCreate' ? 'fill-green-400/20 stroke-green-400' : 'fill-sky-400/20 stroke-sky-400'}`} />}
                 </svg>

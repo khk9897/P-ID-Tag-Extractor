@@ -221,6 +221,21 @@ export interface WorkspaceProps {
   showRelationships: boolean;
   setShowRelationships: (show: boolean) => void;
   isSidePanelVisible: boolean;
+  visibilitySettings: VisibilitySettings;
+  updateVisibilitySettings: (settings: VisibilitySettings) => void;
+  showAutoLinkRanges: boolean;
+  tolerances: ToleranceConfig;
+  loops: Loop[];
+  setLoops: React.Dispatch<React.SetStateAction<Loop[]>>;
+  onCreateHoldDescription: (selectedItems: (Tag | RawTextItem)[]) => void;
+  onDeleteLoops: (loopIds: string[]) => void;
+  onUpdateLoop: (id: string, name: string, tags: string[], notes?: string) => void;
+  onAutoGenerateLoops: () => void;
+  onManualCreateLoop: () => void;
+  toggleTagVisibility: (category: keyof VisibilitySettings['tags']) => void;
+  toggleRelationshipVisibility: (type: keyof VisibilitySettings['relationships']) => void;
+  toggleAllTags: (show: boolean) => void;
+  toggleAllRelationships: (show: boolean) => void;
 }
 
 export interface ManualTagData {

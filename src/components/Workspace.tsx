@@ -104,6 +104,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   toggleAllTags,
   toggleAllRelationships,
   isSidePanelVisible,
+  showAutoLinkRanges,
+  tolerances,
   // Comment system
   comments,
   onCreateComment,
@@ -365,6 +367,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           colorSettings={colorSettings}
           scrollToCenter={scrollToCenter}
           setScrollToCenter={setScrollToCenter}
+          showAutoLinkRanges={showAutoLinkRanges}
+          tolerances={tolerances}
         />
       </div>
       <SelectionPanel

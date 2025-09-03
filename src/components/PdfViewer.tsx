@@ -100,6 +100,10 @@ const PdfViewerComponent = ({
   setScrollToCenter,
   showAutoLinkRanges,
   tolerances,
+  showAllRelationships,
+  setShowAllRelationships,
+  showOnlySelectedRelationships,
+  setShowOnlySelectedRelationships,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -1163,8 +1167,11 @@ const PdfViewerComponent = ({
   const tagsMap = useMemo(() => new Map(tags.map(t => [t.id, t])), [tags]);
   const rawTextMap = useMemo(() => new Map(rawTextItems.map(i => [i.id, i])), [rawTextItems]);
   
-  // Memoize current relationships with pre-calculated rendering data
+  // Memoize current relationships with pre-calculated rendering data and smart filtering
   const currentRelationshipsWithData = useMemo(() => {
+    // First check master toggle - if OFF, return empty array for performance
+    if (!showAllRelationships) return [];
+    
     const visibleRelationships = [];
     
     for (const r of relationships) {
@@ -1187,6 +1194,13 @@ const PdfViewerComponent = ({
         if (toItem?.page !== currentPage) continue;
       }
       
+      // Smart filtering for selected tags only
+      if (showOnlySelectedRelationships && selectedTagIds.length > 0) {
+        const isFromSelected = selectedTagIds.includes(fromTag.id);
+        const isToSelected = selectedTagIds.includes(toItem.id);
+        if (!isFromSelected && !isToSelected) continue;
+      }
+      
       // Pre-calculate rendering data
       visibleRelationships.push({
         rel: r,
@@ -1197,7 +1211,7 @@ const PdfViewerComponent = ({
     }
     
     return visibleRelationships;
-  }, [relationships, tagsMap, rawTextMap, currentPage, visibilitySettings.relationships]);
+  }, [relationships, tagsMap, rawTextMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, selectedTagIds]);
   
   const getAnnotationTargetCenter = (rawTextItemId) => {
       if (!viewport) return { x: 0, y: 0 };

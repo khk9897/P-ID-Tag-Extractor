@@ -174,6 +174,10 @@ export interface HeaderProps {
   onAutoLinkEquipmentShortSpecs: () => void;
   onAutoLinkAll: () => void;
   onRemoveWhitespace: () => void;
+  showAllRelationships: boolean;
+  setShowAllRelationships: (show: boolean) => void;
+  showOnlySelectedRelationships: boolean;
+  setShowOnlySelectedRelationships: (show: boolean) => void;
 }
 
 export type ViewMode = 'select' | 'connect' | 'manualCreate';
@@ -236,6 +240,10 @@ export interface WorkspaceProps {
   toggleRelationshipVisibility: (type: keyof VisibilitySettings['relationships']) => void;
   toggleAllTags: (show: boolean) => void;
   toggleAllRelationships: (show: boolean) => void;
+  showAllRelationships: boolean;
+  setShowAllRelationships: (show: boolean) => void;
+  showOnlySelectedRelationships: boolean;
+  setShowOnlySelectedRelationships: (show: boolean) => void;
 }
 
 export interface ManualTagData {

@@ -101,7 +101,7 @@ const HotkeyHelp = ({ onClose }) => {
   );
 };
 
-const VisibilityPanel = ({ onClose, visibilitySettings, toggleTagVisibility, toggleRelationshipVisibility, toggleAllTags, toggleAllRelationships, updateVisibilitySettings }) => {
+const VisibilityPanel = ({ onClose, visibilitySettings, toggleTagVisibility, toggleRelationshipVisibility, toggleAllTags, toggleAllRelationships, updateVisibilitySettings, showAllRelationships, setShowAllRelationships, showOnlySelectedRelationships, setShowOnlySelectedRelationships }) => {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -246,6 +246,35 @@ const VisibilityPanel = ({ onClose, visibilitySettings, toggleTagVisibility, tog
             />
           </div>
         </div>
+
+        {/* Performance Section */}
+        <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-600">
+          <h4 className="font-semibold text-sm text-amber-400 mb-2 flex items-center">
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Performance
+          </h4>
+          <div className="space-y-2 text-sm">
+            <ToggleSwitch
+              checked={showAllRelationships}
+              onChange={setShowAllRelationships}
+              label="Show Relationship Lines"
+            />
+            {showAllRelationships && (
+              <div className="ml-4 border-l border-slate-600 pl-3">
+                <ToggleSwitch
+                  checked={showOnlySelectedRelationships}
+                  onChange={setShowOnlySelectedRelationships}
+                  label="Smart Mode (Selected Tags Only)"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Shows only relationships connected to selected tags for better performance
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -277,6 +306,10 @@ export const Header = ({
   toggleAllTags,
   toggleAllRelationships,
   showConfirmation,
+  showAllRelationships,
+  setShowAllRelationships,
+  showOnlySelectedRelationships,
+  setShowOnlySelectedRelationships,
 }) => {
   const importInputRef = useRef(null);
   const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
@@ -536,6 +569,10 @@ export const Header = ({
           toggleAllTags={toggleAllTags}
           toggleAllRelationships={toggleAllRelationships}
           updateVisibilitySettings={updateVisibilitySettings}
+          showAllRelationships={showAllRelationships}
+          setShowAllRelationships={setShowAllRelationships}
+          showOnlySelectedRelationships={showOnlySelectedRelationships}
+          setShowOnlySelectedRelationships={setShowOnlySelectedRelationships}
         />
       )}
     </header>

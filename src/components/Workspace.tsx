@@ -114,6 +114,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   getCommentsForTarget,
   // Color settings
   colorSettings,
+  // Performance settings
+  showAllRelationships,
+  setShowAllRelationships,
+  showOnlySelectedRelationships,
+  setShowOnlySelectedRelationships,
 }) => {
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
@@ -369,6 +374,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           setScrollToCenter={setScrollToCenter}
           showAutoLinkRanges={showAutoLinkRanges}
           tolerances={tolerances}
+          showAllRelationships={showAllRelationships}
+          setShowAllRelationships={setShowAllRelationships}
+          showOnlySelectedRelationships={showOnlySelectedRelationships}
+          setShowOnlySelectedRelationships={setShowOnlySelectedRelationships}
         />
       </div>
       <SelectionPanel

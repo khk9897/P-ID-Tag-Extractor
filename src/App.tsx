@@ -123,6 +123,16 @@ const App: React.FC = () => {
   const showRelationships = Object.values(visibilitySettings.relationships).some(Boolean);
   const [isSidePanelVisible, setIsSidePanelVisible] = useState<boolean>(true);
   const [showAutoLinkRanges, setShowAutoLinkRanges] = useState<boolean>(false);
+  
+  // Performance optimization settings
+  const [showAllRelationships, setShowAllRelationships] = useState<boolean>(() => {
+    const saved = localStorage.getItem('pid-tagger-showAllRelationships');
+    return saved === 'false' ? false : true; // Default to true for backward compatibility
+  });
+  const [showOnlySelectedRelationships, setShowOnlySelectedRelationships] = useState<boolean>(() => {
+    const saved = localStorage.getItem('pid-tagger-showOnlySelectedRelationships');
+    return saved === 'true' ? true : false; // Default to false
+  });
 
   
   const [patterns, setPatterns] = useState<PatternConfig>(() => {
@@ -273,6 +283,15 @@ const App: React.FC = () => {
       console.error("Failed to save color settings to localStorage", error);
     }
   }, [colorSettings]);
+
+  // Save performance settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('pid-tagger-showAllRelationships', showAllRelationships.toString());
+  }, [showAllRelationships]);
+
+  useEffect(() => {
+    localStorage.setItem('pid-tagger-showOnlySelectedRelationships', showOnlySelectedRelationships.toString());
+  }, [showOnlySelectedRelationships]);
   
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -2094,6 +2113,10 @@ Do you want to continue?`,
             toggleRelationshipVisibility={toggleRelationshipVisibility}
             toggleAllTags={toggleAllTags}
             toggleAllRelationships={toggleAllRelationships}
+            showAllRelationships={showAllRelationships}
+            setShowAllRelationships={setShowAllRelationships}
+            showOnlySelectedRelationships={showOnlySelectedRelationships}
+            setShowOnlySelectedRelationships={setShowOnlySelectedRelationships}
             comments={comments}
             onCreateComment={handleCreateComment}
             onUpdateComment={handleUpdateComment}
@@ -2161,6 +2184,10 @@ Do you want to continue?`,
           toggleAllTags={toggleAllTags}
           toggleAllRelationships={toggleAllRelationships}
           showConfirmation={showConfirmation}
+          showAllRelationships={showAllRelationships}
+          setShowAllRelationships={setShowAllRelationships}
+          showOnlySelectedRelationships={showOnlySelectedRelationships}
+          setShowOnlySelectedRelationships={setShowOnlySelectedRelationships}
         />
       </ErrorBoundary>
       <main className="flex-grow overflow-hidden">

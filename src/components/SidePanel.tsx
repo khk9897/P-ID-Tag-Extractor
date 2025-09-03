@@ -1634,7 +1634,7 @@ export const SidePanel = ({
     );
   }, [tags, descriptions, rawTextItems, equipmentShortSpecs, currentPage, setCurrentPage, onPingTag, onPingDescription, onPingEquipmentShortSpec, onPingRelationship, goToTag, handleDeleteRelationship]);
 
-  const filterCategories = ['All', Category.Equipment, Category.Line, Category.Instrument, Category.NotesAndHolds, Category.DrawingNumber];
+  const filterCategories = ['All', Category.Equipment, Category.Line, Category.SpecialItem, Category.Instrument, Category.NotesAndHolds, Category.DrawingNumber];
   
   const totalTagCount = useMemo(() => {
     return tags.filter(tag => !showCurrentPageOnly || tag.page === currentPage).length;
@@ -1830,6 +1830,7 @@ export const SidePanel = ({
                       : cat === 'Instrument' ? 'Instr'
                       : cat === 'DrawingNumber' ? 'PID NO'
                       : cat === 'NotesAndHolds' ? 'Notes'
+                      : cat === 'SpecialItem' ? 'Special'
                       : cat;
                     
                     return (

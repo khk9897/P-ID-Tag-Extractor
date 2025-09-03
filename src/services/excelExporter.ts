@@ -5,6 +5,7 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
   const equipment = tags.filter(t => t.category === Category.Equipment);
   const lines = tags.filter(t => t.category === Category.Line);
   const instruments = tags.filter(t => t.category === Category.Instrument);
+  const specialItems = tags.filter(t => t.category === Category.SpecialItem);
   const drawingNumbers = tags.filter(t => t.category === Category.DrawingNumber);
 
   // Create a map for quick lookup of drawing number by page
@@ -135,7 +136,32 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
     };
   });
 
-  // 4. Description Data
+  // 4. Special Item Data
+  const specialItemData = specialItems.map(tag => {
+    const instrumentsInstalled = relationships
+      .filter(r => r.to === tag.id && r.type === RelationshipType.Installation)
+      .map(r => getTagText(r.from))
+      .filter(Boolean)
+      .join(', ');
+    
+    const drawingNumber = pageToDrawingNumberMap.get(tag.page) || '';
+    const description = getDescriptionsForTag(tag.id);
+    const noteAndHold = getNotesForTag(tag.id);
+    const loopNumber = getLoopForTag(tag.id);
+
+    return {
+      'Tag': tag.text,
+      'Loop No': loopNumber,
+      'Page': tag.page,
+      'Drawing Number': drawingNumber,
+      'Instruments Installed': instrumentsInstalled,
+      'Related': description,
+      'Note & Hold': noteAndHold,
+      'Comments': getCommentsForEntity(tag.id),
+    };
+  });
+
+  // 5. Description Data
   const descriptionData = descriptions.map(desc => {
     const drawingNumber = pageToDrawingNumberMap.get(desc.page) || '';
     
@@ -252,6 +278,9 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
 
   const wsInstruments = XLSX.utils.json_to_sheet(instrumentData);
   XLSX.utils.book_append_sheet(wb, wsInstruments, 'Instrument List');
+
+  const wsSpecialItems = XLSX.utils.json_to_sheet(specialItemData);
+  XLSX.utils.book_append_sheet(wb, wsSpecialItems, 'Special Item List');
 
   const wsDescriptions = XLSX.utils.json_to_sheet(descriptionData);
   XLSX.utils.book_append_sheet(wb, wsDescriptions, 'Descriptions');

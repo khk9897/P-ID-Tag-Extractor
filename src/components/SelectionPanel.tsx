@@ -62,11 +62,27 @@ export const SelectionPanel = ({
           <div className="flex items-center justify-between border-t border-slate-700 pt-2">
             <span className="text-sm font-semibold text-slate-300">Select category:</span>
             <div className="flex items-center space-x-2">
-              <button onClick={() => handleCreate(Category.Equipment)} className="px-3 py-1.5 text-sm font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 transition-colors">Equipment</button>
-              <button onClick={() => handleCreate(Category.Line)} className="px-3 py-1.5 text-sm font-semibold text-white bg-rose-600 rounded-md hover:bg-rose-700 transition-colors">Line</button>
-              <button onClick={() => handleCreate(Category.Instrument)} className="px-3 py-1.5 text-sm font-semibold text-white bg-amber-500 rounded-md hover:bg-amber-600 transition-colors">Instrument</button>
+              <button onClick={() => handleCreate(Category.Equipment)} className="px-3 py-1.5 text-sm font-semibold text-white bg-orange-600 rounded-md hover:bg-orange-700 transition-colors flex items-center space-x-1">
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">1</span>
+                <span>Equipment</span>
+              </button>
+              <button onClick={() => handleCreate(Category.Line)} className="px-3 py-1.5 text-sm font-semibold text-white bg-rose-600 rounded-md hover:bg-rose-700 transition-colors flex items-center space-x-1">
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">2</span>
+                <span>Line</span>
+              </button>
+              <button onClick={() => handleCreate(Category.SpecialItem)} className="px-3 py-1.5 text-sm font-semibold text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors flex items-center space-x-1">
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">3</span>
+                <span>Special Item</span>
+              </button>
+              <button onClick={() => handleCreate(Category.Instrument)} className="px-3 py-1.5 text-sm font-semibold text-white bg-amber-500 rounded-md hover:bg-amber-600 transition-colors flex items-center space-x-1">
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">4</span>
+                <span>Instrument</span>
+              </button>
+              <button onClick={() => handleCreate(Category.NotesAndHolds)} className="px-3 py-1.5 text-sm font-semibold text-white bg-teal-600 rounded-md hover:bg-teal-700 transition-colors flex items-center space-x-1">
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">5</span>
+                <span>Note/Hold</span>
+              </button>
               <button onClick={() => handleCreate(Category.DrawingNumber)} className="px-3 py-1.5 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors">Drawing No.</button>
-              <button onClick={() => handleCreate(Category.NotesAndHolds)} className="px-3 py-1.5 text-sm font-semibold text-white bg-teal-600 rounded-md hover:bg-teal-700 transition-colors">Note/Hold</button>
             </div>
           </div>
         </div>
@@ -151,11 +167,27 @@ export const SelectionPanel = ({
                   <div className="flex items-center justify-between border-t border-slate-700 pt-2">
                     <span className="text-sm font-semibold text-slate-300">Create new tag:</span>
                     <div className="flex items-center space-x-2">
-                      <button onClick={() => handleCreate(Category.Equipment)} className="px-3 py-1.5 text-sm font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 transition-colors">Equipment</button>
-                      <button onClick={() => handleCreate(Category.Line)} className="px-3 py-1.5 text-sm font-semibold text-white bg-rose-600 rounded-md hover:bg-rose-700 transition-colors">Line</button>
-                      <button onClick={() => handleCreate(Category.Instrument)} className="px-3 py-1.5 text-sm font-semibold text-white bg-amber-500 rounded-md hover:bg-amber-600 transition-colors">Instrument</button>
+                      <button onClick={() => handleCreate(Category.Equipment)} className="px-3 py-1.5 text-sm font-semibold text-white bg-orange-600 rounded-md hover:bg-orange-700 transition-colors flex items-center space-x-1">
+                        <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">1</span>
+                        <span>Equipment</span>
+                      </button>
+                      <button onClick={() => handleCreate(Category.Line)} className="px-3 py-1.5 text-sm font-semibold text-white bg-rose-600 rounded-md hover:bg-rose-700 transition-colors flex items-center space-x-1">
+                        <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">2</span>
+                        <span>Line</span>
+                      </button>
+                      <button onClick={() => handleCreate(Category.SpecialItem)} className="px-3 py-1.5 text-sm font-semibold text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors flex items-center space-x-1">
+                        <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">3</span>
+                        <span>Special Item</span>
+                      </button>
+                      <button onClick={() => handleCreate(Category.Instrument)} className="px-3 py-1.5 text-sm font-semibold text-white bg-amber-500 rounded-md hover:bg-amber-600 transition-colors flex items-center space-x-1">
+                        <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">4</span>
+                        <span>Instrument</span>
+                      </button>
+                      <button onClick={() => handleCreate(Category.NotesAndHolds)} className="px-3 py-1.5 text-sm font-semibold text-white bg-teal-600 rounded-md hover:bg-teal-700 transition-colors flex items-center space-x-1">
+                        <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">5</span>
+                        <span>Note/Hold</span>
+                      </button>
                       <button onClick={() => handleCreate(Category.DrawingNumber)} className="px-3 py-1.5 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors">Drawing No.</button>
-                      <button onClick={() => handleCreate(Category.NotesAndHolds)} className="px-3 py-1.5 text-sm font-semibold text-white bg-teal-600 rounded-md hover:bg-teal-700 transition-colors">Note/Hold</button>
                     </div>
                   </div>
                 )}
@@ -174,10 +206,11 @@ export const SelectionPanel = ({
               const categorySortOrder = {
                 [Category.Equipment]: 0,
                 [Category.Line]: 1,
-                [Category.Instrument]: 2,
-                [Category.DrawingNumber]: 3,
+                [Category.SpecialItem]: 2,
+                [Category.Instrument]: 3,
                 [Category.NotesAndHolds]: 4,
-                [Category.Uncategorized]: 5,
+                [Category.DrawingNumber]: 5,
+                [Category.Uncategorized]: 6,
               };
 
               selectedTags = [...selectedTags].sort((a, b) => {

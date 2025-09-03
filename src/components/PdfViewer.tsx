@@ -88,6 +88,8 @@ export const PdfViewer = ({
         return colors.entities.drawingNumber;
       case Category.NotesAndHolds:
         return colors.entities.notesAndHolds;
+      case Category.SpecialItem:
+        return colors.entities.specialItem;
       default:
         return colors.entities.uncategorized;
     }
@@ -122,6 +124,8 @@ export const PdfViewer = ({
         return visibilitySettings.tags.drawingNumber;
       case Category.NotesAndHolds:
         return visibilitySettings.tags.notesAndHolds;
+      case Category.SpecialItem:
+        return visibilitySettings.tags.specialItem;
       default:
         return true;
     }
@@ -355,10 +359,69 @@ export const PdfViewer = ({
       }
       
       if (e.key === '1') {
-        setScale(s => Math.max(0.25, s - 0.25));
+        // Equipment hotkey - trigger manual creation mode
+        if (selectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.Equipment);
+          setSelectedRawTextItemIds([]);
+        } else {
+          onManualAreaSelect();
+          setTimeout(() => {
+            const event = new CustomEvent('manualTagCreate', { detail: { category: Category.Equipment } });
+            window.dispatchEvent(event);
+          }, 100);
+        }
         e.preventDefault();
       } else if (e.key === '2') {
-        setScale(s => Math.min(10, s + 0.25));
+        // Line hotkey
+        if (selectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.Line);
+          setSelectedRawTextItemIds([]);
+        } else {
+          onManualAreaSelect();
+          setTimeout(() => {
+            const event = new CustomEvent('manualTagCreate', { detail: { category: Category.Line } });
+            window.dispatchEvent(event);
+          }, 100);
+        }
+        e.preventDefault();
+      } else if (e.key === '3') {
+        // Special Item hotkey
+        if (selectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.SpecialItem);
+          setSelectedRawTextItemIds([]);
+        } else {
+          onManualAreaSelect();
+          setTimeout(() => {
+            const event = new CustomEvent('manualTagCreate', { detail: { category: Category.SpecialItem } });
+            window.dispatchEvent(event);
+          }, 100);
+        }
+        e.preventDefault();
+      } else if (e.key === '4') {
+        // Instrument hotkey
+        if (selectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.Instrument);
+          setSelectedRawTextItemIds([]);
+        } else {
+          onManualAreaSelect();
+          setTimeout(() => {
+            const event = new CustomEvent('manualTagCreate', { detail: { category: Category.Instrument } });
+            window.dispatchEvent(event);
+          }, 100);
+        }
+        e.preventDefault();
+      } else if (e.key === '5') {
+        // Note/Hold hotkey
+        if (selectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.NotesAndHolds);
+          setSelectedRawTextItemIds([]);
+        } else {
+          onManualAreaSelect();
+          setTimeout(() => {
+            const event = new CustomEvent('manualTagCreate', { detail: { category: Category.NotesAndHolds } });
+            window.dispatchEvent(event);
+          }, 100);
+        }
         e.preventDefault();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedTagIds.length > 0) {

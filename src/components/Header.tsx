@@ -68,8 +68,6 @@ const HotkeyHelp = ({ onClose }) => {
             <h4 className="font-semibold text-sm text-slate-400 mb-2">Navigation & Selection</h4>
             <dl className="space-y-2 text-sm text-slate-300">
                 <div className="flex justify-between items-center"><dt>Pan View</dt><dd><Key text="Drag" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Zoom Out</dt><dd><Key text="1" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Zoom In</dt><dd><Key text="2" /></dd></div>
                 <div className="flex justify-between items-center"><dt>Previous Page</dt><dd><Key text="Q" /></dd></div>
                 <div className="flex justify-between items-center"><dt>Next Page</dt><dd><Key text="W" /></dd></div>
                 <div className="flex justify-between items-center"><dt>Area Select</dt><dd><Key text="Ctrl" /> + <Key text="Drag" /></dd></div>
@@ -79,6 +77,16 @@ const HotkeyHelp = ({ onClose }) => {
             <h4 className="font-semibold text-sm text-slate-400 mb-2">Modes</h4>
             <dl className="space-y-2 text-sm text-slate-300">
                 {modes.map(m => <div key={m.key} className="flex justify-between items-center"><dt>{m.desc}</dt><dd><Key text={m.key} /></dd></div>)}
+            </dl>
+        </div>
+        <div>
+            <h4 className="font-semibold text-sm text-slate-400 mb-2">Tag Creation</h4>
+            <dl className="space-y-2 text-sm text-slate-300">
+                <div className="flex justify-between items-center"><dt>Create <span className="text-orange-400 font-semibold">Equipment</span> Tag</dt><dd><Key text="1" /></dd></div>
+                <div className="flex justify-between items-center"><dt>Create <span className="text-rose-400 font-semibold">Line</span> Tag</dt><dd><Key text="2" /></dd></div>
+                <div className="flex justify-between items-center"><dt>Create <span className="text-purple-400 font-semibold">Special Item</span> Tag</dt><dd><Key text="3" /></dd></div>
+                <div className="flex justify-between items-center"><dt>Create <span className="text-amber-400 font-semibold">Instrument</span> Tag</dt><dd><Key text="4" /></dd></div>
+                <div className="flex justify-between items-center"><dt>Create <span className="text-teal-400 font-semibold">Note/Hold</span> Tag</dt><dd><Key text="5" /></dd></div>
             </dl>
         </div>
         <div>

@@ -116,10 +116,14 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
     [Category.NotesAndHolds]: {
         description: "Finds notes or holds, typically starting with 'NOTE' or 'HOLD'.",
         example: "NOTE 1, HOLD FOR REVIEW"
+    },
+    [Category.SpecialItem]: {
+        description: "Finds special items, similar to equipment but without short specs. Uses custom pattern.",
+        example: "Custom pattern defined by user"
     }
   };
 
-  const categories = [Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber, Category.NotesAndHolds];
+  const categories = [Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber, Category.NotesAndHolds, Category.SpecialItem];
   
   const instrumentCurrentTolerances = localTolerances[Category.Instrument] || { vertical: 0, horizontal: 0, autoLinkDistance: 50 };
 

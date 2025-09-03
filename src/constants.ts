@@ -9,6 +9,7 @@ export const DEFAULT_PATTERNS = {
   },
   [Category.DrawingNumber]: '[A-Z\\d-]{5,}-[A-Z\\d-]{5,}-\\d{3,}',
   [Category.NotesAndHolds]: '^(NOTE|HOLD).*',
+  [Category.SpecialItem]: '',
 };
 
 export const DEFAULT_TOLERANCES = {
@@ -25,9 +26,9 @@ export const DEFAULT_SETTINGS = {
 
 export const CATEGORY_COLORS = {
   [Category.Equipment]: {
-    border: 'border-sky-400',
-    bg: 'bg-sky-500/20',
-    text: 'text-sky-400',
+    border: 'border-orange-400',
+    bg: 'bg-orange-500/20',
+    text: 'text-orange-400',
   },
   [Category.Line]: {
     border: 'border-rose-400',
@@ -49,6 +50,11 @@ export const CATEGORY_COLORS = {
     bg: 'bg-teal-500/20',
     text: 'text-teal-400',
   },
+  [Category.SpecialItem]: {
+    border: 'border-purple-400',
+    bg: 'bg-purple-500/20',
+    text: 'text-purple-400',
+  },
   [Category.Uncategorized]: {
     border: 'border-slate-500',
     bg: 'bg-slate-500/20',
@@ -58,14 +64,15 @@ export const CATEGORY_COLORS = {
 
 export const DEFAULT_COLORS: ColorSettings = {
   entities: {
-    equipment: '#38bdf8',      // Sky blue
+    equipment: '#f97316',      // Orange
     line: '#fb7185',           // Rose
     instrument: '#fbbf24',     // Amber
     drawingNumber: '#818cf8',  // Indigo
     notesAndHolds: '#14b8a6',  // Teal
+    specialItem: '#c084fc',    // Purple
     uncategorized: '#94a3b8',  // Slate
     description: '#a855f7',     // Purple (for Note & Hold descriptions)
-    equipmentShortSpec: '#f97316', // Orange (for equipment short specs)
+    equipmentShortSpec: '#fb923c', // Light Orange (for equipment short specs)
   },
   relationships: {
     connection: '#38bdf8',      // Sky blue (arrow line)

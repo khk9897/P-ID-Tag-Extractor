@@ -4,6 +4,7 @@ export const Category = {
   Instrument: 'Instrument',
   DrawingNumber: 'DrawingNumber',
   NotesAndHolds: 'NotesAndHolds',
+  SpecialItem: 'SpecialItem',
   Uncategorized: 'Uncategorized',
 } as const;
 
@@ -43,6 +44,7 @@ export interface VisibilitySettings {
     instrument: boolean;
     drawingNumber: boolean;
     notesAndHolds: boolean;
+    specialItem: boolean;
   };
   descriptions: boolean;
   equipmentShortSpecs: boolean;
@@ -64,6 +66,7 @@ export interface ColorSettings {
     instrument: string;
     drawingNumber: string;
     notesAndHolds: string;
+    specialItem: string;
     uncategorized: string;
     description: string;        // Description entity color
     equipmentShortSpec: string;  // Equipment Short Spec entity color
@@ -239,6 +242,7 @@ export interface PatternConfig {
   [Category.Instrument]: InstrumentPattern;
   [Category.DrawingNumber]: string;
   [Category.NotesAndHolds]: string;
+  [Category.SpecialItem]: string;
 }
 
 export interface ToleranceConfig {

@@ -244,6 +244,7 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances) => {
         { category: Category.Equipment, regex: patterns[Category.Equipment] },
         { category: Category.Line, regex: patterns[Category.Line] },
         { category: Category.NotesAndHolds, regex: patterns[Category.NotesAndHolds] },
+        { category: Category.SpecialItem, regex: patterns[Category.SpecialItem] },
     ];
 
     for (let i = 0; i < textItems.length; i++) {

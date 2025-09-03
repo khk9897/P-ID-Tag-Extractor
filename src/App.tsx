@@ -105,6 +105,7 @@ const App: React.FC = () => {
       instrument: true,
       drawingNumber: true,
       notesAndHolds: true,
+      specialItem: true,
     },
     descriptions: true,
     equipmentShortSpecs: true,

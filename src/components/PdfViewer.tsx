@@ -861,9 +861,9 @@ export const PdfViewer = ({
             const { x, y, width, height } = selectionRect;
             const bbox = {
                 x1: x / scale,
-                y1: (viewport.height - (y + height)) / scale,
+                y1: y / scale,
                 x2: (x + width) / scale,
-                y2: (viewport.height - y) / scale,
+                y2: (y + height) / scale,
             };
             onManualAreaSelect(bbox, currentPage);
         }
@@ -880,7 +880,7 @@ export const PdfViewer = ({
       const { x1, y1, x2, y2 } = tag.bbox;
       const tagRect = {
         x: x1 * scale,
-        y: viewport.height - (y2 * scale),
+        y: y1 * scale,
         width: (x2 - x1) * scale,
         height: (y2 - y1) * scale
       };
@@ -902,7 +902,7 @@ export const PdfViewer = ({
         const { x1, y1, x2, y2 } = item.bbox;
         const itemRect = {
             x: x1 * scale,
-            y: viewport.height - (y2 * scale),
+            y: y1 * scale,
             width: (x2 - x1) * scale,
             height: (y2 - y1) * scale
         };
@@ -946,8 +946,9 @@ export const PdfViewer = ({
         screenY = pdfCenterX * scale;
         break;
       default: // 0 degrees
+        // For non-rotated documents, coordinates are already flipped in taggingService
         screenX = pdfCenterX * scale;
-        screenY = viewport.height - (pdfCenterY * scale);
+        screenY = pdfCenterY * scale;
         break;
     }
     
@@ -1010,8 +1011,10 @@ export const PdfViewer = ({
     
     switch (rotation) {
       case 90:
-        screenX = pdfCenterY * scale;
-        screenY = pdfCenterX * scale;
+        // For 90-degree rotation, coordinates are already swapped in taggingService
+        // Use them directly without additional transformation
+        screenX = pdfCenterX * scale;
+        screenY = pdfCenterY * scale;
         break;
       case 180:
         screenX = (viewport.width / scale - pdfCenterX) * scale;
@@ -1019,11 +1022,12 @@ export const PdfViewer = ({
         break;
       case 270:
         screenX = (viewport.height / scale - pdfCenterY) * scale;
-        screenY = viewport.width - (pdfCenterX * scale);
+        screenY = (viewport.width / scale - pdfCenterX) * scale;
         break;
       default: // 0 degrees
+        // For non-rotated documents, coordinates are already flipped in taggingService
         screenX = pdfCenterX * scale;
-        screenY = viewport.height - (pdfCenterY * scale);
+        screenY = pdfCenterY * scale;
         break;
     }
     
@@ -1058,8 +1062,10 @@ export const PdfViewer = ({
         rectHeight = (x2 - x1) * scale;
         break;
       default: // 0 degrees
+        // For non-rotated documents, coordinates are already flipped in taggingService
+        // Use them directly without additional y-coordinate transformation
         rectX = x1 * scale;
-        rectY = viewport.height - (y2 * scale);
+        rectY = y1 * scale;
         rectWidth = (x2 - x1) * scale;
         rectHeight = (y2 - y1) * scale;
         break;

@@ -28,17 +28,28 @@ const calculateBbox = (item, viewBoxOffsetX = 0, viewBoxOffsetY = 0, viewport = 
         x2: Math.max(...xs), y2: Math.max(...ys),
     };
     
-    // Handle 90-degree rotation: swap X and Y coordinates to match screen layout
+    // Handle different PDF rotations and coordinate system transformations
     if (viewport && rotation === 90) {
+        // 90-degree rotation: swap X and Y coordinates to match screen layout
         return {
             x1: pdfBbox.y1,
             y1: pdfBbox.x1, 
             x2: pdfBbox.y2,
             y2: pdfBbox.x2,
         };
+    } else if (viewport) {
+        // Non-rotated documents: flip Y coordinates to match screen coordinate system
+        // PDF uses bottom-left origin (0,0), screen uses top-left origin (0,0)
+        const pageHeight = viewport.height;
+        return {
+            x1: pdfBbox.x1,
+            y1: pageHeight - pdfBbox.y2,  // Flip Y: bottom becomes top
+            x2: pdfBbox.x2, 
+            y2: pageHeight - pdfBbox.y1,  // Flip Y: top becomes bottom
+        };
     }
     
-    // For other rotations, coordinates are already in correct system
+    // Fallback for cases without viewport information
     return pdfBbox;
 };
 

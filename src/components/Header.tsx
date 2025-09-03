@@ -239,16 +239,6 @@ const VisibilityPanel = ({ onClose, visibilitySettings, toggleTagVisibility, tog
               onChange={() => toggleRelationshipVisibility('note')}
               label="Note"
             />
-            <ToggleSwitch
-              checked={visibilitySettings.relationships.description}
-              onChange={() => toggleRelationshipVisibility('description')}
-              label="Description"
-            />
-            <ToggleSwitch
-              checked={visibilitySettings.relationships.equipmentShortSpec}
-              onChange={() => toggleRelationshipVisibility('equipmentShortSpec')}
-              label="Equipment Short Spec"
-            />
           </div>
         </div>
 

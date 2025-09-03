@@ -1293,13 +1293,11 @@ export const SidePanel = ({
       lastClickedIndex.current = index;
     } else {
       // This is a simple click.
-      // Check if it's a re-click on the single selected tag to trigger a ping.
-      if (selectedTagIds.length === 1 && selectedTagIds[0] === tag.id) {
-        onPingTag(tag.id);
-      }
       setCurrentPage(tag.page);
       setSelectedTagIds([tag.id]);
       lastClickedIndex.current = index;
+      // Always ping tag on click to center it on screen
+      onPingTag(tag.id);
     }
   }, [sortedAndFilteredTags, selectedTagIds, setSelectedTagIds, setCurrentPage, onPingTag]);
   
@@ -1329,27 +1327,8 @@ export const SidePanel = ({
     setCurrentPage(tag.page);
     setSelectedTagIds([tag.id]);
     
-    // Force immediate virtualization update for large lists
-    if (tags.length > 100) {
-      // Calculate based on all tags since we're removing filters
-      const allTags = tags.filter(t => 
-        (!showCurrentPageOnly || !isTagVisible || t.page === tag.page) &&
-        (filterCategory === 'All' || !isTagInCategory || t.category === tag.category) &&
-        (searchQuery === '' || !isTagInSearch || t.text.toLowerCase().includes(tag.text.toLowerCase()))
-      );
-      
-      const selectedIndex = allTags.findIndex(t => t.id === tag.id);
-      if (selectedIndex !== -1) {
-        const bufferSize = 30; // Reduced buffer size for faster updates
-        const newStart = Math.max(0, selectedIndex - bufferSize);
-        const newEnd = Math.min(allTags.length, selectedIndex + bufferSize * 2);
-        
-        // Use requestAnimationFrame for immediate but smooth update
-        requestAnimationFrame(() => {
-          setVirtualizedRange({ start: newStart, end: newEnd });
-        });
-      }
-    }
+    // Don't force virtualization updates to prevent unwanted scrolling in side panel
+    // The virtualization will naturally update when the tag becomes visible
   }, [setCurrentPage, setSelectedTagIds, activeTab, setActiveTab, tags, showCurrentPageOnly, currentPage, filterCategory, searchQuery, setShowCurrentPageOnly, setFilterCategory, setSearchQuery]);
 
   const handleBulkDelete = useCallback(() => {

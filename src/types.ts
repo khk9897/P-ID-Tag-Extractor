@@ -53,8 +53,6 @@ export interface VisibilitySettings {
     installation: boolean;
     annotation: boolean;
     note: boolean;
-    description: boolean;
-    equipmentShortSpec: boolean;
   };
 }
 

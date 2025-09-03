@@ -242,9 +242,9 @@ const PdfViewerComponent = ({
       case RelationshipType.Note:
         return visibilitySettings.relationships.note;
       case RelationshipType.Description:
-        return visibilitySettings.relationships.description;
+        return false; // Always hide Description relationship lines
       case RelationshipType.EquipmentShortSpec:
-        return visibilitySettings.relationships.equipmentShortSpec;
+        return false; // Always hide EquipmentShortSpec relationship lines
       default:
         return true;
     }
@@ -1166,8 +1166,6 @@ const PdfViewerComponent = ({
   // Create lookup maps for better performance
   const tagsMap = useMemo(() => new Map(tags.map(t => [t.id, t])), [tags]);
   const rawTextMap = useMemo(() => new Map(rawTextItems.map(i => [i.id, i])), [rawTextItems]);
-  const descriptionsMap = useMemo(() => new Map(descriptions.map(d => [d.id, d])), [descriptions]);
-  const equipmentShortSpecsMap = useMemo(() => new Map(equipmentShortSpecs.map(e => [e.id, e])), [equipmentShortSpecs]);
   
   // Memoize current relationships with pre-calculated rendering data and smart filtering
   const currentRelationshipsWithData = useMemo(() => {
@@ -1191,29 +1189,24 @@ const PdfViewerComponent = ({
         toItem = rawTextMap.get(r.to);
         if (!toItem || toItem.page !== currentPage) continue;
         isAnnotation = true;
-      } else if (r.type === RelationshipType.Description) {
-        toItem = descriptionsMap.get(r.to);
-        if (!toItem || toItem.page !== currentPage) continue;
-      } else if (r.type === RelationshipType.EquipmentShortSpec) {
-        toItem = equipmentShortSpecsMap.get(r.to);
-        if (!toItem || toItem.page !== currentPage) continue;
       } else {
+        // For Connection, Installation, Note relationships, toItem should be a tag
         toItem = tagsMap.get(r.to);
         if (!toItem || toItem.page !== currentPage) continue;
       }
       
       // Smart filtering for selected entities only
-      if (showOnlySelectedRelationships && (selectedTagIds.length > 0 || selectedDescriptionIds.length > 0 || selectedEquipmentShortSpecIds.length > 0 || selectedRawTextItemIds.length > 0)) {
+      if (showOnlySelectedRelationships && (selectedTagIds.length > 0 || selectedRawTextItemIds.length > 0)) {
         const isFromSelected = selectedTagIds.includes(fromTag.id);
         
         let isToSelected = false;
-        if (r.type === RelationshipType.Description) {
-          isToSelected = selectedDescriptionIds.includes(toItem.id);
-        } else if (r.type === RelationshipType.EquipmentShortSpec) {
-          isToSelected = selectedEquipmentShortSpecIds.includes(toItem.id);
-        } else if (r.type === RelationshipType.Annotation) {
+        if (r.type === RelationshipType.Annotation) {
           // For annotations, toItem is a rawTextItem
           isToSelected = selectedRawTextItemIds.includes(toItem.id);
+          // If no raw text items are selected but tags are selected, hide Annotation relationships
+          if (selectedRawTextItemIds.length === 0 && selectedTagIds.length > 0) {
+            continue;
+          }
         } else {
           // For other relationship types (Connection, Installation, Note), toItem should be a tag
           isToSelected = selectedTagIds.includes(toItem.id);
@@ -1232,7 +1225,7 @@ const PdfViewerComponent = ({
     }
     
     return visibleRelationships;
-  }, [relationships, tagsMap, rawTextMap, descriptionsMap, equipmentShortSpecsMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, selectedTagIds, selectedDescriptionIds, selectedEquipmentShortSpecIds, selectedRawTextItemIds]);
+  }, [relationships, tagsMap, rawTextMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, selectedTagIds, selectedRawTextItemIds]);
   
   const getAnnotationTargetCenter = (rawTextItemId) => {
       if (!viewport) return { x: 0, y: 0 };

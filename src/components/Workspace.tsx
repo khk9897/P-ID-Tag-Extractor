@@ -546,7 +546,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     return otherTag ? (
                       <div key={rel.id} className="flex items-center justify-between">
                         <div className="flex items-center space-x-1.5">
-                          <span className="text-slate-400">→</span>
+                          <span className="text-slate-300 text-xs">To</span>
                           {renderRelationship(otherTag.id, otherTag.text)}
                         </div>
                         <DeleteRelationshipButton onClick={() => handleDeleteRelationship(rel.id)} />
@@ -560,7 +560,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     return otherTag ? (
                       <div key={rel.id} className="flex items-center justify-between">
                         <div className="flex items-center space-x-1.5">
-                          <span className="text-slate-400">←</span>
+                          <span className="text-slate-300 text-xs">From</span>
                           {renderRelationship(otherTag.id, otherTag.text)}
                         </div>
                         <DeleteRelationshipButton onClick={() => handleDeleteRelationship(rel.id)} />

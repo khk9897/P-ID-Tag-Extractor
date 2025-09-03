@@ -430,12 +430,12 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
           {/* Outgoing Connections */}
           {outgoingConnections.map(rel => {
             const otherTag = tagMap.get(rel.to);
-            return otherTag ? <div key={rel.id} className="flex items-center justify-between"><div className="flex items-center space-x-1.5"><span className="text-slate-400">→</span>{renderRelationship(otherTag.id, otherTag.text)}</div><DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} /></div> : null;
+            return otherTag ? <div key={rel.id} className="flex items-center justify-between"><div className="flex items-center space-x-1.5"><span className="text-slate-300 text-xs">To</span>{renderRelationship(otherTag.id, otherTag.text)}</div><DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} /></div> : null;
           })}
           {/* Incoming Connections */}
           {incomingConnections.map(rel => {
             const otherTag = tagMap.get(rel.from);
-            return otherTag ? <div key={rel.id} className="flex items-center justify-between"><div className="flex items-center space-x-1.5"><span className="text-slate-400">←</span>{renderRelationship(otherTag.id, otherTag.text)}</div><DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} /></div> : null;
+            return otherTag ? <div key={rel.id} className="flex items-center justify-between"><div className="flex items-center space-x-1.5"><span className="text-slate-300 text-xs">From</span>{renderRelationship(otherTag.id, otherTag.text)}</div><DeleteRelationshipButton onClick={() => onDeleteRelationship(rel.id)} /></div> : null;
           })}
           {/* This tag is an instrument installed ON something */}
           {installationTarget && tagMap.get(installationTarget.to) && (
@@ -905,7 +905,7 @@ export const SidePanel = ({
         if (!rel) return 'Unknown Relationship';
         const fromTag = tags.find(t => t.id === rel.from);
         const toTag = tags.find(t => t.id === rel.to);
-        return `${fromTag?.text || 'Unknown'} → ${toTag?.text || 'Unknown'}`;
+        return `From ${fromTag?.text || 'Unknown'} To ${toTag?.text || 'Unknown'}`;
       default:
         return 'Unknown';
     }
@@ -962,7 +962,7 @@ export const SidePanel = ({
         const fromTag = tags.find(t => t.id === rel.from);
         const toTag = tags.find(t => t.id === rel.to);
         return {
-          name: `${fromTag?.text || 'Unknown'} → ${toTag?.text || 'Unknown'}`,
+          name: `From ${fromTag?.text || 'Unknown'} To ${toTag?.text || 'Unknown'}`,
           metadata: `Type: ${rel.type}`
         };
       
@@ -1580,7 +1580,7 @@ export const SidePanel = ({
                     const getRelationshipDisplay = (type) => {
                       switch (type) {
                         case RelationshipType.Connection:
-                          return { icon: '→', title: 'Connection' };
+                          return { icon: '⟶', title: 'Connection' };
                         case RelationshipType.Installation:
                           return { icon: '📌', title: 'Installation' };
                         case RelationshipType.Annotation:
@@ -1607,8 +1607,9 @@ export const SidePanel = ({
                         >
                             <div className="flex items-center space-x-2 flex-grow">
                                 <span className="text-xs text-slate-500 font-medium">{rel.type}</span>
+                                <span className="text-slate-300 text-xs">From</span>
                                 {renderEntity(fromEntity)}
-                                <span className="text-slate-400" title={title}>{icon}</span>
+                                <span className="text-slate-300 text-xs">To</span>
                                 {renderEntity(toEntity)}
                                 <CommentIndicator
                                   comments={getCommentsForTarget(rel.id)}
@@ -1616,7 +1617,7 @@ export const SidePanel = ({
                                     e.stopPropagation();
                                     const fromName = fromEntity?.text || 'Unknown';
                                     const toName = toEntity?.text || 'Unknown';
-                                    handleOpenComments(rel.id, `${fromName} → ${toName}`, 'relationship');
+                                    handleOpenComments(rel.id, `From ${fromName} To ${toName}`, 'relationship');
                                   }}
                                   size="sm"
                                   className="ml-2"

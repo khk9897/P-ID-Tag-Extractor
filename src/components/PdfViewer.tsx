@@ -3,7 +3,57 @@ import { RelationshipType, Category } from '../types.ts';
 import { CATEGORY_COLORS, DEFAULT_COLORS } from '../constants.ts';
 import { v4 as uuidv4 } from 'uuid';
 
-export const PdfViewer = ({
+// Throttle function for performance
+const throttle = (func, delay) => {
+  let timeoutId;
+  let lastExecTime = 0;
+  return (...args) => {
+    const currentTime = Date.now();
+    if (currentTime - lastExecTime > delay) {
+      func(...args);
+      lastExecTime = currentTime;
+    }
+  };
+};
+
+// Memoized relationship line component for performance
+const RelationshipLine = React.memo(({ rel, start, end, strokeColor, marker, isPinged }) => {
+  const lineStrokeWidth = isPinged ? '4' : '2';
+  const lineStrokeColor = isPinged ? '#ef4444' : strokeColor;
+  const dashArray = isPinged ? 'none' : 
+    (rel.type === RelationshipType.Annotation || rel.type === RelationshipType.Note ? '3 3' : 'none');
+
+  return (
+    <g>
+      <line 
+        x1={start.x} 
+        y1={start.y} 
+        x2={end.x} 
+        y2={end.y} 
+        stroke={lineStrokeColor} 
+        strokeWidth={lineStrokeWidth} 
+        strokeDasharray={dashArray} 
+        markerEnd={marker}
+        className={isPinged ? 'ping-highlight-line' : ''}
+      />
+      {isPinged && (
+        <line 
+          x1={start.x} 
+          y1={start.y} 
+          x2={end.x} 
+          y2={end.y} 
+          stroke="#ef4444" 
+          strokeWidth="8" 
+          strokeOpacity="0.3"
+          strokeDasharray="none"
+          className="ping-highlight-line-glow"
+        />
+      )}
+    </g>
+  );
+});
+
+const PdfViewerComponent = ({
   pdfDoc,
   tags,
   setTags,
@@ -885,8 +935,28 @@ export const PdfViewer = ({
   };
 
   // Show all tags for interaction, but apply different styling based on visibility
-  const currentTags = tags.filter(t => t.page === currentPage);
-  const currentRawTextItems = rawTextItems.filter(t => t.page === currentPage);
+  // Memoize current page tags for performance
+  const currentTags = useMemo(() => 
+    tags.filter(t => t.page === currentPage),
+    [tags, currentPage]
+  );
+  // Memoize current page raw text items for performance
+  const currentRawTextItems = useMemo(() => 
+    rawTextItems.filter(t => t.page === currentPage),
+    [rawTextItems, currentPage]
+  );
+  
+  // Memoize current page descriptions for performance
+  const currentDescriptions = useMemo(() => 
+    descriptions.filter(desc => desc.page === currentPage),
+    [descriptions, currentPage]
+  );
+  
+  // Memoize current page equipment short specs for performance
+  const currentEquipmentShortSpecs = useMemo(() => 
+    equipmentShortSpecs.filter(spec => spec.page === currentPage),
+    [equipmentShortSpecs, currentPage]
+  );
 
  const handleViewerMouseDown = (e) => {
     if (
@@ -1089,23 +1159,49 @@ export const PdfViewer = ({
     return { x: screenX, y: screenY };
   };
 
-  const currentRelationships = relationships.filter(r => {
-    // First check if this relationship type should be visible
-    if (!isRelationshipVisible(r)) return false;
+  // Create lookup maps for better performance
+  const tagsMap = useMemo(() => new Map(tags.map(t => [t.id, t])), [tags]);
+  const rawTextMap = useMemo(() => new Map(rawTextItems.map(i => [i.id, i])), [rawTextItems]);
+  
+  // Memoize current relationships with pre-calculated rendering data
+  const currentRelationshipsWithData = useMemo(() => {
+    const visibleRelationships = [];
     
-    const fromTag = tags.find(t => t.id === r.from);
-    // Annotations can link to raw text items which don't have a page property in the same way
-    if (r.type === RelationshipType.Annotation) {
-        const toItem = rawTextItems.find(item => item.id === r.to);
-        return fromTag?.page === currentPage && toItem?.page === currentPage;
+    for (const r of relationships) {
+      // First check if this relationship type should be visible
+      if (!isRelationshipVisible(r)) continue;
+      
+      const fromTag = tagsMap.get(r.from);
+      if (fromTag?.page !== currentPage) continue;
+      
+      let toItem = null;
+      let isAnnotation = false;
+      
+      // Annotations can link to raw text items
+      if (r.type === RelationshipType.Annotation) {
+        toItem = rawTextMap.get(r.to);
+        if (toItem?.page !== currentPage) continue;
+        isAnnotation = true;
+      } else {
+        toItem = tagsMap.get(r.to);
+        if (toItem?.page !== currentPage) continue;
+      }
+      
+      // Pre-calculate rendering data
+      visibleRelationships.push({
+        rel: r,
+        fromTag,
+        toItem,
+        isAnnotation
+      });
     }
-    const toTag = tags.find(t => t.id === r.to);
-    return fromTag?.page === currentPage && toTag?.page === currentPage;
-  });
+    
+    return visibleRelationships;
+  }, [relationships, tagsMap, rawTextMap, currentPage, visibilitySettings.relationships]);
   
   const getAnnotationTargetCenter = (rawTextItemId) => {
       if (!viewport) return { x: 0, y: 0 };
-      const item = rawTextItems.find(i => i.id === rawTextItemId);
+      const item = rawTextMap.get(rawTextItemId);
       if (!item) return { x: 0, y: 0 };
       
       // Get the center coordinates in PDF coordinate system
@@ -1300,25 +1396,20 @@ export const PdfViewer = ({
                          )
                     })}
                     
-                    {currentRelationships.map(rel => {
-                        const fromTag = tags.find(t => t.id === rel.from);
-                        if (!fromTag) return null;
+                    {currentRelationshipsWithData.map(({ rel, fromTag, toItem, isAnnotation }) => {
+                        if (!fromTag || !toItem) return null;
                         
                         const start = getTagCenter(fromTag);
                         let end, strokeColor, marker;
                         
-                        if (rel.type === RelationshipType.Annotation) {
-                            const toItem = rawTextItems.find(i => i.id === rel.to);
-                            if (!toItem) return null;
+                        if (isAnnotation) {
                             end = getAnnotationTargetCenter(rel.to);
                             strokeColor = getRelationshipColor(rel.type);
                             marker = '';
                         } else {
-                            const toTag = tags.find(t => t.id === rel.to);
-                            if (!toTag) return null;
-                            end = getTagCenter(toTag);
-                            
+                            end = getTagCenter(toItem);
                             strokeColor = getRelationshipColor(rel.type);
+                            
                             if (rel.type === RelationshipType.Connection) {
                                 marker = 'url(#arrowhead-connect)';
                             } else if (rel.type === RelationshipType.Installation) {
@@ -1330,37 +1421,17 @@ export const PdfViewer = ({
 
                         // Check if this relationship should be highlighted
                         const isPinged = pingedRelationshipId === rel.id;
-                        const lineStrokeWidth = isPinged ? '4' : '2';
-                        const lineStrokeColor = isPinged ? '#ef4444' : strokeColor; // red-500 for pinged
-                        const dashArray = isPinged ? 'none' : (rel.type === RelationshipType.Annotation || rel.type === RelationshipType.Note ? '3 3' : 'none');
 
                         return (
-                            <g key={rel.id}>
-                                <line 
-                                    x1={start.x} 
-                                    y1={start.y} 
-                                    x2={end.x} 
-                                    y2={end.y} 
-                                    stroke={lineStrokeColor} 
-                                    strokeWidth={lineStrokeWidth} 
-                                    strokeDasharray={dashArray} 
-                                    markerEnd={marker}
-                                    className={isPinged ? 'ping-highlight-line' : ''}
-                                />
-                                {isPinged && (
-                                    <line 
-                                        x1={start.x} 
-                                        y1={start.y} 
-                                        x2={end.x} 
-                                        y2={end.y} 
-                                        stroke="#ef4444" 
-                                        strokeWidth="8" 
-                                        strokeOpacity="0.3"
-                                        strokeDasharray="none"
-                                        className="ping-highlight-line-glow"
-                                    />
-                                )}
-                            </g>
+                            <RelationshipLine
+                                key={rel.id}
+                                rel={rel}
+                                start={start}
+                                end={end}
+                                strokeColor={strokeColor}
+                                marker={marker}
+                                isPinged={isPinged}
+                            />
                         );
                     })}
                     
@@ -1447,7 +1518,7 @@ export const PdfViewer = ({
                     })()}
 
                     {/* Descriptions */}
-                    {descriptions.filter(desc => desc.page === currentPage).map(desc => {
+                    {currentDescriptions.map(desc => {
                       const { x1, y1, x2, y2 } = desc.bbox;
                       const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                       const isSelected = selectedDescriptionIds.includes(desc.id);
@@ -1563,7 +1634,7 @@ export const PdfViewer = ({
                     })()}
 
                     {/* Equipment Short Specs */}
-                    {equipmentShortSpecs.filter(spec => spec.page === currentPage).map(spec => {
+                    {currentEquipmentShortSpecs.map(spec => {
                       const { x1, y1, x2, y2 } = spec.bbox;
                       const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                       const isSelected = selectedEquipmentShortSpecIds.includes(spec.id);
@@ -1602,7 +1673,7 @@ export const PdfViewer = ({
                     {/* Auto-link Range Circles */}
                     {showAutoLinkRanges && 
                       tolerances && tolerances[Category.Instrument]?.autoLinkDistance && 
-                      tags.filter(tag => tag.category === Category.Instrument && tag.page === currentPage).map(tag => {
+                      currentTags.filter(tag => tag.category === Category.Instrument).map(tag => {
                         const autoLinkDistance = tolerances[Category.Instrument].autoLinkDistance;
                         const { x1, y1, x2, y2 } = tag.bbox;
                         const centerX = (x1 + x2) / 2;
@@ -1723,3 +1794,24 @@ export const PdfViewer = ({
     </div>
   );
 };
+
+// Export memoized component for better performance
+export const PdfViewer = React.memo(PdfViewerComponent, (prevProps, nextProps) => {
+  // Custom comparison function for deep equality check on critical props
+  return (
+    prevProps.currentPage === nextProps.currentPage &&
+    prevProps.scale === nextProps.scale &&
+    prevProps.mode === nextProps.mode &&
+    prevProps.tags === nextProps.tags &&
+    prevProps.relationships === nextProps.relationships &&
+    prevProps.rawTextItems === nextProps.rawTextItems &&
+    prevProps.descriptions === nextProps.descriptions &&
+    prevProps.equipmentShortSpecs === nextProps.equipmentShortSpecs &&
+    prevProps.selectedTagIds === nextProps.selectedTagIds &&
+    prevProps.selectedRawTextItemIds === nextProps.selectedRawTextItemIds &&
+    prevProps.selectedDescriptionIds === nextProps.selectedDescriptionIds &&
+    prevProps.selectedEquipmentShortSpecIds === nextProps.selectedEquipmentShortSpecIds &&
+    prevProps.visibilitySettings === nextProps.visibilitySettings &&
+    prevProps.showAutoLinkRanges === nextProps.showAutoLinkRanges
+  );
+});

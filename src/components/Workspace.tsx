@@ -124,6 +124,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
   const [selectedDescriptionIds, setSelectedDescriptionIds] = useState([]);
   const [selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds] = useState([]);
+  const [tagSelectionSource, setTagSelectionSource] = useState(null); // 'pdf' | 'panel' | null
   const [manualCreationData, setManualCreationData] = useState(null); // {bbox, page}
   const [pingedTagId, setPingedTagId] = useState(null);
   const [pingedDescriptionId, setPingedDescriptionId] = useState(null);
@@ -142,6 +143,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   const handleDeselectTag = (tagId) => {
     setSelectedTagIds(prev => prev.filter(id => id !== tagId));
+    if (selectedTagIds.length <= 1) {
+      setTagSelectionSource(null);
+    }
   };
   
   const handleDeselectRawTextItem = (itemId) => {
@@ -156,6 +160,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setSelectedTagIds([]);
     setSelectedRawTextItemIds([]);
     setSelectedDescriptionIds([]);
+    setTagSelectionSource(null);
   };
   
   const handleManualAreaSelect = (bbox, page) => {
@@ -286,7 +291,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         selectedTagIds={selectedTagIds}
-        setSelectedTagIds={setSelectedTagIds}
+        setSelectedTagIds={(ids) => {
+          setSelectedTagIds(ids);
+          // When selecting from panel, mark the source
+          setTagSelectionSource('panel');
+        }}
+        tagSelectionSource={tagSelectionSource}
         selectedDescriptionIds={selectedDescriptionIds}
         setSelectedDescriptionIds={setSelectedDescriptionIds}
         selectedEquipmentShortSpecIds={selectedEquipmentShortSpecIds}
@@ -336,7 +346,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           currentPage={currentPage}
           setCurrentPage={setCurrentPage}
           selectedTagIds={selectedTagIds}
-          setSelectedTagIds={setSelectedTagIds}
+          setSelectedTagIds={(ids) => {
+            setSelectedTagIds(ids);
+            // When selecting from PDF, mark the source
+            setTagSelectionSource('pdf');
+          }}
           selectedDescriptionIds={selectedDescriptionIds}
           setSelectedDescriptionIds={setSelectedDescriptionIds}
           selectedEquipmentShortSpecIds={selectedEquipmentShortSpecIds}

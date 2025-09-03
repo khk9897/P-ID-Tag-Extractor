@@ -760,6 +760,7 @@ export const SidePanel = ({
   // View props
   currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, 
   setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds,
+  tagSelectionSource, // Add selection source tracking
   // Action props
   onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, 
   onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText,
@@ -1234,8 +1235,20 @@ export const SidePanel = ({
     });
   }, [relationships, showCurrentPageOnly, currentPage, tags, descriptions, rawTextItems]);
 
-  // Removed auto-scroll useEffect to prevent unwanted SidePanel scrolling
-  // Tags will remain visible through virtualization without forced scrolling
+  // Auto-scroll to selected tag only when selection comes from PDF viewer
+  useEffect(() => {
+    // Only scroll if selection came from PDF and we have a single selected tag
+    if (tagSelectionSource === 'pdf' && selectedTagIds.length === 1 && activeTab === 'tags' && listRef.current) {
+      const selectedId = selectedTagIds[0];
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        const element = listRef.current.querySelector(`[data-tag-id='${selectedId}']`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [selectedTagIds, tagSelectionSource, activeTab, sortedAndFilteredTags]);
 
   // Focus on selected description in side panel when selected from PDF viewer
   useEffect(() => {

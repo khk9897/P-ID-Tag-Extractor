@@ -124,8 +124,11 @@ const PdfViewerComponent = ({
   const [editingText, setEditingText] = useState('');
   const editInputRef = useRef(null);
   
-  // Timer for auto-clearing tag selection
+  // Timer for auto-clearing tag selection highlight
   const selectionTimerRef = useRef(null);
+  
+  // State to track visual highlight separately from selection
+  const [highlightedTagIds, setHighlightedTagIds] = useState(new Set());
 
   // Focus input when editing starts
   useEffect(() => {
@@ -135,7 +138,14 @@ const PdfViewerComponent = ({
     }
   }, [editingTagId, editingRawTextId]);
 
-  // Auto-clear tag selection after 3 seconds
+  // Sync highlighted tags with selected tags
+  useEffect(() => {
+    if (selectedTagIds.length > 0) {
+      setHighlightedTagIds(new Set(selectedTagIds));
+    }
+  }, [selectedTagIds]);
+
+  // Auto-clear tag highlight (not selection) after 3 seconds
   useEffect(() => {
     // Clear existing timer
     if (selectionTimerRef.current) {
@@ -143,10 +153,10 @@ const PdfViewerComponent = ({
       selectionTimerRef.current = null;
     }
 
-    // Only set timer if tags are selected
-    if (selectedTagIds.length > 0) {
+    // Only set timer if tags are highlighted
+    if (highlightedTagIds.size > 0) {
       selectionTimerRef.current = setTimeout(() => {
-        setSelectedTagIds([]);
+        setHighlightedTagIds(new Set()); // Clear highlight only
         selectionTimerRef.current = null;
       }, 3000); // 3 seconds
     }
@@ -158,7 +168,7 @@ const PdfViewerComponent = ({
         selectionTimerRef.current = null;
       }
     };
-  }, [selectedTagIds, setSelectedTagIds]);
+  }, [highlightedTagIds]);
 
   // Handle editing completion
   const handleEditComplete = useCallback((save = true) => {
@@ -1495,6 +1505,7 @@ const PdfViewerComponent = ({
                     const { x1, y1, x2, y2 } = tag.bbox;
                     const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                     const isSelected = selectedTagIds.includes(tag.id);
+                    const isHighlighted = highlightedTagIds.has(tag.id); // Use highlight state for visual feedback
                     const isRelStart = tag.id === relationshipStartTag;
                     const isRelated = relatedTagIds.has(tag.id);
                     const isVisible = isTagVisible(tag);
@@ -1508,18 +1519,18 @@ const PdfViewerComponent = ({
                           width={rectWidth} 
                           height={rectHeight} 
                           stroke={isVisible ? getEntityColor(tag.category) : 'transparent'}
-                          strokeWidth={isVisible ? (isSelected ? "3" : "3") : "0.5"}
+                          strokeWidth={isVisible ? (isHighlighted ? "3" : "3") : "0.5"}
                           className="transition-all duration-150" 
                           fill={
                             isVisible 
-                              ? (isSelected ? `${color}4D` : `${getEntityColor(tag.category)}66`) // Selection: 30% opacity like Description/EquipmentShortSpec, Normal: original 40% opacity
+                              ? (isHighlighted ? `${color}4D` : `${getEntityColor(tag.category)}66`) // Highlight: 30% opacity, Normal: 40% opacity
                               : 'rgba(255, 255, 255, 0.003)'
                           } 
                           strokeDasharray={isRelStart ? "4 2" : "none"}
                           style={{ pointerEvents: 'all' }}
-                          rx={isSelected ? "2" : "0"}
+                          rx={isHighlighted ? "2" : "0"}
                         />
-                        {isRelated && !isSelected && isVisible && (
+                        {isRelated && !isHighlighted && isVisible && (
                             <rect 
                             x={rectX} 
                             y={rectY} 

@@ -123,6 +123,9 @@ const PdfViewerComponent = ({
   const [editingRawTextId, setEditingRawTextId] = useState(null);
   const [editingText, setEditingText] = useState('');
   const editInputRef = useRef(null);
+  
+  // Timer for auto-clearing tag selection
+  const selectionTimerRef = useRef(null);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -131,6 +134,31 @@ const PdfViewerComponent = ({
       editInputRef.current.select();
     }
   }, [editingTagId, editingRawTextId]);
+
+  // Auto-clear tag selection after 3 seconds
+  useEffect(() => {
+    // Clear existing timer
+    if (selectionTimerRef.current) {
+      clearTimeout(selectionTimerRef.current);
+      selectionTimerRef.current = null;
+    }
+
+    // Only set timer if tags are selected
+    if (selectedTagIds.length > 0) {
+      selectionTimerRef.current = setTimeout(() => {
+        setSelectedTagIds([]);
+        selectionTimerRef.current = null;
+      }, 3000); // 3 seconds
+    }
+
+    // Cleanup timer on component unmount
+    return () => {
+      if (selectionTimerRef.current) {
+        clearTimeout(selectionTimerRef.current);
+        selectionTimerRef.current = null;
+      }
+    };
+  }, [selectedTagIds, setSelectedTagIds]);
 
   // Handle editing completion
   const handleEditComplete = useCallback((save = true) => {
@@ -1470,7 +1498,7 @@ const PdfViewerComponent = ({
                     const isRelStart = tag.id === relationshipStartTag;
                     const isRelated = relatedTagIds.has(tag.id);
                     const isVisible = isTagVisible(tag);
-                    const colors = CATEGORY_COLORS[tag.category];
+                    const color = getEntityColor(tag.category);
 
                     return (
                         <g key={tag.id} data-tag-id={tag.id} onMouseDown={(e) => handleTagMouseDown(e, tag.id)} className="cursor-pointer">
@@ -1480,39 +1508,27 @@ const PdfViewerComponent = ({
                           width={rectWidth} 
                           height={rectHeight} 
                           stroke={isVisible ? getEntityColor(tag.category) : 'transparent'}
-                          strokeWidth={isVisible ? 3 : 0.5}
+                          strokeWidth={isVisible ? (isSelected ? "3" : "3") : "0.5"}
                           className="transition-all duration-150" 
                           fill={
                             isVisible 
-                              ? `${getEntityColor(tag.category)}66` // Add 40% opacity (66 in hex)
+                              ? (isSelected ? `${color}4D` : `${getEntityColor(tag.category)}66`) // Selection: 30% opacity like Description/EquipmentShortSpec, Normal: original 40% opacity
                               : 'rgba(255, 255, 255, 0.003)'
                           } 
                           strokeDasharray={isRelStart ? "4 2" : "none"}
                           style={{ pointerEvents: 'all' }}
+                          rx={isSelected ? "2" : "0"}
                         />
-                        {isSelected && (
-                          <rect 
-                            x={rectX - 4} 
-                            y={rectY - 4} 
-                            width={rectWidth + 8} 
-                            height={rectHeight + 8} 
-                            fill="none"
-                            stroke={colors.highlights?.selected || DEFAULT_COLORS.highlights.selected} 
-                            strokeWidth={isVisible ? "4" : "2"} 
-                            strokeDasharray={isVisible ? "none" : "4 4"}
-                            opacity={isVisible ? "1" : "0.7"}
-                            rx="2" 
-                          />
-                        )}
                         {isRelated && !isSelected && isVisible && (
                             <rect 
                             x={rectX} 
                             y={rectY} 
                             width={rectWidth} 
                             height={rectHeight} 
-                            fill={`${colors.highlights?.noteRelated || DEFAULT_COLORS.highlights.noteRelated}66`} 
-                            stroke={colors.highlights?.noteRelated || DEFAULT_COLORS.highlights.noteRelated}
+                            fill={`${DEFAULT_COLORS.highlights.noteRelated}66`} 
+                            stroke={DEFAULT_COLORS.highlights.noteRelated}
                             strokeWidth="3"
+                            rx="2"
                             />
                         )}
                         </g>

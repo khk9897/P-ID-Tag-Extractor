@@ -1234,32 +1234,8 @@ export const SidePanel = ({
     });
   }, [relationships, showCurrentPageOnly, currentPage, tags, descriptions, rawTextItems]);
 
-  useEffect(() => {
-    if (activeTab === 'tags' && selectedTagIds.length === 1 && listRef.current) {
-      const selectedId = selectedTagIds[0];
-      
-      // Fast scroll function with reduced retry logic
-      const fastScrollToElement = (attempt = 0) => {
-        const element = listRef.current?.querySelector(`[data-tag-id='${selectedId}']`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else if (attempt < 3) { // Reduced retry count for speed
-          // Quick retries with shorter wait time
-          setTimeout(() => fastScrollToElement(attempt + 1), 50);
-        } else {
-          // Immediate fallback: estimate scroll position
-          const tagIndex = sortedAndFilteredTags.findIndex(tag => tag.id === selectedId);
-          if (tagIndex !== -1 && listRef.current) {
-            const estimatedPosition = tagIndex * 80; // Approximate item height
-            listRef.current.scrollTop = Math.max(0, estimatedPosition - 200);
-          }
-        }
-      };
-      
-      // Start immediately without initial delay
-      fastScrollToElement();
-    }
-  }, [selectedTagIds, activeTab, sortedAndFilteredTags]);
+  // Removed auto-scroll useEffect to prevent unwanted SidePanel scrolling
+  // Tags will remain visible through virtualization without forced scrolling
 
   // Focus on selected description in side panel when selected from PDF viewer
   useEffect(() => {

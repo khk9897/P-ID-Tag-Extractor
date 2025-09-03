@@ -1166,6 +1166,8 @@ const PdfViewerComponent = ({
   // Create lookup maps for better performance
   const tagsMap = useMemo(() => new Map(tags.map(t => [t.id, t])), [tags]);
   const rawTextMap = useMemo(() => new Map(rawTextItems.map(i => [i.id, i])), [rawTextItems]);
+  const descriptionsMap = useMemo(() => new Map(descriptions.map(d => [d.id, d])), [descriptions]);
+  const equipmentShortSpecsMap = useMemo(() => new Map(equipmentShortSpecs.map(e => [e.id, e])), [equipmentShortSpecs]);
   
   // Memoize current relationships with pre-calculated rendering data and smart filtering
   const currentRelationshipsWithData = useMemo(() => {
@@ -1184,11 +1186,17 @@ const PdfViewerComponent = ({
       let toItem = null;
       let isAnnotation = false;
       
-      // Annotations can link to raw text items
+      // Different relationship types link to different entity types
       if (r.type === RelationshipType.Annotation) {
         toItem = rawTextMap.get(r.to);
         if (toItem?.page !== currentPage) continue;
         isAnnotation = true;
+      } else if (r.type === RelationshipType.Description) {
+        toItem = descriptionsMap.get(r.to);
+        if (toItem?.page !== currentPage) continue;
+      } else if (r.type === RelationshipType.EquipmentShortSpec) {
+        toItem = equipmentShortSpecsMap.get(r.to);
+        if (toItem?.page !== currentPage) continue;
       } else {
         toItem = tagsMap.get(r.to);
         if (toItem?.page !== currentPage) continue;
@@ -1211,7 +1219,7 @@ const PdfViewerComponent = ({
     }
     
     return visibleRelationships;
-  }, [relationships, tagsMap, rawTextMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, selectedTagIds]);
+  }, [relationships, tagsMap, rawTextMap, descriptionsMap, equipmentShortSpecsMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, selectedTagIds]);
   
   const getAnnotationTargetCenter = (rawTextItemId) => {
       if (!viewport) return { x: 0, y: 0 };
@@ -1532,7 +1540,7 @@ const PdfViewerComponent = ({
                     })()}
 
                     {/* Descriptions */}
-                    {currentDescriptions.map(desc => {
+                    {visibilitySettings.descriptions && currentDescriptions.map(desc => {
                       const { x1, y1, x2, y2 } = desc.bbox;
                       const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                       const isSelected = selectedDescriptionIds.includes(desc.id);
@@ -1648,7 +1656,7 @@ const PdfViewerComponent = ({
                     })()}
 
                     {/* Equipment Short Specs */}
-                    {currentEquipmentShortSpecs.map(spec => {
+                    {visibilitySettings.equipmentShortSpecs && currentEquipmentShortSpecs.map(spec => {
                       const { x1, y1, x2, y2 } = spec.bbox;
                       const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
                       const isSelected = selectedEquipmentShortSpecIds.includes(spec.id);

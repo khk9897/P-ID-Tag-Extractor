@@ -113,9 +113,9 @@ const App: React.FC = () => {
     relationships: {
       connection: true,
       installation: true,
-      annotation: true,
-      note: true,
-      offPageConnection: true,
+      annotation: false,
+      note: false,
+      offPageConnection: false,
     },
   });
   

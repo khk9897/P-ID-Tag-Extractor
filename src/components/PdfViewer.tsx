@@ -1398,42 +1398,25 @@ const PdfViewerComponent = ({
     const visibleRelationships = [];
     
     for (const r of relationships) {
-      // First check if this relationship type should be visible
+      // 🚀 Performance: Only process Connection and Installation relationships
+      if (r.type !== RelationshipType.Connection && r.type !== RelationshipType.Installation) {
+        continue; // Skip other relationship types entirely
+      }
+      
+      // Check if this relationship type should be visible
       if (!isRelationshipVisible(r)) continue;
       
       const fromTag = tagsMap.get(r.from);
       if (fromTag?.page !== currentPage) continue;
       
-      let toItem = null;
-      let isAnnotation = false;
-      
-      // Different relationship types link to different entity types
-      if (r.type === RelationshipType.Annotation) {
-        toItem = rawTextMap.get(r.to);
-        if (!toItem || toItem.page !== currentPage) continue;
-        isAnnotation = true;
-      } else {
-        // For Connection, Installation, Note relationships, toItem should be a tag
-        toItem = tagsMap.get(r.to);
-        if (!toItem || toItem.page !== currentPage) continue;
-      }
+      // Connection/Installation relationships are always Tag → Tag
+      const toTag = tagsMap.get(r.to);
+      if (!toTag || toTag.page !== currentPage) continue;
       
       // Smart filtering for selected entities only
-      if (showOnlySelectedRelationships && (selectedTagIds.length > 0 || selectedRawTextItemIds.length > 0)) {
+      if (showOnlySelectedRelationships && selectedTagIds.length > 0) {
         const isFromSelected = selectedTagIds.includes(fromTag.id);
-        
-        let isToSelected = false;
-        if (r.type === RelationshipType.Annotation) {
-          // For annotations, toItem is a rawTextItem
-          isToSelected = selectedRawTextItemIds.includes(toItem.id);
-          // If no raw text items are selected but tags are selected, hide Annotation relationships
-          if (selectedRawTextItemIds.length === 0 && selectedTagIds.length > 0) {
-            continue;
-          }
-        } else {
-          // For other relationship types (Connection, Installation, Note), toItem should be a tag
-          isToSelected = selectedTagIds.includes(toItem.id);
-        }
+        const isToSelected = selectedTagIds.includes(toTag.id);
         
         if (!isFromSelected && !isToSelected) continue;
       }
@@ -1442,13 +1425,13 @@ const PdfViewerComponent = ({
       visibleRelationships.push({
         rel: r,
         fromTag,
-        toItem,
-        isAnnotation
+        toItem: toTag,
+        isAnnotation: false // Connection/Installation are never annotations
       });
     }
     
     return visibleRelationships;
-  }, [relationships, tagsMap, rawTextMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, selectedTagIds, selectedRawTextItemIds]);
+  }, [relationships, tagsMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, selectedTagIds]);
   
   const getAnnotationTargetCenter = (rawTextItemId) => {
       if (!viewport) return { x: 0, y: 0 };

@@ -338,6 +338,103 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
         }
     }
 
+    // OPC Pass: Find Off-Page Connector tags (Drawing Number + Reference combination)
+    const drawingNumberRegex = new RegExp(drawingNumberRegexString);
+    const opcReferenceRegex = new RegExp(patterns[Category.OffPageConnector]);
+    const opcTolerances = tolerances[Category.OffPageConnector] || { vertical: 15, horizontal: 20 };
+    
+    try {
+        // Find all Drawing Number matches (including already consumed ones for OPC purposes)
+        const drawingNumberMatches = [];
+        for (let i = 0; i < textItems.length; i++) {
+            const item = textItems[i];
+            const match = item.str.match(drawingNumberRegex);
+            
+            if (match) {
+                const bbox = calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY, viewport, rotation);
+                drawingNumberMatches.push({
+                    item,
+                    index: i,
+                    bbox,
+                    text: match[0],
+                    isConsumed: consumedIndices.has(i), // Track if this was already used as Drawing Number tag
+                });
+            }
+        }
+        
+        console.log(`[OPC Pass] Page ${pageNum}: Found ${drawingNumberMatches.length} Drawing Number candidates for OPC combinations`, 
+                   drawingNumberMatches.map(d => `"${d.text}" (${d.isConsumed ? 'used as tag' : 'unused'})`));
+        
+        // For each Drawing Number, look for nearby reference numbers
+        for (const dwgMatch of drawingNumberMatches) {
+            const dwgCenter = {
+                x: (dwgMatch.bbox.x1 + dwgMatch.bbox.x2) / 2,
+                y: (dwgMatch.bbox.y1 + dwgMatch.bbox.y2) / 2,
+            };
+            
+            let bestReference = null;
+            let minDistanceSq = Infinity;
+            
+            for (let i = 0; i < textItems.length; i++) {
+                if (consumedIndices.has(i) || i === dwgMatch.index) continue;
+                
+                const item = textItems[i];
+                const refMatch = item.str.match(opcReferenceRegex);
+                
+                if (refMatch) {
+                    const bbox = calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY, viewport, rotation);
+                    const refCenter = {
+                        x: (bbox.x1 + bbox.x2) / 2,
+                        y: (bbox.y1 + bbox.y2) / 2,
+                    };
+                    
+                    const dx = Math.abs(dwgCenter.x - refCenter.x);
+                    const dy = Math.abs(dwgCenter.y - refCenter.y);
+                    
+                    if (dx <= opcTolerances.horizontal && dy <= opcTolerances.vertical) {
+                        const distanceSq = dx * dx + dy * dy;
+                        if (distanceSq < minDistanceSq) {
+                            minDistanceSq = distanceSq;
+                            bestReference = { item, index: i, bbox, text: refMatch[0] };
+                        }
+                    }
+                }
+            }
+            
+            if (bestReference) {
+                // Create OPC tag using only the reference part (not the full drawing number)
+                const cleanedText = removeWhitespace(bestReference.text, Category.OffPageConnector, appSettings.autoRemoveWhitespace);
+                console.log(`[OPC Creation] Page ${pageNum}: Creating OPC "${cleanedText}" from Drawing Number "${dwgMatch.text}" + reference "${bestReference.text}" (dwg tag ${dwgMatch.isConsumed ? 'exists' : 'unused'})`);
+                
+                foundTags.push({
+                    id: uuidv4(),
+                    text: cleanedText,
+                    page: pageNum,
+                    bbox: bestReference.bbox,
+                    category: Category.OffPageConnector,
+                    sourceItems: [
+                        {
+                            id: uuidv4(),
+                            text: dwgMatch.item.str,
+                            page: pageNum,
+                            bbox: dwgMatch.bbox,
+                        },
+                        {
+                            id: uuidv4(),
+                            text: bestReference.item.str,
+                            page: pageNum,
+                            bbox: bestReference.bbox,
+                        }
+                    ],
+                });
+                consumedIndices.add(bestReference.index);
+                // Note: We don't consume the drawing number index as it might be the title block
+            }
+        }
+    } catch (error) {
+        console.error(`Error in OPC detection: ${error.message}`, error);
+    }
+
     // Final Pass: Collect all un-tagged items as raw text
     for (let i = 0; i < textItems.length; i++) {
         if (consumedIndices.has(i)) continue;
@@ -354,4 +451,60 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
     }
 
     return { tags: foundTags, rawTextItems };
+};
+
+// Post-processing function to create OPC relationships across pages
+export const createOPCRelationships = (tags, relationshipType) => {
+    const opcTags = tags.filter(tag => tag.category === Category.OffPageConnector);
+    const relationships = [];
+    
+    console.log(`[OPC] Found ${opcTags.length} OPC tags:`, opcTags.map(t => `${t.text} (page ${t.page})`));
+    
+    // Group OPC tags by their reference text
+    const opcGroups = {};
+    opcTags.forEach(tag => {
+        const refText = tag.text;
+        if (!opcGroups[refText]) {
+            opcGroups[refText] = [];
+        }
+        opcGroups[refText].push(tag);
+    });
+    
+    // Create relationships for groups that have exactly 2 tags on different pages
+    Object.entries(opcGroups).forEach(([refText, tagGroup]) => {
+        console.log(`[OPC] Processing group "${refText}" with ${tagGroup.length} tags`);
+        
+        if (tagGroup.length === 2) {
+            const [tag1, tag2] = tagGroup;
+            
+            // Only connect if they are on different pages
+            if (tag1.page !== tag2.page) {
+                console.log(`[OPC] Creating bidirectional relationship for "${refText}" between page ${tag1.page} and ${tag2.page}`);
+                
+                // Create bidirectional relationship
+                relationships.push({
+                    id: uuidv4(),
+                    from: tag1.id,
+                    to: tag2.id,
+                    type: relationshipType.OffPageConnection,
+                });
+                
+                relationships.push({
+                    id: uuidv4(),
+                    from: tag2.id,
+                    to: tag1.id,
+                    type: relationshipType.OffPageConnection,
+                });
+            } else {
+                console.warn(`[OPC] Reference "${refText}" found twice on same page ${tag1.page}`);
+            }
+        } else if (tagGroup.length > 2) {
+            console.warn(`[OPC] Reference "${refText}" found ${tagGroup.length} times. Expected exactly 2 for connection.`);
+        } else {
+            console.log(`[OPC] Reference "${refText}" found only once on page ${tagGroup[0].page}`);
+        }
+    });
+    
+    console.log(`[OPC] Created ${relationships.length} relationships`);
+    return relationships;
 };

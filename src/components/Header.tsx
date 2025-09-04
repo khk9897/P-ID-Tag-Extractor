@@ -32,6 +32,7 @@ const HotkeyHelp = ({ onClose }) => {
 
   const modes = [
     { key: 'S', desc: <>Toggle <span className="text-sky-300 font-bold">S</span>ide Panel</> },
+    { key: 'O', desc: <>Toggle <span className="text-sky-300 font-bold">O</span>PC Panel</> },
     { key: 'C', desc: <>Toggle <span className="text-sky-300 font-bold">C</span>onnect Mode</> },
     { key: 'K', desc: <>Toggle Manual Ma<span className="text-sky-300 font-bold">k</span>e Mode</> },
     { key: 'V', desc: <>Toggle <span className="text-sky-300 font-bold">V</span>isibility Panel</> },
@@ -289,6 +290,7 @@ export const Header = ({
   setScale,
   mode,
   onToggleSidePanel,
+  onToggleOPCPanel,
   onAutoLinkDescriptions,
   onAutoLinkNotesAndHolds,
   onAutoLinkEquipmentShortSpecs,
@@ -371,6 +373,22 @@ export const Header = ({
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 lg:h-5 lg:w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="9" y1="3" x2="9" y2="21"></line>
+              </svg>
+            </button>
+          )}
+
+          {/* OPC Panel Toggle - next to side panel */}
+          {hasData && (
+            <button
+              onClick={onToggleOPCPanel}
+              className="p-1.5 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+              title="Toggle OPC Panel (O)"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 lg:h-5 lg:w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="15" y1="3" x2="15" y2="21"></line>
+                <circle cx="8" cy="8" r="2"></circle>
+                <circle cx="8" cy="16" r="2"></circle>
               </svg>
             </button>
           )}

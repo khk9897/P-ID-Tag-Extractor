@@ -83,6 +83,10 @@ export const SelectionPanel = ({
                 <span>Note/Hold</span>
               </button>
               <button onClick={() => handleCreate(Category.DrawingNumber)} className="px-3 py-1.5 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors">Drawing No.</button>
+              <button onClick={() => handleCreate(Category.OffPageConnector)} className="px-3 py-1.5 text-sm font-semibold text-white bg-violet-600 rounded-md hover:bg-violet-700 transition-colors flex items-center space-x-1">
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">O</span>
+                <span>OPC</span>
+              </button>
             </div>
           </div>
         </div>
@@ -188,6 +192,10 @@ export const SelectionPanel = ({
                         <span>Note/Hold</span>
                       </button>
                       <button onClick={() => handleCreate(Category.DrawingNumber)} className="px-3 py-1.5 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors">Drawing No.</button>
+                      <button onClick={() => handleCreate(Category.OffPageConnector)} className="px-3 py-1.5 text-sm font-semibold text-white bg-violet-600 rounded-md hover:bg-violet-700 transition-colors flex items-center space-x-1">
+                        <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-mono">O</span>
+                        <span>OPC</span>
+                      </button>
                     </div>
                   </div>
                 )}

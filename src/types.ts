@@ -5,6 +5,7 @@ export const Category = {
   DrawingNumber: 'DrawingNumber',
   NotesAndHolds: 'NotesAndHolds',
   SpecialItem: 'SpecialItem',
+  OffPageConnector: 'OffPageConnector',
   Uncategorized: 'Uncategorized',
 } as const;
 
@@ -17,6 +18,7 @@ export const RelationshipType = {
   Note: 'Note', // Equipment/Line/Instrument -> NotesAndHolds Tag
   Description: 'Description', // NotesAndHolds Tag -> Description
   EquipmentShortSpec: 'EquipmentShortSpec', // Equipment Tag -> Equipment Short Spec
+  OffPageConnection: 'OffPageConnection', // OPC Tag <-> OPC Tag (bidirectional)
 } as const;
 
 export type RelationshipTypeValue = typeof RelationshipType[keyof typeof RelationshipType];
@@ -45,6 +47,7 @@ export interface VisibilitySettings {
     drawingNumber: boolean;
     notesAndHolds: boolean;
     specialItem: boolean;
+    offPageConnector: boolean;
   };
   descriptions: boolean;
   equipmentShortSpecs: boolean;
@@ -53,6 +56,7 @@ export interface VisibilitySettings {
     installation: boolean;
     annotation: boolean;
     note: boolean;
+    offPageConnection: boolean;
   };
 }
 
@@ -65,15 +69,17 @@ export interface ColorSettings {
     drawingNumber: string;
     notesAndHolds: string;
     specialItem: string;
+    offPageConnector: string;
     uncategorized: string;
     description: string;        // Description entity color
     equipmentShortSpec: string;  // Equipment Short Spec entity color
   };
   relationships: {
-    connection: string;      // Connection arrow line
-    installation: string;    // Installation arrow line
-    annotation: string;      // Annotation line & linked raw text
-    note: string;           // Note relationship line
+    connection: string;         // Connection arrow line
+    installation: string;       // Installation arrow line
+    annotation: string;         // Annotation line & linked raw text
+    note: string;              // Note relationship line
+    offPageConnection: string; // OPC relationship line
   };
   highlights: {
     noteRelated: string;    // Highlight color for tags related to notes
@@ -167,6 +173,7 @@ export interface HeaderProps {
   setScale: (scale: number) => void;
   mode: ViewMode;
   onToggleSidePanel: () => void;
+  onToggleOPCPanel: () => void;
   onAutoLinkDescriptions: () => void;
   onAutoLinkNotesAndHolds: () => void;
   onAutoLinkEquipmentShortSpecs: () => void;
@@ -223,6 +230,7 @@ export interface WorkspaceProps {
   showRelationships: boolean;
   setShowRelationships: (show: boolean) => void;
   isSidePanelVisible: boolean;
+  isOPCPanelVisible: boolean;
   visibilitySettings: VisibilitySettings;
   updateVisibilitySettings: (settings: VisibilitySettings) => void;
   showAutoLinkRanges: boolean;
@@ -264,6 +272,7 @@ export interface PatternConfig {
   [Category.DrawingNumber]: string;
   [Category.NotesAndHolds]: string;
   [Category.SpecialItem]: string;
+  [Category.OffPageConnector]: string;
 }
 
 export interface ToleranceConfig {
@@ -281,6 +290,7 @@ export interface HyphenSettings {
   drawingNumber: boolean;
   notesAndHolds: boolean;
   specialItem: boolean;
+  offPageConnector: boolean;
 }
 
 export interface AppSettings {

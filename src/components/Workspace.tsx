@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { PdfViewer } from './PdfViewer.tsx';
 import { SidePanel } from './SidePanel.tsx';
+import { OPCPanel } from './OPCPanel.tsx';
 import { SelectionPanel } from './SelectionPanel.tsx';
 import { CommentIndicator } from './CommentIndicator.tsx';
 import { WorkspaceProps } from '../types.ts';
@@ -104,6 +105,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   toggleAllTags,
   toggleAllRelationships,
   isSidePanelVisible,
+  isOPCPanelVisible,
   showAutoLinkRanges,
   tolerances,
   // Comment system
@@ -792,6 +794,19 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               );
             })()}
           </div>
+        </div>
+      )}
+      
+      {/* OPC Panel */}
+      {isOPCPanelVisible && (
+        <div className="w-80 flex-shrink-0">
+          <OPCPanel
+            tags={tags}
+            relationships={relationships}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            isVisible={isOPCPanelVisible}
+          />
         </div>
       )}
       

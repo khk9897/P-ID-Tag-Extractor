@@ -118,12 +118,16 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
     },
     [Category.SpecialItem]: {
         description: "Custom pattern for matching special items."
+    },
+    [Category.OffPageConnector]: {
+        description: "Pattern for matching off-page connector reference numbers (e.g., A, B, 1, 2, A1, B2)."
     }
   };
 
-  const categories = [Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber, Category.NotesAndHolds, Category.SpecialItem];
+  const categories = [Category.Equipment, Category.Line, Category.Instrument, Category.DrawingNumber, Category.NotesAndHolds, Category.SpecialItem, Category.OffPageConnector];
   
   const instrumentCurrentTolerances = localTolerances[Category.Instrument] || { vertical: 0, horizontal: 0, autoLinkDistance: 50 };
+  const opcCurrentTolerances = localTolerances[Category.OffPageConnector] || { vertical: 0, horizontal: 0, autoLinkDistance: 30 };
 
 
   return (
@@ -251,6 +255,21 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                       />
                       <div className="mt-1 text-xs text-slate-400">
                         <p>{categoryInfo[Category.SpecialItem].description}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="pattern-OffPageConnector" className="block text-xs font-medium text-slate-300 mb-1">OPC Reference</label>
+                      <input
+                        id="pattern-OffPageConnector"
+                        type="text"
+                        value={localPatterns[Category.OffPageConnector]}
+                        onChange={(e) => handlePatternChange(Category.OffPageConnector, e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-600 rounded-md p-2 text-sm font-mono focus:ring-sky-500 focus:border-sky-500"
+                        placeholder="Enter regex pattern for OPC Reference..."
+                      />
+                      <div className="mt-1 text-xs text-slate-400">
+                        <p>{categoryInfo[Category.OffPageConnector].description}</p>
                       </div>
                     </div>
                   </div>
@@ -412,6 +431,7 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                       { key: 'drawingNumber', label: 'Drawing Number', color: 'text-indigo-400' },
                       { key: 'notesAndHolds', label: 'Notes & Holds', color: 'text-teal-400' },
                       { key: 'specialItem', label: 'Special Item', color: 'text-purple-400' },
+                      { key: 'offPageConnector', label: 'OPC Tag', color: 'text-violet-400' },
                     ].map(({ key, label, color }) => (
                       <div key={key} className="flex items-center space-x-2">
                         <input
@@ -478,6 +498,68 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                     </div>
                   </div>
                 </div>
+
+                <div className="p-3 bg-slate-900/30 rounded-lg">
+                  <h4 className="text-sm font-medium text-slate-200 mb-3">OPC Tolerances</h4>
+                  <div className="space-y-4">
+                    <div>
+                       <label htmlFor="tolerance-opc-vertical" className="block text-xs text-slate-400 mb-1">
+                        Max Vertical Distance ({opcCurrentTolerances.vertical}px)
+                       </label>
+                       <div className="flex items-center space-x-2">
+                        <input id="tolerance-opc-vertical" type="range" min="0" max="100"
+                            value={opcCurrentTolerances.vertical}
+                            onChange={(e) => {
+                              setLocalTolerances(prev => ({
+                                ...prev,
+                                [Category.OffPageConnector]: {
+                                  ...opcCurrentTolerances,
+                                  vertical: parseInt(e.target.value)
+                                }
+                              }));
+                            }}
+                            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                        <input type="number" value={opcCurrentTolerances.vertical} onChange={(e) => {
+                          setLocalTolerances(prev => ({
+                            ...prev,
+                            [Category.OffPageConnector]: {
+                              ...opcCurrentTolerances,
+                              vertical: parseInt(e.target.value) || 0
+                            }
+                          }));
+                        }} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
+                       </div>
+                    </div>
+                    <div>
+                       <label htmlFor="tolerance-opc-horizontal" className="block text-xs text-slate-400 mb-1">
+                        Max Horizontal Distance ({opcCurrentTolerances.horizontal}px)
+                       </label>
+                       <div className="flex items-center space-x-2">
+                        <input id="tolerance-opc-horizontal" type="range" min="0" max="100"
+                            value={opcCurrentTolerances.horizontal}
+                            onChange={(e) => {
+                              setLocalTolerances(prev => ({
+                                ...prev,
+                                [Category.OffPageConnector]: {
+                                  ...opcCurrentTolerances,
+                                  horizontal: parseInt(e.target.value)
+                                }
+                              }));
+                            }}
+                            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer" />
+                        <input type="number" min="0" max="100" value={opcCurrentTolerances.horizontal} onChange={(e) => {
+                          setLocalTolerances(prev => ({
+                            ...prev,
+                            [Category.OffPageConnector]: {
+                              ...opcCurrentTolerances,
+                              horizontal: parseInt(e.target.value) || 0
+                            }
+                          }));
+                        }} className="w-16 bg-slate-900 border border-slate-600 rounded-md p-1 text-sm text-center" />
+                       </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             </div>
@@ -501,6 +583,8 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                     instrument: 'Instrument Tag',
                     drawingNumber: 'Drawing Number',
                     notesAndHolds: 'Notes & Holds Tag',
+                    specialItem: 'Special Item Tag',
+                    offPageConnector: 'OPC Tag',
                     description: 'Note/Hold Description',
                     equipmentShortSpec: 'Equipment Short Spec',
                     uncategorized: 'Uncategorized'

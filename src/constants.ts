@@ -10,6 +10,7 @@ export const DEFAULT_PATTERNS = {
   [Category.DrawingNumber]: '[A-Z\\d-]{5,}-[A-Z\\d-]{5,}-\\d{3,}',
   [Category.NotesAndHolds]: '^(NOTE|HOLD).*',
   [Category.SpecialItem]: '',
+  [Category.OffPageConnector]: '^[A-Z0-9]{1,3}$',
 };
 
 export const DEFAULT_TOLERANCES = {
@@ -17,6 +18,11 @@ export const DEFAULT_TOLERANCES = {
         vertical: 15, // px for combining parts
         horizontal: 20, // px for combining parts
         autoLinkDistance: 30, // px for auto-linking notes
+    },
+    [Category.OffPageConnector]: {
+        vertical: 15, // px for combining drawing number with reference
+        horizontal: 20, // px for combining drawing number with reference
+        autoLinkDistance: 30, // px for auto-linking related elements
     },
 };
 
@@ -30,6 +36,7 @@ export const DEFAULT_SETTINGS = {
         drawingNumber: false,
         notesAndHolds: false,
         specialItem: true, // Default to true for special items
+        offPageConnector: false, // OPC tags don't typically need hyphen handling
     },
 };
 
@@ -64,6 +71,11 @@ export const CATEGORY_COLORS = {
     bg: 'bg-purple-500/20',
     text: 'text-purple-400',
   },
+  [Category.OffPageConnector]: {
+    border: 'border-violet-400',
+    bg: 'bg-violet-500/20',
+    text: 'text-violet-400',
+  },
   [Category.Uncategorized]: {
     border: 'border-slate-500',
     bg: 'bg-slate-500/20',
@@ -79,6 +91,7 @@ export const DEFAULT_COLORS: ColorSettings = {
     drawingNumber: '#818cf8',  // Indigo
     notesAndHolds: '#14b8a6',  // Teal
     specialItem: '#c084fc',    // Purple
+    offPageConnector: '#8b5cf6', // Violet
     uncategorized: '#94a3b8',  // Slate
     description: '#a855f7',     // Purple (for Note & Hold descriptions)
     equipmentShortSpec: '#fb923c', // Light Orange (for equipment short specs)
@@ -88,6 +101,7 @@ export const DEFAULT_COLORS: ColorSettings = {
     installation: '#facc15',    // Yellow (arrow line)
     annotation: '#a78bfa',      // Purple-400 (line & linked raw text)
     note: '#14b8a6',           // Teal (line connecting to notes)
+    offPageConnection: '#8b5cf6', // Violet (OPC connection line)
   },
   highlights: {
     noteRelated: '#6366f1',    // Indigo-500 (highlight for note-related tags)

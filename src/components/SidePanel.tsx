@@ -1047,6 +1047,7 @@ export const SidePanel = ({
     let baseTags = tags;
     
     const filtered = baseTags
+      .filter(tag => tag.category !== Category.OffPageConnector) // Hide OPC tags from left panel
       .filter(tag => !showCurrentPageOnly || tag.page === currentPage)
       .filter(tag => filterCategory === 'All' || tag.category === filterCategory)
       .filter(tag => {
@@ -1615,7 +1616,9 @@ export const SidePanel = ({
   const filterCategories = ['All', Category.Equipment, Category.Line, Category.SpecialItem, Category.Instrument, Category.NotesAndHolds, Category.DrawingNumber];
   
   const totalTagCount = useMemo(() => {
-    return tags.filter(tag => !showCurrentPageOnly || tag.page === currentPage).length;
+    return tags
+      .filter(tag => tag.category !== Category.OffPageConnector) // Exclude OPC tags from count
+      .filter(tag => !showCurrentPageOnly || tag.page === currentPage).length;
   }, [tags, showCurrentPageOnly, currentPage]);
   
   return (
@@ -1718,7 +1721,8 @@ export const SidePanel = ({
                             { key: 'WithComments', display: '💬+', tooltip: 'Show tags with comments only' },
                             { key: 'WithoutComments', display: '💬-', tooltip: 'Show tags without comments only' }
                           ].map((filterOption, index) => {
-                            const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage)
+                            const baseTags = tags.filter(t => t.category !== Category.OffPageConnector) // Exclude OPC tags
+                              .filter(t => !showCurrentPageOnly || t.page === currentPage)
                               .filter(tag => filterCategory === 'All' || tag.category === filterCategory);
                             
                             let count = 0;
@@ -1799,7 +1803,8 @@ export const SidePanel = ({
                 <hr className="border-slate-700" />
                 <div className="border-b border-slate-700 flex text-xs">
                   {filterCategories.map((cat, index) => {
-                    const baseTags = tags.filter(t => !showCurrentPageOnly || t.page === currentPage);
+                    const baseTags = tags.filter(t => t.category !== Category.OffPageConnector) // Exclude OPC tags
+                      .filter(t => !showCurrentPageOnly || t.page === currentPage);
                     const count = cat === 'All' ? baseTags.length : baseTags.filter(t => t.category === cat).length;
                     const isActive = filterCategory === cat;
                     

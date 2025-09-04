@@ -6,7 +6,7 @@ import { Workspace } from './components/Workspace.tsx';
 import { Header } from './components/Header.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
-import { extractTags } from './services/taggingService.ts';
+import { extractTags, createOPCRelationships } from './services/taggingService.ts';
 import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES, DEFAULT_SETTINGS, DEFAULT_COLORS } from './constants.ts';
 import { 
   Category, 
@@ -106,6 +106,7 @@ const App: React.FC = () => {
       drawingNumber: true,
       notesAndHolds: true,
       specialItem: true,
+      offPageConnector: true,
     },
     descriptions: true,
     equipmentShortSpecs: true,
@@ -114,14 +115,14 @@ const App: React.FC = () => {
       installation: true,
       annotation: true,
       note: true,
-      description: true,
-      equipmentShortSpec: true,
+      offPageConnection: true,
     },
   });
   
   // Keep backward compatibility - derive showRelationships from relationships settings
   const showRelationships = Object.values(visibilitySettings.relationships).some(Boolean);
   const [isSidePanelVisible, setIsSidePanelVisible] = useState<boolean>(true);
+  const [isOPCPanelVisible, setIsOPCPanelVisible] = useState<boolean>(true); // 임시로 true로 설정
   const [showAutoLinkRanges, setShowAutoLinkRanges] = useState<boolean>(false);
   
   // Performance optimization settings
@@ -315,6 +316,9 @@ const App: React.FC = () => {
         if (e.key.toLowerCase() === 's') {
             e.preventDefault();
             setIsSidePanelVisible(prev => !prev);
+        } else if (e.key.toLowerCase() === 'o') {
+            e.preventDefault();
+            setIsOPCPanelVisible(prev => !prev);
         } else if (e.key.toLowerCase() === 'v') {
             e.preventDefault();
             // Toggle visibility panel by dispatching a custom event
@@ -325,6 +329,24 @@ const App: React.FC = () => {
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []); // Run only once
+
+  // Auto-create OPC relationships when tags change
+  useEffect(() => {
+    const opcTags = tags.filter(tag => tag.category === Category.OffPageConnector);
+    if (opcTags.length > 0) {
+      const opcRelationships = createOPCRelationships(tags, RelationshipType);
+      
+      // Only update if there are new relationships to add
+      if (opcRelationships.length > 0) {
+        setRelationships(prevRel => {
+          // Remove existing OPC relationships to avoid duplicates
+          const nonOpcRel = prevRel.filter(rel => rel.type !== RelationshipType.OffPageConnection);
+          console.log(`[OPC Auto-Update] Adding ${opcRelationships.length} OPC relationships`);
+          return [...nonOpcRel, ...opcRelationships];
+        });
+      }
+    }
+  }, [tags]); // Run when tags change
 
   const showConfirmation = (message: string, onConfirm: () => void): void => {
     setConfirmation({ isOpen: true, message, onConfirm });
@@ -361,6 +383,10 @@ const App: React.FC = () => {
       }
       setTags(allTags);
       setRawTextItems(allRawTextItems);
+      
+      // Create OPC relationships after all tags are processed
+      const opcRelationships = createOPCRelationships(allTags, RelationshipType);
+      setRelationships(opcRelationships);
       
       // Auto-generate loops if enabled
       if (appSettingsToUse?.autoGenerateLoops || appSettings.autoGenerateLoops) {
@@ -2167,6 +2193,7 @@ Do you want to continue?`,
             onDeleteComment={handleDeleteComment}
             getCommentsForTarget={getCommentsForTarget}
             isSidePanelVisible={isSidePanelVisible}
+            isOPCPanelVisible={isOPCPanelVisible}
             colorSettings={colorSettings}
           />
         </ErrorBoundary>
@@ -2216,6 +2243,7 @@ Do you want to continue?`,
           setScale={setScale}
           mode={mode}
           onToggleSidePanel={() => setIsSidePanelVisible(p => !p)}
+          onToggleOPCPanel={() => setIsOPCPanelVisible(p => !p)}
           onAutoLinkDescriptions={handleAutoLinkDescriptions}
           onAutoLinkNotesAndHolds={handleAutoLinkNotesAndHolds}
           onAutoLinkEquipmentShortSpecs={handleAutoLinkEquipmentShortSpecs}

@@ -21,7 +21,8 @@ const RelationshipLine = React.memo(({ rel, start, end, strokeColor, marker, isP
   const lineStrokeWidth = isPinged ? '4' : '2';
   const lineStrokeColor = isPinged ? '#ef4444' : strokeColor;
   const dashArray = isPinged ? 'none' : 
-    (rel.type === RelationshipType.Annotation || rel.type === RelationshipType.Note ? '3 3' : 'none');
+    (rel.type === RelationshipType.Annotation || rel.type === RelationshipType.Note ? '3 3' : 
+     rel.type === RelationshipType.OffPageConnection ? '8 4' : 'none');
 
   return (
     <g>
@@ -227,6 +228,8 @@ const PdfViewerComponent = ({
         return colors.entities.notesAndHolds;
       case Category.SpecialItem:
         return colors.entities.specialItem;
+      case Category.OffPageConnector:
+        return colors.entities.offPageConnector;
       default:
         return colors.entities.uncategorized;
     }
@@ -243,6 +246,8 @@ const PdfViewerComponent = ({
         return colors.relationships.annotation;
       case RelationshipType.Note:
         return colors.relationships.note;
+      case RelationshipType.OffPageConnection:
+        return colors.relationships.offPageConnection;
       default:
         return '#94a3b8'; // Default slate color
     }
@@ -263,6 +268,8 @@ const PdfViewerComponent = ({
         return visibilitySettings.tags.notesAndHolds;
       case Category.SpecialItem:
         return visibilitySettings.tags.specialItem;
+      case Category.OffPageConnector:
+        return visibilitySettings.tags.offPageConnector;
       default:
         return true;
     }
@@ -283,6 +290,8 @@ const PdfViewerComponent = ({
         return false; // Always hide Description relationship lines
       case RelationshipType.EquipmentShortSpec:
         return false; // Always hide EquipmentShortSpec relationship lines
+      case RelationshipType.OffPageConnection:
+        return false; // Always hide OPC relationship lines (different pages)
       default:
         return true;
     }
@@ -821,8 +830,6 @@ const PdfViewerComponent = ({
             installation: newState,
             annotation: newState,
             note: newState,
-            description: newState,
-            equipmentShortSpec: newState,
           },
         });
       } else if (e.key.toLowerCase() === 'q' && pdfDoc) {
@@ -1535,34 +1542,80 @@ const PdfViewerComponent = ({
 
                     return (
                         <g key={tag.id} data-tag-id={tag.id} onMouseDown={(e) => handleTagMouseDown(e, tag.id)} className="cursor-pointer">
-                        <rect 
-                          x={rectX} 
-                          y={rectY} 
-                          width={rectWidth} 
-                          height={rectHeight} 
-                          stroke={isVisible ? getEntityColor(tag.category) : 'transparent'}
-                          strokeWidth={isVisible ? (isHighlighted ? "3" : "3") : "0.5"}
-                          className="transition-all duration-150" 
-                          fill={
-                            isVisible 
-                              ? (isHighlighted ? `${color}4D` : `${getEntityColor(tag.category)}66`) // Highlight: 30% opacity, Normal: 40% opacity
-                              : 'rgba(255, 255, 255, 0.003)'
-                          } 
-                          strokeDasharray={isRelStart ? "4 2" : "none"}
-                          style={{ pointerEvents: 'all' }}
-                          rx={isHighlighted ? "2" : "0"}
-                        />
-                        {isRelated && !isHighlighted && isVisible && (
+                        {tag.category === Category.OffPageConnector ? (
+                          // Render OPC tags as circles
+                          (() => {
+                            // Check if this OPC tag is connected
+                            const isConnected = relationships.some(rel => 
+                              rel.type === RelationshipType.OffPageConnection && 
+                              (rel.from === tag.id || rel.to === tag.id)
+                            );
+                            
+                            const opcColor = isConnected ? '#10b981' : '#ef4444'; // green : red
+                            
+                            return (
+                              <>
+                                <circle 
+                                  cx={rectX + rectWidth / 2} 
+                                  cy={rectY + rectHeight / 2} 
+                                  r={Math.max(rectWidth, rectHeight) / 2 + 5} 
+                                  stroke={isVisible ? opcColor : 'transparent'}
+                                  strokeWidth={isVisible ? (isHighlighted ? "4" : "3") : "0.5"}
+                                  className="transition-all duration-150" 
+                                  fill={
+                                    isVisible 
+                                      ? (isHighlighted ? `${opcColor}4D` : `${opcColor}66`) 
+                                      : 'rgba(255, 255, 255, 0.003)'
+                                  } 
+                                  strokeDasharray={isRelStart ? "4 2" : "none"}
+                                  style={{ pointerEvents: 'all' }}
+                                />
+                                {isRelated && !isHighlighted && isVisible && (
+                                  <circle 
+                                    cx={rectX + rectWidth / 2} 
+                                    cy={rectY + rectHeight / 2} 
+                                    r={Math.max(rectWidth, rectHeight) / 2 + 8} 
+                                    fill="none"
+                                    stroke={DEFAULT_COLORS.highlights.noteRelated}
+                                    strokeWidth="3"
+                                  />
+                                )}
+                              </>
+                            );
+                          })()
+                        ) : (
+                          // Render other tags as rectangles
+                          <>
                             <rect 
-                            x={rectX} 
-                            y={rectY} 
-                            width={rectWidth} 
-                            height={rectHeight} 
-                            fill={`${DEFAULT_COLORS.highlights.noteRelated}66`} 
-                            stroke={DEFAULT_COLORS.highlights.noteRelated}
-                            strokeWidth="3"
-                            rx="2"
+                              x={rectX} 
+                              y={rectY} 
+                              width={rectWidth} 
+                              height={rectHeight} 
+                              stroke={isVisible ? getEntityColor(tag.category) : 'transparent'}
+                              strokeWidth={isVisible ? (isHighlighted ? "3" : "3") : "0.5"}
+                              className="transition-all duration-150" 
+                              fill={
+                                isVisible 
+                                  ? (isHighlighted ? `${color}4D` : `${getEntityColor(tag.category)}66`) // Highlight: 30% opacity, Normal: 40% opacity
+                                  : 'rgba(255, 255, 255, 0.003)'
+                              } 
+                              strokeDasharray={isRelStart ? "4 2" : "none"}
+                              style={{ pointerEvents: 'all' }}
+                              rx={isHighlighted ? "2" : "0"}
                             />
+                            {isRelated && !isHighlighted && isVisible && (
+                                <rect 
+                                x={rectX} 
+                                y={rectY} 
+                                width={rectWidth} 
+                                height={rectHeight} 
+                                fill={`${DEFAULT_COLORS.highlights.noteRelated}66`} 
+                                stroke={DEFAULT_COLORS.highlights.noteRelated}
+                                strokeWidth="3"
+                                rx="2"
+                                />
+                            )}
+                          </>
                         )}
                         </g>
                     );

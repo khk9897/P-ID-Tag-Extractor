@@ -7,6 +7,7 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
   const instruments = tags.filter(t => t.category === Category.Instrument);
   const specialItems = tags.filter(t => t.category === Category.SpecialItem);
   const drawingNumbers = tags.filter(t => t.category === Category.DrawingNumber);
+  const opcTags = tags.filter(t => t.category === Category.OffPageConnector);
 
   // Create a map for quick lookup of drawing number by page
   const pageToDrawingNumberMap = new Map(drawingNumbers.map(tag => [tag.page, tag.text]));
@@ -267,6 +268,60 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
       'Created': new Date(comment.timestamp).toLocaleString(),
     };
   });
+
+  // 7. OPC Connections Data
+  const opcConnections = [];
+  const opcRelationships = relationships.filter(r => r.type === RelationshipType.OffPageConnection);
+  const opcGroups = new Map();
+
+  // Group OPC tags by reference text
+  opcTags.forEach(tag => {
+    const refText = tag.text;
+    if (!opcGroups.has(refText)) {
+      opcGroups.set(refText, []);
+    }
+    opcGroups.get(refText).push(tag);
+  });
+
+  // Create connection data for each group
+  opcGroups.forEach((tagGroup, refText) => {
+    if (tagGroup.length === 2) {
+      const [tag1, tag2] = tagGroup;
+      const hasConnection = opcRelationships.some(rel => 
+        (rel.from === tag1.id && rel.to === tag2.id) ||
+        (rel.from === tag2.id && rel.to === tag1.id)
+      );
+
+      opcConnections.push({
+        'Reference': refText,
+        'Page 1': tag1.page,
+        'Drawing Number 1': pageToDrawingNumberMap.get(tag1.page) || '',
+        'Page 2': tag2.page,
+        'Drawing Number 2': pageToDrawingNumberMap.get(tag2.page) || '',
+        'Status': hasConnection ? 'Connected' : 'Not Connected',
+        'Location 1': `(${Math.round(tag1.bbox.x1)}, ${Math.round(tag1.bbox.y1)})`,
+        'Location 2': `(${Math.round(tag2.bbox.x1)}, ${Math.round(tag2.bbox.y1)})`,
+        'Comments 1': getCommentsForEntity(tag1.id),
+        'Comments 2': getCommentsForEntity(tag2.id),
+      });
+    } else {
+      // Handle cases where there are not exactly 2 tags
+      tagGroup.forEach((tag, index) => {
+        opcConnections.push({
+          'Reference': refText,
+          'Page 1': tag.page,
+          'Drawing Number 1': pageToDrawingNumberMap.get(tag.page) || '',
+          'Page 2': '',
+          'Drawing Number 2': '',
+          'Status': tagGroup.length === 1 ? 'Unmatched' : `Multiple (${tagGroup.length} found)`,
+          'Location 1': `(${Math.round(tag.bbox.x1)}, ${Math.round(tag.bbox.y1)})`,
+          'Location 2': '',
+          'Comments 1': getCommentsForEntity(tag.id),
+          'Comments 2': '',
+        });
+      });
+    }
+  });
   
   const wb = XLSX.utils.book_new();
   
@@ -290,6 +345,9 @@ export const exportToExcel = (tags, relationships, rawTextItems, descriptions = 
 
   const wsComments = XLSX.utils.json_to_sheet(commentData);
   XLSX.utils.book_append_sheet(wb, wsComments, 'Comments');
+
+  const wsOPCConnections = XLSX.utils.json_to_sheet(opcConnections);
+  XLSX.utils.book_append_sheet(wb, wsOPCConnections, 'OPC Connections');
   
   XLSX.writeFile(wb, 'P&ID_Tag_Export.xlsx');
 };

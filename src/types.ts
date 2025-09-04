@@ -82,8 +82,14 @@ export interface ColorSettings {
     offPageConnection: string; // OPC relationship line
   };
   highlights: {
-    noteRelated: string;    // Highlight color for tags related to notes
-    selected: string;       // Selected items
+    primary: string;        // Red-500 (primary selection/ping)
+    note: string;          // Violet-500 (note-related items)
+    equipment: string;     // Orange-500 (equipment-related items)
+    description: string;   // Purple-500 (description items)
+    related: string;       // Indigo-500 (related tags)
+    // Legacy support
+    noteRelated: string;   // Keep for backward compatibility
+    selected: string;      // Keep for backward compatibility
   };
 }
 

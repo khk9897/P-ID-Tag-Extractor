@@ -62,3 +62,22 @@
     stroke-opacity: 0.3;
   }
 }
+
+@keyframes fade-in-out {
+  0% {
+    stroke-opacity: 0;
+    stroke-width: 2;
+  }
+  15% {
+    stroke-opacity: 1;
+    stroke-width: 3;
+  }
+  85% {
+    stroke-opacity: 1;
+    stroke-width: 3;
+  }
+  100% {
+    stroke-opacity: 0;
+    stroke-width: 2;
+  }
+}

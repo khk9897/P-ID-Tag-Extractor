@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import { RelationshipType, Category } from '../types.ts';
 import { CATEGORY_COLORS, DEFAULT_COLORS } from '../constants.ts';
+import { TagHighlight, getHighlightTypeFromEntity, getHighlightEffect } from './TagHighlight.tsx';
 import { v4 as uuidv4 } from 'uuid';
 
 // Throttle function for performance
@@ -135,38 +136,26 @@ const PdfViewerComponent = ({
   
   // OPC Navigation function
   const handleOpcNavigation = useCallback(() => {
-    console.log(`[OPC Navigation] handleOpcNavigation called, opcNavigationButton:`, opcNavigationButton);
     
     if (opcNavigationButton) {
       const { targetTagId, targetPage } = opcNavigationButton;
       
-      console.log(`[OPC Navigation] Setting pending target:`, { targetTagId, targetPage });
       
       // Set pending target for after page change
       setPendingOpcTarget({ targetTagId, targetPage });
       
       // Navigate to target page
-      console.log(`[OPC Navigation] Changing page from ${currentPage} to ${targetPage}`);
       setCurrentPage(targetPage);
       
       // Hide navigation button
       setOpcNavigationButton(null);
       
-      console.log(`[OPC Navigation] Navigation process initiated for tag ${targetTagId} on page ${targetPage}`);
     } else {
-      console.warn(`[OPC Navigation] handleOpcNavigation called but no opcNavigationButton set`);
     }
   }, [opcNavigationButton, setCurrentPage, currentPage]);
   
   // Handle OPC target selection after page change
   useEffect(() => {
-    console.log(`[OPC Navigation Debug] useEffect triggered:`, {
-      hasPendingTarget: !!pendingOpcTarget,
-      currentPage,
-      targetPage: pendingOpcTarget?.targetPage,
-      hasViewport: !!viewport,
-      tagsCount: tags.length
-    });
     
     if (pendingOpcTarget && currentPage === pendingOpcTarget.targetPage && viewport) {
       const { targetTagId } = pendingOpcTarget;
@@ -174,33 +163,22 @@ const PdfViewerComponent = ({
       // Check if target tag exists on current page
       const targetTag = tags.find(t => t.id === targetTagId && t.page === currentPage);
       
-      console.log(`[OPC Navigation Debug] Looking for target tag:`, {
-        targetTagId,
-        targetTag: targetTag ? { id: targetTag.id, text: targetTag.text, page: targetTag.page } : null,
-        allTagsOnPage: tags.filter(t => t.page === currentPage).map(t => ({ id: t.id, text: t.text }))
-      });
       
       if (targetTag) {
-        console.log(`[OPC Navigation] Starting selection process for tag "${targetTag.text}"`);
         
         // Wait for page to render, then select, highlight, and scroll to center
         const timer = setTimeout(() => {
-          console.log(`[OPC Navigation] Executing selection...`);
           
           // Set selection
           setSelectedTagIds([targetTagId]);
-          console.log(`[OPC Navigation] Set selectedTagIds to:`, [targetTagId]);
           
           // Set highlight
           setHighlightedTagIds(new Set([targetTagId]));
-          console.log(`[OPC Navigation] Set highlightedTagIds to:`, [targetTagId]);
           
           // Scroll to center the target tag
           const scrollData = { tagId: targetTagId, timestamp: Date.now() };
           setScrollToCenter(scrollData);
-          console.log(`[OPC Navigation] Called setScrollToCenter with:`, scrollData);
           
-          console.log(`[OPC Navigation] Successfully processed tag "${targetTag.text}" (${targetTagId}) on page ${currentPage}`);
           
           // Clear pending target AFTER processing is complete
           setPendingOpcTarget(null);
@@ -208,14 +186,11 @@ const PdfViewerComponent = ({
           // Clear highlight after 2 seconds
           setTimeout(() => {
             setHighlightedTagIds(new Set());
-            console.log(`[OPC Navigation] Cleared highlight for tag ${targetTagId}`);
           }, 2000);
         }, 300); // Increased delay further
         
         return () => clearTimeout(timer);
       } else {
-        console.warn(`[OPC Navigation] Target tag ${targetTagId} not found on page ${currentPage}, available tags:`, 
-          tags.filter(t => t.page === currentPage).map(t => `${t.text} (${t.id})`));
       }
     }
   }, [currentPage, pendingOpcTarget, viewport, tags, setSelectedTagIds, setScrollToCenter]);
@@ -235,6 +210,8 @@ const PdfViewerComponent = ({
   useEffect(() => {
     if (selectedTagIds.length > 0) {
       setHighlightedTagIds(new Set(selectedTagIds));
+    } else {
+      setHighlightedTagIds(new Set()); // Clear highlights when no tags selected
     }
   }, [selectedTagIds]);
 
@@ -466,7 +443,6 @@ const PdfViewerComponent = ({
         
       } catch (error) {
         if (error.name !== 'RenderingCancelledException') {
-          console.error('PDF rendering error:', error);
         }
       } finally {
         if (renderTaskRef.current) {
@@ -707,14 +683,12 @@ const PdfViewerComponent = ({
         if (selectedTagIds.length >= 2) {
           e.preventDefault();
           
-          console.log('Creating sequential connections for:', selectedTagIds.length, 'tags');
           
           // Get selected tags in selection order (not sorted)
           const selectedTags = selectedTagIds
             .map(id => tags.find(tag => tag.id === id))
             .filter(tag => !!tag);
           
-          console.log('Found tags:', selectedTags.map(t => `${t.text} (page ${t.page})`));
           
           // Create sequential relationships: A→B, B→C, C→D, etc.
           const newRelationships = [];
@@ -722,7 +696,6 @@ const PdfViewerComponent = ({
             const fromTag = selectedTags[i];
             const toTag = selectedTags[i + 1];
             
-            console.log(`Creating connection: ${fromTag.text} (page ${fromTag.page}) → ${toTag.text} (page ${toTag.page})`);
             
             // Check if relationship already exists
             const existsAlready = relationships.some(r => 
@@ -737,15 +710,12 @@ const PdfViewerComponent = ({
                 type: RelationshipType.Connection,
               });
             } else {
-              console.log('Relationship already exists');
             }
           }
           
-          console.log('New relationships to create:', newRelationships.length);
           
           if (newRelationships.length > 0) {
             setRelationships(prev => [...prev, ...newRelationships]);
-            console.log('Sequential connections created successfully');
           }
           
           // Clear selection after creating relationships
@@ -753,7 +723,6 @@ const PdfViewerComponent = ({
           setSelectedRawTextItemIds([]);
         } else {
           // Original behavior for 0-1 selected tags: toggle connect mode
-          console.log('Toggling connect mode, selected tags:', selectedTagIds.length);
           if (mode === 'connect') {
             setMode('select');
             setRelationshipStartTag(null);
@@ -762,7 +731,6 @@ const PdfViewerComponent = ({
             // If exactly one tag is selected, use it as the start tag
             if (selectedTagIds.length === 1) {
               const startTag = tags.find(t => t.id === selectedTagIds[0]);
-              console.log('Using selected tag as relationship start:', startTag?.text);
               setRelationshipStartTag(selectedTagIds[0]);
               // Keep the selection to show visually
             } else {
@@ -885,7 +853,6 @@ const PdfViewerComponent = ({
             }
             setSelectedTagIds([]);
             setSelectedRawTextItemIds([]);
-            console.info(`Created ${uniqueNewRels.length} new relationship(s).`);
         }
       } else if (e.key.toLowerCase() === 'i' && mode === 'select' && selectedTagIds.length > 1) {
         const selected = tags.filter(t => selectedTagIds.includes(t.id));
@@ -908,9 +875,7 @@ const PdfViewerComponent = ({
               setRelationships(prev => [...prev, ...uniqueNewRels]);
           }
           setSelectedTagIds([]);
-          console.info(`Created ${uniqueNewRels.length} new installation relationship(s).`);
         } else {
-          console.warn('To create an installation, please select exactly one Equipment or Line, and one or more Instruments.');
         }
       } else if (e.key.toLowerCase() === 'l' && mode === 'select' && selectedTagIds.length >= 2) {
         const selectedInstrumentTags = tags.filter(t => 
@@ -923,7 +888,6 @@ const PdfViewerComponent = ({
             setSelectedTagIds([]);
           }
         } else {
-          console.warn('To create a loop, please select at least 2 instrument tags.');
         }
       } else if (e.key.toLowerCase() === 'v') {
         // Toggle all relationships visibility
@@ -1053,13 +1017,7 @@ const PdfViewerComponent = ({
               referenceText: clickedTag.text
             };
             setOpcNavigationButton(navigationData);
-            console.log(`[OPC Navigation] Set navigation button:`, navigationData);
           } else {
-            console.log(`[OPC Navigation] No navigation needed:`, {
-              targetTag: targetTag ? { id: targetTag.id, page: targetTag.page } : null,
-              currentPage,
-              samePageCheck: targetTag?.page === currentPage
-            });
           }
         }
       }
@@ -1077,14 +1035,12 @@ const PdfViewerComponent = ({
     } else if (mode === 'connect') {
       if (!relationshipStartTag) {
         const startTag = tags.find(t => t.id === tagId);
-        console.log('Setting relationship start tag:', startTag?.text, '(page', startTag?.page, ')');
         setRelationshipStartTag(tagId);
         // Also select the tag visually to show it's the start point
         setSelectedTagIds([tagId]);
       } else if (relationshipStartTag !== tagId) {
         const startTag = tags.find(t => t.id === relationshipStartTag);
         const endTag = tags.find(t => t.id === tagId);
-        console.log(`Creating connection in connect mode: ${startTag?.text} (page ${startTag?.page}) → ${endTag?.text} (page ${endTag?.page})`);
         
         // Check if relationship already exists
         const existsAlready = relationships.some(r => 
@@ -1101,9 +1057,7 @@ const PdfViewerComponent = ({
               type: RelationshipType.Connection,
             },
           ]);
-          console.log('Connection created successfully');
         } else {
-          console.log('Relationship already exists, skipping');
         }
         
         // For continuous connection, the destination tag becomes the new start tag.
@@ -1122,22 +1076,15 @@ const PdfViewerComponent = ({
     // Find the clicked item and log its coordinates for instrument tag debugging
     const clickedItem = rawTextItems.find(item => item.id === rawTextItemId);
     if (clickedItem) {
-        console.log(`🎯 [INSTRUMENT DEBUG] Selected text: "${clickedItem.text}"`);
-        console.log(`📍 Coordinates: X=${clickedItem.bbox.x1.toFixed(1)}-${clickedItem.bbox.x2.toFixed(1)}, Y=${clickedItem.bbox.y1.toFixed(1)}-${clickedItem.bbox.y2.toFixed(1)}`);
-        console.log(`📄 Page: ${clickedItem.page}`);
         
         // Check if it matches instrument patterns
         const funcPattern = /^[A-Z]{2,4}$/;
         const numPattern = /^\d{3,4}(?:\s?[A-Z])?$/;
         
         if (funcPattern.test(clickedItem.text)) {
-            console.log(`🔤 Type: FUNCTION pattern (${clickedItem.text})`);
         } else if (numPattern.test(clickedItem.text)) {
-            console.log(`🔢 Type: NUMBER pattern (${clickedItem.text})`);
         } else {
-            console.log(`❓ Type: OTHER (doesn't match instrument patterns)`);
         }
-        console.log(`────────────────────────────────`);
     }
 
     if (isMultiSelect) {
@@ -1710,133 +1657,41 @@ const PdfViewerComponent = ({
                                   cy={rectY + rectHeight / 2} 
                                   r={Math.max(rectWidth, rectHeight) / 2 + 5} 
                                   stroke={isVisible ? opcColor : 'transparent'}
-                                  strokeWidth="3"
+                                  strokeWidth={isSelected ? "4" : "2"}
                                   className={`transition-all duration-150 ${isHighlighted ? 'animate-pulse' : ''}`}
                                   fill={
                                     isVisible 
-                                      ? `${opcColor}66`
+                                      ? isSelected 
+                                        ? `${opcColor}CC` // 80% opacity when selected
+                                        : `${opcColor}33` // 20% opacity when not selected
                                       : 'rgba(255, 255, 255, 0.003)'
                                   } 
                                   strokeDasharray={isRelStart ? "4 2" : "none"}
                                   style={{ pointerEvents: 'all' }}
                                 />
-                                {/* Red arrows for selected OPC tags */}
+                                {/* Selection indicator circle */}
                                 {isSelected && isVisible && (
-                                  <>
-                                    {/* Selection indicator circle */}
-                                    <circle 
-                                      cx={rectX + rectWidth / 2} 
-                                      cy={rectY + rectHeight / 2} 
-                                      r={Math.max(rectWidth, rectHeight) / 2 + 10} 
-                                      fill="none"
-                                      stroke="#60a5fa"
-                                      strokeWidth="2"
-                                      strokeOpacity="0.8"
-                                    />
-                                    {/* Red arrows pointing to corners for selected OPC tags */}
-                                    {/* Top-left arrow */}
-                                    <polygon
-                                      points={`${rectX - 15},${rectY - 15} ${rectX - 5},${rectY - 15} ${rectX - 5},${rectY - 5} ${rectX - 15},${rectY - 5}`}
-                                      fill="#ef4444"
-                                      className="animate-pulse"
-                                    />
-                                    <polygon
-                                      points={`${rectX - 12},${rectY - 8} ${rectX - 8},${rectY - 12} ${rectX - 8},${rectY - 8}`}
-                                      fill="#ef4444"
-                                    />
-                                    
-                                    {/* Top-right arrow */}
-                                    <polygon
-                                      points={`${rectX + rectWidth + 5},${rectY - 15} ${rectX + rectWidth + 15},${rectY - 15} ${rectX + rectWidth + 15},${rectY - 5} ${rectX + rectWidth + 5},${rectY - 5}`}
-                                      fill="#ef4444"
-                                      className="animate-pulse"
-                                    />
-                                    <polygon
-                                      points={`${rectX + rectWidth + 8},${rectY - 8} ${rectX + rectWidth + 12},${rectY - 12} ${rectX + rectWidth + 12},${rectY - 8}`}
-                                      fill="#ef4444"
-                                    />
-                                    
-                                    {/* Bottom-left arrow */}
-                                    <polygon
-                                      points={`${rectX - 15},${rectY + rectHeight + 5} ${rectX - 5},${rectY + rectHeight + 5} ${rectX - 5},${rectY + rectHeight + 15} ${rectX - 15},${rectY + rectHeight + 15}`}
-                                      fill="#ef4444"
-                                      className="animate-pulse"
-                                    />
-                                    <polygon
-                                      points={`${rectX - 12},${rectY + rectHeight + 8} ${rectX - 8},${rectY + rectHeight + 12} ${rectX - 8},${rectY + rectHeight + 8}`}
-                                      fill="#ef4444"
-                                    />
-                                    
-                                    {/* Bottom-right arrow */}
-                                    <polygon
-                                      points={`${rectX + rectWidth + 5},${rectY + rectHeight + 5} ${rectX + rectWidth + 15},${rectY + rectHeight + 5} ${rectX + rectWidth + 15},${rectY + rectHeight + 15} ${rectX + rectWidth + 5},${rectY + rectHeight + 15}`}
-                                      fill="#ef4444"
-                                      className="animate-pulse"
-                                    />
-                                    <polygon
-                                      points={`${rectX + rectWidth + 8},${rectY + rectHeight + 8} ${rectX + rectWidth + 12},${rectY + rectHeight + 12} ${rectX + rectWidth + 12},${rectY + rectHeight + 8}`}
-                                      fill="#ef4444"
-                                    />
-                                  </>
-                                )}
-                                {isRelated && !isHighlighted && isVisible && (
                                   <circle 
                                     cx={rectX + rectWidth / 2} 
                                     cy={rectY + rectHeight / 2} 
-                                    r={Math.max(rectWidth, rectHeight) / 2 + 8} 
+                                    r={Math.max(rectWidth, rectHeight) / 2 + 10} 
                                     fill="none"
-                                    stroke={DEFAULT_COLORS.highlights.noteRelated}
-                                    strokeWidth="3"
+                                    stroke="#60a5fa"
+                                    strokeWidth="2"
+                                    strokeOpacity="0.8"
                                   />
                                 )}
-                                {/* Red arrows pointing to corners for highlighted OPC tags */}
-                                {isHighlighted && isVisible && (
-                                  <>
-                                    {/* Top-left arrow */}
-                                    <polygon
-                                      points={`${rectX - 15},${rectY - 15} ${rectX - 5},${rectY - 15} ${rectX - 5},${rectY - 5} ${rectX - 15},${rectY - 5}`}
-                                      fill="#ef4444"
-                                      className="animate-pulse"
-                                    />
-                                    <polygon
-                                      points={`${rectX - 12},${rectY - 8} ${rectX - 8},${rectY - 12} ${rectX - 8},${rectY - 8}`}
-                                      fill="#ef4444"
-                                    />
-                                    
-                                    {/* Top-right arrow */}
-                                    <polygon
-                                      points={`${rectX + rectWidth + 5},${rectY - 15} ${rectX + rectWidth + 15},${rectY - 15} ${rectX + rectWidth + 15},${rectY - 5} ${rectX + rectWidth + 5},${rectY - 5}`}
-                                      fill="#ef4444"
-                                      className="animate-pulse"
-                                    />
-                                    <polygon
-                                      points={`${rectX + rectWidth + 8},${rectY - 8} ${rectX + rectWidth + 12},${rectY - 12} ${rectX + rectWidth + 12},${rectY - 8}`}
-                                      fill="#ef4444"
-                                    />
-                                    
-                                    {/* Bottom-left arrow */}
-                                    <polygon
-                                      points={`${rectX - 15},${rectY + rectHeight + 5} ${rectX - 5},${rectY + rectHeight + 5} ${rectX - 5},${rectY + rectHeight + 15} ${rectX - 15},${rectY + rectHeight + 15}`}
-                                      fill="#ef4444"
-                                      className="animate-pulse"
-                                    />
-                                    <polygon
-                                      points={`${rectX - 12},${rectY + rectHeight + 8} ${rectX - 8},${rectY + rectHeight + 12} ${rectX - 8},${rectY + rectHeight + 8}`}
-                                      fill="#ef4444"
-                                    />
-                                    
-                                    {/* Bottom-right arrow */}
-                                    <polygon
-                                      points={`${rectX + rectWidth + 5},${rectY + rectHeight + 5} ${rectX + rectWidth + 15},${rectY + rectHeight + 5} ${rectX + rectWidth + 15},${rectY + rectHeight + 15} ${rectX + rectWidth + 5},${rectY + rectHeight + 15}`}
-                                      fill="#ef4444"
-                                      className="animate-pulse"
-                                    />
-                                    <polygon
-                                      points={`${rectX + rectWidth + 8},${rectY + rectHeight + 8} ${rectX + rectWidth + 12},${rectY + rectHeight + 12} ${rectX + rectWidth + 12},${rectY + rectHeight + 8}`}
-                                      fill="#ef4444"
-                                    />
-                                  </>
-                                )}
+                                
+                                {/* Unified highlight system for OPC tags */}
+                                <TagHighlight
+                                  bbox={{ x1: rectX, y1: rectY, x2: rectX + rectWidth, y2: rectY + rectHeight }}
+                                  type={isRelated && !isHighlighted ? "related" : "primary"}
+                                  effect={getHighlightEffect(isSelected, false, isRelated)}
+                                  isSelected={isSelected && isVisible}
+                                  isHighlighted={isHighlighted && isVisible}
+                                  isMultiSelection={selectedTagIds.length > 1}
+                                  colorSettings={colors}
+                                />
                               </>
                             );
                           })()
@@ -1849,76 +1704,28 @@ const PdfViewerComponent = ({
                               width={rectWidth} 
                               height={rectHeight} 
                               stroke={isVisible ? getEntityColor(tag.category) : 'transparent'}
-                              strokeWidth="3"
+                              strokeWidth={isSelected ? "4" : "2"}
                               className="transition-all duration-150"
                               fill={
                                 isVisible 
-                                  ? `${getEntityColor(tag.category)}66`
+                                  ? isSelected 
+                                    ? `${getEntityColor(tag.category)}CC` // 80% opacity when selected
+                                    : `${getEntityColor(tag.category)}33` // 20% opacity when not selected
                                   : 'rgba(255, 255, 255, 0.003)'
                               } 
                               strokeDasharray={isRelStart ? "4 2" : "none"}
                               style={{ pointerEvents: 'all' }}
                             />
-                            {/* Red arrows pointing to corners for highlighted and selected tags */}
-                            {(isHighlighted || isSelected) && isVisible && (
-                              <>
-                                {/* Top-left arrow */}
-                                <polygon
-                                  points={`${rectX - 15},${rectY - 15} ${rectX - 5},${rectY - 15} ${rectX - 5},${rectY - 5} ${rectX - 15},${rectY - 5}`}
-                                  fill="#ef4444"
-                                  className="animate-pulse"
-                                />
-                                <polygon
-                                  points={`${rectX - 12},${rectY - 8} ${rectX - 8},${rectY - 12} ${rectX - 8},${rectY - 8}`}
-                                  fill="#ef4444"
-                                />
-                                
-                                {/* Top-right arrow */}
-                                <polygon
-                                  points={`${rectX + rectWidth + 5},${rectY - 15} ${rectX + rectWidth + 15},${rectY - 15} ${rectX + rectWidth + 15},${rectY - 5} ${rectX + rectWidth + 5},${rectY - 5}`}
-                                  fill="#ef4444"
-                                  className="animate-pulse"
-                                />
-                                <polygon
-                                  points={`${rectX + rectWidth + 8},${rectY - 8} ${rectX + rectWidth + 12},${rectY - 12} ${rectX + rectWidth + 12},${rectY - 8}`}
-                                  fill="#ef4444"
-                                />
-                                
-                                {/* Bottom-left arrow */}
-                                <polygon
-                                  points={`${rectX - 15},${rectY + rectHeight + 5} ${rectX - 5},${rectY + rectHeight + 5} ${rectX - 5},${rectY + rectHeight + 15} ${rectX - 15},${rectY + rectHeight + 15}`}
-                                  fill="#ef4444"
-                                  className="animate-pulse"
-                                />
-                                <polygon
-                                  points={`${rectX - 12},${rectY + rectHeight + 8} ${rectX - 8},${rectY + rectHeight + 12} ${rectX - 8},${rectY + rectHeight + 8}`}
-                                  fill="#ef4444"
-                                />
-                                
-                                {/* Bottom-right arrow */}
-                                <polygon
-                                  points={`${rectX + rectWidth + 5},${rectY + rectHeight + 5} ${rectX + rectWidth + 15},${rectY + rectHeight + 5} ${rectX + rectWidth + 15},${rectY + rectHeight + 15} ${rectX + rectWidth + 5},${rectY + rectHeight + 15}`}
-                                  fill="#ef4444"
-                                  className="animate-pulse"
-                                />
-                                <polygon
-                                  points={`${rectX + rectWidth + 8},${rectY + rectHeight + 8} ${rectX + rectWidth + 12},${rectY + rectHeight + 12} ${rectX + rectWidth + 12},${rectY + rectHeight + 8}`}
-                                  fill="#ef4444"
-                                />
-                              </>
-                            )}
-                            {isRelated && !isHighlighted && isVisible && (
-                                <rect 
-                                x={rectX} 
-                                y={rectY} 
-                                width={rectWidth} 
-                                height={rectHeight} 
-                                fill={`${DEFAULT_COLORS.highlights.noteRelated}66`} 
-                                stroke={DEFAULT_COLORS.highlights.noteRelated}
-                                strokeWidth="3"
-                                rx="2"
-                                />
-                            )}
+                            {/* Unified highlight system for regular tags */}
+                            <TagHighlight
+                              bbox={{ x1: rectX, y1: rectY, x2: rectX + rectWidth, y2: rectY + rectHeight }}
+                              type={isRelated && !isHighlighted ? "related" : "primary"}
+                              effect={getHighlightEffect(isSelected, false, isRelated)}
+                              isSelected={isSelected && isVisible}
+                              isHighlighted={isHighlighted && isVisible}
+                              isMultiSelection={selectedTagIds.length > 1}
+                              colorSettings={colors}
+                            />
                           </>
                         )}
                         </g>
@@ -1928,26 +1735,18 @@ const PdfViewerComponent = ({
                     {pingedTagId && (() => {
                       const tagToPing = currentTags.find(t => t.id === pingedTagId);
                       if (!tagToPing) return null;
-
+                      
                       const { x1, y1, x2, y2 } = tagToPing.bbox;
                       const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
-                      
-                      const paddings = [10, 20, 30];
 
                       return (
-                        <g style={{ pointerEvents: 'none' }}>
-                            {paddings.map((padding, index) => (
-                                <rect
-                                    key={index}
-                                    x={rectX - padding}
-                                    y={rectY - padding}
-                                    width={rectWidth + padding * 2}
-                                    height={rectHeight + padding * 2}
-                                    className="fill-none stroke-red-500 ping-highlight-box"
-                                    rx="4"
-                                />
-                            ))}
-                        </g>
+                        <TagHighlight
+                          bbox={{ x1: rectX, y1: rectY, x2: rectX + rectWidth, y2: rectY + rectHeight }}
+                          type="primary"
+                          effect="box"
+                          isPinged={true}
+                          colorSettings={colors}
+                        />
                       );
                     })()}
 
@@ -1993,37 +1792,18 @@ const PdfViewerComponent = ({
                       if (!descToPing || descToPing.page !== currentPage) {
                         return null;
                       }
-
+                      
                       const { x1, y1, x2, y2 } = descToPing.bbox;
                       const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
-                      
-                      const paddings = [10, 20, 30];
 
                       return (
-                        <g style={{ pointerEvents: 'none' }}>
-                            {/* Background highlight */}
-                            <rect
-                                x={rectX - 5}
-                                y={rectY - 5}
-                                width={rectWidth + 10}
-                                height={rectHeight + 10}
-                                className="fill-purple-300 opacity-20"
-                                rx="4"
-                            />
-                            {/* Animated rings */}
-                            {paddings.map((padding, index) => (
-                                <rect
-                                    key={index}
-                                    x={rectX - padding}
-                                    y={rectY - padding}
-                                    width={rectWidth + padding * 2}
-                                    height={rectHeight + padding * 2}
-                                    className="fill-none stroke-purple-400 ping-highlight-box"
-                                    strokeWidth="3"
-                                    rx="4"
-                                />
-                            ))}
-                        </g>
+                        <TagHighlight
+                          bbox={{ x1: rectX, y1: rectY, x2: rectX + rectWidth, y2: rectY + rectHeight }}
+                          type="description"
+                          effect="box"
+                          isPinged={true}
+                          colorSettings={colors}
+                        />
                       );
                     })()}
 
@@ -2033,37 +1813,18 @@ const PdfViewerComponent = ({
                       if (!specToPing || specToPing.page !== currentPage) {
                         return null;
                       }
-
+                      
                       const { x1, y1, x2, y2 } = specToPing.bbox;
                       const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
-                      
-                      const paddings = [10, 20, 30];
 
                       return (
-                        <g style={{ pointerEvents: 'none' }}>
-                            {/* Background highlight */}
-                            <rect
-                                x={rectX - 5}
-                                y={rectY - 5}
-                                width={rectWidth + 10}
-                                height={rectHeight + 10}
-                                className="fill-orange-300 opacity-20"
-                                rx="4"
-                            />
-                            {/* Animated rings */}
-                            {paddings.map((padding, index) => (
-                                <rect
-                                    key={index}
-                                    x={rectX - padding}
-                                    y={rectY - padding}
-                                    width={rectWidth + padding * 2}
-                                    height={rectHeight + padding * 2}
-                                    className="fill-none stroke-orange-400 ping-highlight-box"
-                                    strokeWidth="3"
-                                    rx="4"
-                                />
-                            ))}
-                        </g>
+                        <TagHighlight
+                          bbox={{ x1: rectX, y1: rectY, x2: rectX + rectWidth, y2: rectY + rectHeight }}
+                          type="equipment"
+                          effect="box"
+                          isPinged={true}
+                          colorSettings={colors}
+                        />
                       );
                     })()}
 

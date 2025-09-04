@@ -469,8 +469,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     comments={getCommentsForTarget?.(selectedTag.id) || []}
                     onClick={() => {
                       // CommentIndicator expects a click handler - this would typically open a comment modal
-                      // For now, we'll just log that the comment button was clicked
-                      console.log('Comment clicked for tag:', selectedTag.text);
+                      // For now, we'll just handle the click without logging
                     }}
                     size="sm"
                     className="flex-shrink-0 ml-2"

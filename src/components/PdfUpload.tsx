@@ -28,7 +28,7 @@ export const PdfUpload = ({ onFileSelect }) => {
       if(e.dataTransfer.files[0].type === 'application/pdf') {
         onFileSelect(e.dataTransfer.files[0]);
       } else {
-        console.warn('Please upload a valid PDF file.');
+        // Invalid file type - PDF required
       }
       e.dataTransfer.clearData();
     }

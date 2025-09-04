@@ -658,8 +658,13 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                 <h3 className="text-sm font-semibold mb-3 text-slate-200">Highlight Colors</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries({
-                    noteRelated: 'Note-Related Tag Highlight',
-                    selected: 'Selected Item Border'
+                    primary: 'Primary Selection/Ping Highlight',
+                    note: 'Note-Related Item Highlight',
+                    equipment: 'Equipment-Related Item Highlight',
+                    description: 'Description Item Highlight',
+                    related: 'Related Tag Highlight',
+                    noteRelated: 'Legacy Note-Related Highlight',
+                    selected: 'Legacy Selected Item Border'
                   }).map(([key, label]) => (
                     <div key={key} className="flex items-center justify-between p-3 bg-slate-900/30 rounded-lg">
                       <label className="text-sm text-slate-200">{label}</label>

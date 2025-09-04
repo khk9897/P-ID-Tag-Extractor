@@ -52,13 +52,11 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
   const [editText, setEditText] = useState<string>('');
   const opcListRef = useRef<HTMLDivElement>(null);
   
-  console.log(`[OPC Panel] isVisible: ${isVisible}`);
 
   const opcConnections = useMemo(() => {
     const opcTags = tags.filter(tag => tag.category === Category.OffPageConnector);
     const opcRelationships = relationships.filter(rel => rel.type === RelationshipType.OffPageConnection);
     
-    console.log(`[OPC Panel] Found ${opcTags.length} OPC tags and ${opcRelationships.length} OPC relationships`);
     
     // Group OPC tags by reference text
     const groups: Record<string, OPCConnection> = {};
@@ -96,12 +94,6 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
           group.status = 'ready';
         }
         
-        console.log(`[OPC Panel] Checking connection for "${group.referenceText}":`, {
-          tag1: `${tag1.id} (page ${tag1.page})`,
-          tag2: `${tag2.id} (page ${tag2.page})`,
-          status: group.status,
-          hasRelationship: !!relationship
-        });
       } else {
         group.status = 'invalid';
       }
@@ -163,7 +155,6 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
         to: tag2.id,
       };
       setRelationships(prev => [...prev, newRelationship]);
-      console.log(`[OPC Panel] Creating connection between ${tag1.text} on P${tag1.page} and ${tag2.text} on P${tag2.page}`);
     }
   };
 
@@ -172,7 +163,6 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
       setRelationships(prev => 
         prev.filter(r => r.id !== connection.relationship?.id)
       );
-      console.log(`[OPC Panel] Disconnecting ${connection.referenceText}`);
     }
   };
 
@@ -209,7 +199,6 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
       }
       
       onDeleteTags([tagId]);
-      console.log(`[OPC Panel] Deleting tag ${tagId}`);
     }
   };
 

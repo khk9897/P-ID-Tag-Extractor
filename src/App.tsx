@@ -168,7 +168,6 @@ const App: React.FC = () => {
               updated = true;
           }
           if (updated) {
-               console.log("Updated patterns with new categories or structure from defaults.");
           }
           return parsed;
       }
@@ -176,7 +175,6 @@ const App: React.FC = () => {
       // If format is completely wrong, return defaults
       return DEFAULT_PATTERNS; 
     } catch (error) {
-      console.error("Failed to load patterns from localStorage", error);
       return DEFAULT_PATTERNS;
     }
   });
@@ -198,7 +196,6 @@ const App: React.FC = () => {
             }
             return DEFAULT_TOLERANCES;
         } catch (error) {
-            console.error("Failed to load tolerances from localStorage", error);
             return DEFAULT_TOLERANCES;
         }
     });
@@ -220,7 +217,6 @@ const App: React.FC = () => {
       }
       return DEFAULT_SETTINGS;
     } catch (error) {
-      console.error("Failed to load app settings from localStorage", error);
       return DEFAULT_SETTINGS;
     }
   });
@@ -233,7 +229,6 @@ const App: React.FC = () => {
         
         // Migration from old structure to new structure
         if (parsed.tags && !parsed.entities) {
-          console.log('Migrating color settings from old structure to new structure');
           return {
             entities: {
               ...parsed.tags,
@@ -260,7 +255,6 @@ const App: React.FC = () => {
       }
       return DEFAULT_COLORS;
     } catch (error) {
-      console.error("Failed to load color settings from localStorage", error);
       return DEFAULT_COLORS;
     }
   });
@@ -270,7 +264,6 @@ const App: React.FC = () => {
       localStorage.setItem('pid-tagger-patterns', JSON.stringify(patterns));
     } catch (error)
       {
-      console.error("Failed to save patterns to localStorage", error);
     }
   }, [patterns]);
 
@@ -278,7 +271,6 @@ const App: React.FC = () => {
         try {
             localStorage.setItem('pid-tagger-tolerances', JSON.stringify(tolerances));
         } catch (error) {
-            console.error("Failed to save tolerances to localStorage", error);
         }
     }, [tolerances]);
 
@@ -286,7 +278,6 @@ const App: React.FC = () => {
     try {
       localStorage.setItem('pid-tagger-app-settings', JSON.stringify(appSettings));
     } catch (error) {
-      console.error("Failed to save app settings to localStorage", error);
     }
   }, [appSettings]);
 
@@ -294,7 +285,6 @@ const App: React.FC = () => {
     try {
       localStorage.setItem('pid-tagger-color-settings', JSON.stringify(colorSettings));
     } catch (error) {
-      console.error("Failed to save color settings to localStorage", error);
     }
   }, [colorSettings]);
 
@@ -342,7 +332,6 @@ const App: React.FC = () => {
         setRelationships(prevRel => {
           // Remove existing OPC relationships to avoid duplicates
           const nonOpcRel = prevRel.filter(rel => rel.type !== RelationshipType.OffPageConnection);
-          console.log(`[OPC Auto-Update] Adding ${opcRelationships.length} OPC relationships`);
           return [...nonOpcRel, ...opcRelationships];
         });
       }
@@ -402,8 +391,6 @@ const App: React.FC = () => {
         }, 100); // Small delay to ensure tags are set
       }
     } catch (error) {
-      console.error("Error processing PDF:", error);
-      console.error("Failed to process PDF file. It might be corrupted or in an unsupported format.");
     } finally {
       setIsLoading(false);
     }
@@ -425,8 +412,6 @@ const App: React.FC = () => {
       setPdfDoc(doc);
       await processPdf(doc, patterns, tolerances, appSettings);
     } catch (error) {
-      console.error("Error loading PDF:", error);
-      console.error("Failed to load PDF file. It might be corrupted or in an unsupported format.");
       setIsLoading(false);
     }
   }, [patterns, tolerances, appSettings, processPdf]);
@@ -575,7 +560,6 @@ Do you want to continue?`,
     // All items must be on the same page
     const page = itemsToConvert[0].page;
     if (itemsToConvert.some(item => item.page !== page)) {
-      console.error("Cannot combine items from different pages.");
       return;
     }
 
@@ -640,7 +624,6 @@ Do you want to continue?`,
   const handleCreateManualTag = useCallback((tagData: ManualTagData): void => {
     const { text, bbox, page, category } = tagData;
     if (!text || !bbox || !page || !category) {
-        console.error("Missing data for manual tag creation.");
         return;
     }
 
@@ -672,7 +655,6 @@ Do you want to continue?`,
     for (const tag of tagsToRevert) {
       if (tag.sourceItems && tag.sourceItems.length > 0) {
         // It was a manually created tag, restore the original source items
-        console.log('Restoring sourceItems:', tag.sourceItems);
         // Convert source items to proper RawTextItem format
         const convertedItems = tag.sourceItems.map(item => ({
           id: uuidv4(),
@@ -694,7 +676,6 @@ Do you want to continue?`,
           page: tag.page,
           bbox: tag.bbox,
         };
-        console.log('Restoring tag as raw item:', restoredItem);
         itemsToRestore.push(restoredItem);
       }
     }
@@ -718,7 +699,6 @@ Do you want to continue?`,
     // All items must be on the same page
     const page = itemsToMerge[0].page;
     if (itemsToMerge.some(item => item.page !== page)) {
-      console.error("Cannot merge items from different pages.");
       return;
     }
 
@@ -902,7 +882,6 @@ Do you want to continue?`,
     const equipmentTags = selectedItems.filter(item => 'category' in item && item.category === Category.Equipment) as Tag[];
     
     if (equipmentTags.length === 0) {
-      console.error('Must select at least one Equipment tag');
       return;
     }
 
@@ -911,7 +890,6 @@ Do you want to continue?`,
     const nonTagItems = selectedItems.filter(item => !('category' in item));
 
     if (nonTagItems.length === 0) {
-      console.error('Must select at least one non-tag item');
       return;
     }
 
@@ -1310,7 +1288,6 @@ Do you want to continue?`,
         setAppSettings(sanitizedData.settings.appSettings);
     }
     
-    console.log("Project loaded successfully.");
   }, []);
 
   const handleImportProject = useCallback(async (file: File): Promise<void> => {
@@ -1357,7 +1334,6 @@ Do you want to continue?`,
                 loadProjectData(projectData);
             }
         } catch (error) {
-            console.error("Error parsing project file:", error);
             let errorMessage = "Could not load project. ";
             
             if (error instanceof SyntaxError) {
@@ -1435,7 +1411,6 @@ Do you want to continue?`,
     }
 
     // Show range circles first
-    console.log('DEBUG: Setting showAutoLinkRanges to true');
     setShowAutoLinkRanges(true);
     
     // Show confirmation after a brief delay to display ranges

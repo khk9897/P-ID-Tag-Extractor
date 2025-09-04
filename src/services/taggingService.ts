@@ -122,24 +122,20 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
             const funcCandidates = [];
             const numCandidates = [];
 
-            console.log(`🔍 [DEBUG] Processing ${textItems.length} text items`);
             textItems.forEach((item, index) => {
                 if (funcRegex.test(item.str)) {
                     const bbox = calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY, viewport, rotation);
                     funcCandidates.push({ item, index, bbox });
                     if (item.str === "TXT") {
                         const center = { x: (bbox.x1 + bbox.x2) / 2, y: (bbox.y1 + bbox.y2) / 2 };
-                        console.log(`🟦 [DEBUG] Found TXT function at bbox (${bbox.x1.toFixed(1)}, ${bbox.y1.toFixed(1)}) center (${center.x.toFixed(1)}, ${center.y.toFixed(1)})`);
                     }
                 } else if (numRegex.test(item.str)) {
                     const bbox = calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY, viewport, rotation);
                     numCandidates.push({ item, index, bbox });
                     if (item.str === "596B") {
                         const center = { x: (bbox.x1 + bbox.x2) / 2, y: (bbox.y1 + bbox.y2) / 2 };
-                        console.log(`🟨 [DEBUG] Found 596B number at bbox (${bbox.x1.toFixed(1)}, ${bbox.y1.toFixed(1)}) center (${center.x.toFixed(1)}, ${center.y.toFixed(1)})`);
                     }
                 } else if (item.str === "TXT" || item.str === "596B") {
-                    console.log(`❓ [DEBUG] Item "${item.str}" didn't match pattern - func:${funcRegex.test(item.str)}, num:${numRegex.test(item.str)}`);
                 }
             });
 
@@ -155,7 +151,6 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
                 };
 
                 if (func.item.str === "TXT") {
-                    console.log(`🔍 [DEBUG] Processing TXT at center (${funcCenter.x.toFixed(1)}, ${funcCenter.y.toFixed(1)})`);
                 }
                 
                 for (const num of numCandidates) {
@@ -167,21 +162,16 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
                     };
 
                     if (func.item.str === "TXT" && num.item.str === "596B") {
-                        console.log(`🎯 [DEBUG] Checking TXT-596B pair:`);
-                        console.log(`   TXT: (${funcCenter.x.toFixed(1)}, ${funcCenter.y.toFixed(1)})`);
-                        console.log(`   596B: (${numCenter.x.toFixed(1)}, ${numCenter.y.toFixed(1)})`);
                     }
 
                     // Function part must be strictly above the number part
                     const isAbove = funcCenter.y < numCenter.y;
 
                     if (func.item.str === "TXT" && num.item.str === "596B") {
-                        console.log(`   isAbove: ${isAbove} (${funcCenter.y.toFixed(1)} < ${numCenter.y.toFixed(1)})`);
                     }
 
                     if (!isAbove) {
                         if (func.item.str === "TXT" && num.item.str === "596B") {
-                            console.log(`   ❌ Rejected: TXT not above 596B`);
                         }
                         continue;
                     }
@@ -190,25 +180,20 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
                     const dy = Math.abs(funcCenter.y - numCenter.y);
                     
                     if (func.item.str === "TXT" && num.item.str === "596B") {
-                        console.log(`   Distance: dx=${dx.toFixed(1)}, dy=${dy.toFixed(1)}`);
-                        console.log(`   Tolerances: h=${instrumentTolerances.horizontal}, v=${instrumentTolerances.vertical}`);
                     }
                     
                     if (dx <= instrumentTolerances.horizontal && dy <= instrumentTolerances.vertical) {
                         const distanceSq = dx * dx + dy * dy;
                         if (func.item.str === "TXT" && num.item.str === "596B") {
-                            console.log(`   ✅ Within tolerance! Distance²=${distanceSq.toFixed(2)}`);
                         }
                         if (distanceSq < minDistanceSq) {
                             minDistanceSq = distanceSq;
                             bestPartner = num;
                             if (func.item.str === "TXT" && num.item.str === "596B") {
-                                console.log(`   🎯 New best partner: 596B`);
                             }
                         }
                     } else {
                         if (func.item.str === "TXT" && num.item.str === "596B") {
-                            console.log(`   ❌ Outside tolerance`);
                         }
                     }
                 }
@@ -243,7 +228,6 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
                 }
             }
         } catch (e) {
-            console.error("Error processing instrument tags:", e);
         }
     }
 
@@ -282,7 +266,6 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
                     }
                 }
             } catch (error) {
-                 console.error(`Invalid regex for category ${pattern.category}: ${pattern.regex}`, error);
             }
         }
 
@@ -334,7 +317,6 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
                 consumedIndices.add(bestCandidate.index);
             }
         } catch (error) {
-            console.error(`Invalid regex for Drawing Number: ${drawingNumberRegexString}`, error);
         }
     }
 
@@ -362,8 +344,6 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
             }
         }
         
-        console.log(`[OPC Pass] Page ${pageNum}: Found ${drawingNumberMatches.length} Drawing Number candidates for OPC combinations`, 
-                   drawingNumberMatches.map(d => `"${d.text}" (${d.isConsumed ? 'used as tag' : 'unused'})`));
         
         // For each Drawing Number, look for nearby reference numbers
         for (const dwgMatch of drawingNumberMatches) {
@@ -404,7 +384,6 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
             if (bestReference) {
                 // Create OPC tag using only the reference part (not the full drawing number)
                 const cleanedText = removeWhitespace(bestReference.text, Category.OffPageConnector, appSettings.autoRemoveWhitespace);
-                console.log(`[OPC Creation] Page ${pageNum}: Creating OPC "${cleanedText}" from Drawing Number "${dwgMatch.text}" + reference "${bestReference.text}" (dwg tag ${dwgMatch.isConsumed ? 'exists' : 'unused'})`);
                 
                 foundTags.push({
                     id: uuidv4(),
@@ -432,7 +411,6 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
             }
         }
     } catch (error) {
-        console.error(`Error in OPC detection: ${error.message}`, error);
     }
 
     // Final Pass: Collect all un-tagged items as raw text
@@ -458,7 +436,6 @@ export const createOPCRelationships = (tags, relationshipType) => {
     const opcTags = tags.filter(tag => tag.category === Category.OffPageConnector);
     const relationships = [];
     
-    console.log(`[OPC] Found ${opcTags.length} OPC tags:`, opcTags.map(t => `${t.text} (page ${t.page})`));
     
     // Group OPC tags by their reference text
     const opcGroups = {};
@@ -472,14 +449,12 @@ export const createOPCRelationships = (tags, relationshipType) => {
     
     // Create relationships for groups that have exactly 2 tags on different pages
     Object.entries(opcGroups).forEach(([refText, tagGroup]) => {
-        console.log(`[OPC] Processing group "${refText}" with ${tagGroup.length} tags`);
         
         if (tagGroup.length === 2) {
             const [tag1, tag2] = tagGroup;
             
             // Only connect if they are on different pages
             if (tag1.page !== tag2.page) {
-                console.log(`[OPC] Creating bidirectional relationship for "${refText}" between page ${tag1.page} and ${tag2.page}`);
                 
                 // Create bidirectional relationship
                 relationships.push({
@@ -496,15 +471,11 @@ export const createOPCRelationships = (tags, relationshipType) => {
                     type: relationshipType.OffPageConnection,
                 });
             } else {
-                console.warn(`[OPC] Reference "${refText}" found twice on same page ${tag1.page}`);
             }
         } else if (tagGroup.length > 2) {
-            console.warn(`[OPC] Reference "${refText}" found ${tagGroup.length} times. Expected exactly 2 for connection.`);
         } else {
-            console.log(`[OPC] Reference "${refText}" found only once on page ${tagGroup[0].page}`);
         }
     });
     
-    console.log(`[OPC] Created ${relationships.length} relationships`);
     return relationships;
 };

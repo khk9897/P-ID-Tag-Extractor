@@ -104,8 +104,14 @@ export const DEFAULT_COLORS: ColorSettings = {
     offPageConnection: '#8b5cf6', // Violet (OPC connection line)
   },
   highlights: {
-    noteRelated: '#6366f1',    // Indigo-500 (highlight for note-related tags)
-    selected: '#ef4444',       // Red (selected items)
+    primary: '#ef4444',        // Red-500 (primary selection/ping)
+    note: '#8b5cf6',          // Violet-500 (note-related items)
+    equipment: '#f97316',     // Orange-500 (equipment-related items)
+    description: '#a855f7',   // Purple-500 (description items)
+    related: '#6366f1',       // Indigo-500 (related tags)
+    // Legacy support
+    noteRelated: '#6366f1',   // Keep for backward compatibility
+    selected: '#ef4444',      // Keep for backward compatibility
   },
 };
 

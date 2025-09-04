@@ -645,8 +645,16 @@ const PdfViewerComponent = ({
             setRelationshipStartTag(null);
           } else {
             setMode('connect');
-            setRelationshipStartTag(null);
-            setSelectedTagIds([]);
+            // If exactly one tag is selected, use it as the start tag
+            if (selectedTagIds.length === 1) {
+              const startTag = tags.find(t => t.id === selectedTagIds[0]);
+              console.log('Using selected tag as relationship start:', startTag?.text);
+              setRelationshipStartTag(selectedTagIds[0]);
+              // Keep the selection to show visually
+            } else {
+              setRelationshipStartTag(null);
+              setSelectedTagIds([]);
+            }
             setSelectedRawTextItemIds([]);
           }
         }
@@ -917,23 +925,37 @@ const PdfViewerComponent = ({
         const startTag = tags.find(t => t.id === tagId);
         console.log('Setting relationship start tag:', startTag?.text, '(page', startTag?.page, ')');
         setRelationshipStartTag(tagId);
+        // Also select the tag visually to show it's the start point
+        setSelectedTagIds([tagId]);
       } else if (relationshipStartTag !== tagId) {
         const startTag = tags.find(t => t.id === relationshipStartTag);
         const endTag = tags.find(t => t.id === tagId);
         console.log(`Creating connection in connect mode: ${startTag?.text} (page ${startTag?.page}) → ${endTag?.text} (page ${endTag?.page})`);
         
-        setRelationships(prev => [
-          ...prev,
-          {
-            id: uuidv4(),
-            from: relationshipStartTag,
-            to: tagId,
-            type: RelationshipType.Connection,
-          },
-        ]);
-        console.log('Connection created successfully');
+        // Check if relationship already exists
+        const existsAlready = relationships.some(r => 
+          r.from === relationshipStartTag && r.to === tagId && r.type === RelationshipType.Connection
+        );
+        
+        if (!existsAlready) {
+          setRelationships(prev => [
+            ...prev,
+            {
+              id: uuidv4(),
+              from: relationshipStartTag,
+              to: tagId,
+              type: RelationshipType.Connection,
+            },
+          ]);
+          console.log('Connection created successfully');
+        } else {
+          console.log('Relationship already exists, skipping');
+        }
+        
         // For continuous connection, the destination tag becomes the new start tag.
         setRelationshipStartTag(tagId);
+        // Update selection to show the new start tag
+        setSelectedTagIds([tagId]);
       }
     }
   };

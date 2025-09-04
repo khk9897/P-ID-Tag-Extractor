@@ -1312,53 +1312,58 @@ export const SidePanel = ({
     }
   }, [tags, showCurrentPageOnly, currentPage, filterCategory, reviewFilter, commentFilter, debouncedSearchQuery, sortOrder, commentCountsByTag]);
 
-  // Virtualized tags for performance - ultra-aggressive virtualization
+  // Virtualized tags for performance - ultra-aggressive virtualization with selection awareness
   const virtualizedTags = useMemo(() => {
     // Ultra-aggressive virtualization threshold: start at 30 items
     if (sortedAndFilteredTags.length <= 30) {
       return sortedAndFilteredTags; 
     }
     
-    // Much smaller viewport for faster rendering
-    const baseViewport = Math.min(50, Math.max(20, Math.floor(sortedAndFilteredTags.length * 0.05)));
-    
-    // Ensure we don't exceed array bounds
-    const safeStart = Math.max(0, Math.min(virtualizedRange.start, sortedAndFilteredTags.length));
-    const safeEnd = Math.max(safeStart, Math.min(virtualizedRange.end || baseViewport, sortedAndFilteredTags.length));
-    
-    // Even smaller viewport for ultra-fast rendering
-    const actualEnd = Math.min(safeEnd, safeStart + baseViewport);
-    
-    const result = sortedAndFilteredTags.slice(safeStart, actualEnd);
-    debugLog('PERF', `🚀 Ultra-fast render: ${result.length}/${sortedAndFilteredTags.length} tags (${safeStart}-${actualEnd})`);
-    
-    return result;
-  }, [sortedAndFilteredTags, virtualizedRange]);
-
-  // Separate effect to handle selection-based virtualization range updates
-  useEffect(() => {
-    if (sortedAndFilteredTags.length <= 30) return;
-    
-    const bufferSize = Math.min(100, Math.max(20, Math.floor(sortedAndFilteredTags.length / 50)));
+    // Check if selected tag needs to be in viewport
+    let adjustedStart = virtualizedRange.start;
+    let adjustedEnd = virtualizedRange.end;
     
     if (selectedTagIds.length === 1) {
       const selectedIndex = sortedAndFilteredTags.findIndex(tag => tag.id === selectedTagIds[0]);
       if (selectedIndex !== -1) {
-        // Only update if the selected tag is completely outside current range
+        // If selected tag is outside current range, expand range to include it immediately
         const isOutsideRange = selectedIndex < virtualizedRange.start || selectedIndex >= virtualizedRange.end;
         
         if (isOutsideRange) {
-          const newStart = Math.max(0, selectedIndex - bufferSize);
-          const newEnd = Math.min(sortedAndFilteredTags.length, selectedIndex + bufferSize * 2);
-          setVirtualizedRange({ start: newStart, end: newEnd });
+          const bufferSize = Math.min(50, Math.max(25, Math.floor(sortedAndFilteredTags.length / 100)));
+          adjustedStart = Math.max(0, selectedIndex - bufferSize);
+          adjustedEnd = Math.min(sortedAndFilteredTags.length, selectedIndex + bufferSize * 2);
+          
+          debugLog('PERF', `🎯 Adjusted virtualization for selected tag: ${selectedIndex} (${adjustedStart}-${adjustedEnd})`);
+          
+          // Update the range state for next renders (async)
+          setTimeout(() => {
+            setVirtualizedRange({ start: adjustedStart, end: adjustedEnd });
+          }, 0);
         }
       }
-    } else if (virtualizedRange.start === 0 && virtualizedRange.end === 100) {
-      // For large lists without selection, show first items for immediate feedback
-      const initialSize = Math.min(200, sortedAndFilteredTags.length);
+    }
+    
+    // Use current or adjusted range
+    const safeStart = Math.max(0, Math.min(adjustedStart, sortedAndFilteredTags.length));
+    const safeEnd = Math.max(safeStart, Math.min(adjustedEnd || 50, sortedAndFilteredTags.length));
+    
+    const result = sortedAndFilteredTags.slice(safeStart, safeEnd);
+    debugLog('PERF', `🚀 Ultra-fast render: ${result.length}/${sortedAndFilteredTags.length} tags (${safeStart}-${safeEnd})`);
+    
+    return result;
+  }, [sortedAndFilteredTags, virtualizedRange, selectedTagIds]);
+
+  // Initialize virtualization range for large lists
+  useEffect(() => {
+    if (sortedAndFilteredTags.length <= 30) return;
+    
+    // Only initialize if we're at the default range and have no selection
+    if (virtualizedRange.start === 0 && virtualizedRange.end === 100 && selectedTagIds.length === 0) {
+      const initialSize = Math.min(150, sortedAndFilteredTags.length);
       setVirtualizedRange({ start: 0, end: initialSize });
     }
-  }, [selectedTagIds, sortedAndFilteredTags]);
+  }, [sortedAndFilteredTags.length]);
 
   const filteredDescriptions = useMemo(() => {
     if (!showCurrentPageOnly) return descriptions;

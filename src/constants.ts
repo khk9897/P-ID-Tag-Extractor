@@ -23,6 +23,14 @@ export const DEFAULT_TOLERANCES = {
 export const DEFAULT_SETTINGS = {
     autoGenerateLoops: true, // Auto-generate loops after tag extraction
     autoRemoveWhitespace: true, // Auto-remove whitespace from tags (except NotesAndHolds)
+    hyphenSettings: {
+        equipment: false,
+        line: false,
+        instrument: true, // Default to true for instruments
+        drawingNumber: false,
+        notesAndHolds: false,
+        specialItem: true, // Default to true for special items
+    },
 };
 
 export const CATEGORY_COLORS = {

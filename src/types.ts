@@ -274,16 +274,28 @@ export interface ToleranceConfig {
   };
 }
 
+export interface HyphenSettings {
+  equipment: boolean;
+  line: boolean;
+  instrument: boolean;
+  drawingNumber: boolean;
+  notesAndHolds: boolean;
+  specialItem: boolean;
+}
+
 export interface AppSettings {
   autoGenerateLoops: boolean;
   autoRemoveWhitespace: boolean;
+  hyphenSettings: HyphenSettings;
 }
 
 export interface SettingsModalProps {
   patterns: PatternConfig;
   tolerances: ToleranceConfig;
   appSettings: AppSettings;
-  onSave: (patterns: PatternConfig, tolerances: ToleranceConfig, appSettings: AppSettings) => void;
+  colorSettings: ColorSettings;
+  onSaveOnly: (patterns: PatternConfig, tolerances: ToleranceConfig, appSettings: AppSettings, colorSettings: ColorSettings) => void;
+  onSaveAndRescan: (patterns: PatternConfig, tolerances: ToleranceConfig, appSettings: AppSettings, colorSettings: ColorSettings, activeTab: string) => void;
   onClose: () => void;
 }
 

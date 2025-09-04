@@ -37,7 +37,7 @@ const RegexHelp = () => {
   );
 };
 
-export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings, onSave, onClose }) => {
+export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings, onSaveOnly, onSaveAndRescan, onClose }) => {
   const [localPatterns, setLocalPatterns] = useState(patterns);
   const [localTolerances, setLocalTolerances] = useState(tolerances);
   const [localAppSettings, setLocalAppSettings] = useState(appSettings);
@@ -55,8 +55,12 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleSave = () => {
-    onSave(localPatterns, localTolerances, localAppSettings, localColorSettings, activeTab);
+  const handleSaveOnly = () => {
+    onSaveOnly(localPatterns, localTolerances, localAppSettings, localColorSettings);
+  };
+
+  const handleSaveAndRescan = () => {
+    onSaveAndRescan(localPatterns, localTolerances, localAppSettings, localColorSettings, activeTab);
   };
   
   const handleReset = () => {
@@ -391,6 +395,48 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                   </div>
                 </div>
 
+                <div className="p-5 bg-slate-900/40 rounded-lg border border-slate-700/50">
+                  <div className="mb-3">
+                    <h4 className="text-sm font-semibold text-slate-200 mb-1">
+                      Hyphen Settings for Multi-Text Tags
+                    </h4>
+                    <div className="text-xs text-slate-400 mb-3">
+                      When creating tags from multiple text pieces, choose which categories should use hyphens (-) as separators.
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {[
+                      { key: 'equipment', label: 'Equipment', color: 'text-orange-400' },
+                      { key: 'line', label: 'Line', color: 'text-rose-400' },
+                      { key: 'instrument', label: 'Instrument', color: 'text-amber-400' },
+                      { key: 'drawingNumber', label: 'Drawing Number', color: 'text-indigo-400' },
+                      { key: 'notesAndHolds', label: 'Notes & Holds', color: 'text-teal-400' },
+                      { key: 'specialItem', label: 'Special Item', color: 'text-purple-400' },
+                    ].map(({ key, label, color }) => (
+                      <div key={key} className="flex items-center space-x-2">
+                        <input
+                          id={`hyphen-${key}`}
+                          type="checkbox"
+                          checked={localAppSettings.hyphenSettings?.[key] || false}
+                          onChange={(e) => {
+                            setLocalAppSettings(prev => ({
+                              ...prev,
+                              hyphenSettings: {
+                                ...(prev.hyphenSettings || {}),
+                                [key]: e.target.checked
+                              }
+                            }));
+                          }}
+                          className="w-4 h-4 text-sky-600 bg-slate-900 border-slate-600 rounded focus:ring-sky-500 focus:ring-2"
+                        />
+                        <label htmlFor={`hyphen-${key}`} className={`text-sm ${color} select-none cursor-pointer`}>
+                          {label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="p-3 bg-slate-900/30 rounded-lg">
                   <h4 className="text-sm font-medium text-slate-200 mb-3">Instrument Tolerances</h4>
                   <div className="space-y-4">
@@ -575,11 +621,19 @@ export const SettingsModal = ({ patterns, tolerances, appSettings, colorSettings
                     Cancel
                 </button>
                 <button
-                    onClick={handleSave}
+                    onClick={handleSaveOnly}
                     className="px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-800"
                 >
-                    {activeTab === 'patterns' ? 'Save and Re-scan' : 'Save'}
+                    Save
                 </button>
+                {activeTab === 'patterns' && (
+                  <button
+                      onClick={handleSaveAndRescan}
+                      className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-800"
+                  >
+                      Save and Re-scan
+                  </button>
+                )}
             </div>
         </div>
       </div>

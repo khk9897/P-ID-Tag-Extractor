@@ -204,7 +204,19 @@ const App: React.FC = () => {
   const [appSettings, setAppSettings] = useState<AppSettings>(() => {
     try {
       const saved = localStorage.getItem('pid-tagger-app-settings');
-      return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Merge with defaults to ensure all properties exist (for backward compatibility)
+        return {
+          ...DEFAULT_SETTINGS,
+          ...parsed,
+          hyphenSettings: {
+            ...DEFAULT_SETTINGS.hyphenSettings,
+            ...(parsed.hyphenSettings || {})
+          }
+        };
+      }
+      return DEFAULT_SETTINGS;
     } catch (error) {
       console.error("Failed to load app settings from localStorage", error);
       return DEFAULT_SETTINGS;
@@ -386,12 +398,32 @@ const App: React.FC = () => {
     }
   }, [patterns, tolerances, appSettings, processPdf]);
 
-  const handleSaveSettings = async (newPatterns: PatternConfig, newTolerances: ToleranceConfig, newAppSettings: AppSettings, newColorSettings: ColorSettings, activeTab: string): Promise<void> => {
+  const handleSaveSettingsOnly = (newPatterns: PatternConfig, newTolerances: ToleranceConfig, newAppSettings: AppSettings, newColorSettings: ColorSettings): void => {
     setPatterns(newPatterns);
     setTolerances(newTolerances);
     setAppSettings(newAppSettings);
     setColorSettings(newColorSettings);
     setIsSettingsOpen(false);
+    
+    // Store to localStorage
+    localStorage.setItem('pid-tagger-patterns', JSON.stringify(newPatterns));
+    localStorage.setItem('pid-tagger-tolerances', JSON.stringify(newTolerances));
+    localStorage.setItem('pid-tagger-app-settings', JSON.stringify(newAppSettings));
+    localStorage.setItem('pid-tagger-color-settings', JSON.stringify(newColorSettings));
+  };
+
+  const handleSaveSettingsAndRescan = async (newPatterns: PatternConfig, newTolerances: ToleranceConfig, newAppSettings: AppSettings, newColorSettings: ColorSettings, activeTab: string): Promise<void> => {
+    setPatterns(newPatterns);
+    setTolerances(newTolerances);
+    setAppSettings(newAppSettings);
+    setColorSettings(newColorSettings);
+    setIsSettingsOpen(false);
+    
+    // Store to localStorage
+    localStorage.setItem('pid-tagger-patterns', JSON.stringify(newPatterns));
+    localStorage.setItem('pid-tagger-tolerances', JSON.stringify(newTolerances));
+    localStorage.setItem('pid-tagger-app-settings', JSON.stringify(newAppSettings));
+    localStorage.setItem('pid-tagger-color-settings', JSON.stringify(newColorSettings));
     
     // Only rescan if patterns/tolerances/settings changed (not for color changes)
     if (activeTab === 'patterns' && pdfDoc) {
@@ -525,8 +557,20 @@ Do you want to continue?`,
       return a.bbox.x1 - b.bbox.x1;
     });
     
-    // Combine text with appropriate separator
-    const rawCombinedText = category === Category.Instrument 
+    // Combine text with appropriate separator based on category settings
+    const shouldUseHyphen = (() => {
+      switch (category) {
+        case Category.Equipment: return appSettings.hyphenSettings.equipment;
+        case Category.Line: return appSettings.hyphenSettings.line;
+        case Category.Instrument: return appSettings.hyphenSettings.instrument;
+        case Category.DrawingNumber: return appSettings.hyphenSettings.drawingNumber;
+        case Category.NotesAndHolds: return appSettings.hyphenSettings.notesAndHolds;
+        case Category.SpecialItem: return appSettings.hyphenSettings.specialItem;
+        default: return false;
+      }
+    })();
+    
+    const rawCombinedText = shouldUseHyphen
       ? sortedItems.map(item => item.text).join('-')
       : sortedItems.map(item => item.text).join('');
     
@@ -558,7 +602,7 @@ Do you want to continue?`,
     setRawTextItems(prev => prev.filter(item => !idsToConvert.has(item.id)));
     // Clean up any annotation relationships involving the now-converted raw items
     setRelationships(prev => prev.filter(rel => !(rel.type === RelationshipType.Annotation && idsToConvert.has(rel.to))));
-  }, [appSettings.autoRemoveWhitespace]);
+  }, [appSettings.autoRemoveWhitespace, appSettings.hyphenSettings]);
 
   const handleCreateManualTag = useCallback((tagData: ManualTagData): void => {
     const { text, bbox, page, category } = tagData;
@@ -2214,7 +2258,8 @@ Do you want to continue?`,
             tolerances={tolerances}
             appSettings={appSettings}
             colorSettings={colorSettings}
-            onSave={handleSaveSettings}
+            onSaveOnly={handleSaveSettingsOnly}
+            onSaveAndRescan={handleSaveSettingsAndRescan}
             onClose={() => setIsSettingsOpen(false)}
           />
         </ErrorBoundary>

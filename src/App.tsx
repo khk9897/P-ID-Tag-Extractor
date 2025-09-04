@@ -124,6 +124,7 @@ const App: React.FC = () => {
   const [isSidePanelVisible, setIsSidePanelVisible] = useState<boolean>(true);
   const [isOPCPanelVisible, setIsOPCPanelVisible] = useState<boolean>(true); // 임시로 true로 설정
   const [showAutoLinkRanges, setShowAutoLinkRanges] = useState<boolean>(false);
+  const [focusOPCConnection, setFocusOPCConnection] = useState<string | null>(null);
   
   // Performance optimization settings
   const [showAllRelationships, setShowAllRelationships] = useState<boolean>(() => {
@@ -347,6 +348,12 @@ const App: React.FC = () => {
       }
     }
   }, [tags]); // Run when tags change
+
+  const handleOPCTagClick = useCallback((tagText: string): void => {
+    setFocusOPCConnection(tagText);
+    // Clear focus after a short delay to allow for re-focusing
+    setTimeout(() => setFocusOPCConnection(null), 100);
+  }, []);
 
   const showConfirmation = (message: string, onConfirm: () => void): void => {
     setConfirmation({ isOpen: true, message, onConfirm });
@@ -2195,6 +2202,8 @@ Do you want to continue?`,
             isSidePanelVisible={isSidePanelVisible}
             isOPCPanelVisible={isOPCPanelVisible}
             colorSettings={colorSettings}
+            focusOPCConnection={focusOPCConnection}
+            onOPCTagClick={handleOPCTagClick}
           />
         </ErrorBoundary>
       );

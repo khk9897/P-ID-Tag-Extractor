@@ -12,6 +12,8 @@ interface OPCPanelProps {
   isVisible: boolean;
   onUpdateTagText: (tagId: string, newText: string) => void;
   onDeleteTags: (tagIds: string[]) => void;
+  onPingTag: (tagId: string) => void;
+  focusOPCConnection?: string | null;
 }
 
 interface OPCConnection {
@@ -31,12 +33,24 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
   isVisible,
   onUpdateTagText,
   onDeleteTags,
+  onPingTag,
+  focusOPCConnection,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState<boolean>(true);
+  const [statusFilters, setStatusFilters] = useState<{
+    connected: boolean;
+    ready: boolean;
+    invalid: boolean;
+  }>({
+    connected: true,
+    ready: true,
+    invalid: true,
+  });
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>('');
+  const opcListRef = useRef<HTMLDivElement>(null);
   
   console.log(`[OPC Panel] isVisible: ${isVisible}`);
 
@@ -113,8 +127,11 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
       );
     }
     
+    // Filter by status
+    connections = connections.filter(conn => statusFilters[conn.status]);
+    
     return connections;
-  }, [opcConnections, searchTerm, showCurrentPageOnly, currentPage]);
+  }, [opcConnections, searchTerm, showCurrentPageOnly, currentPage, statusFilters]);
 
   const handlePageNavigation = (page: number) => {
     setCurrentPage(page);
@@ -196,6 +213,43 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
     }
   };
 
+  const handleTagClick = (tag: Tag) => {
+    setCurrentPage(tag.page);
+    onPingTag(tag.id);
+  };
+
+  // Focus on OPC connection when focusOPCConnection prop changes
+  useEffect(() => {
+    if (focusOPCConnection && isVisible) {
+      // Find the connection that contains the tag
+      const targetConnection = opcConnections.find(conn => 
+        conn.tags.some(tag => tag.text === focusOPCConnection)
+      );
+      
+      if (targetConnection) {
+        // Expand the group
+        setExpandedGroups(prev => new Set([...prev, targetConnection.referenceText]));
+        
+        // Scroll to the connection after a short delay to ensure DOM is updated
+        setTimeout(() => {
+          const connectionElement = document.querySelector(`[data-connection-ref="${targetConnection.referenceText}"]`);
+          if (connectionElement && opcListRef.current) {
+            connectionElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+            
+            // Add temporary highlight effect
+            connectionElement.classList.add('animate-pulse', 'bg-violet-500/20');
+            setTimeout(() => {
+              connectionElement.classList.remove('animate-pulse', 'bg-violet-500/20');
+            }, 2000);
+          }
+        }, 100);
+      }
+    }
+  }, [focusOPCConnection, isVisible, opcConnections]);
+
   if (!isVisible) return null;
 
   return (
@@ -224,7 +278,7 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
         </div>
 
         {/* Page Filter */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 mb-3">
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
               type="checkbox"
@@ -239,6 +293,58 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
               Page {currentPage}
             </span>
           )}
+        </div>
+
+        {/* Status Filters */}
+        <div className="space-y-2">
+          <span className="text-sm text-slate-400 font-medium">Status Filter:</span>
+          <div className="flex flex-wrap gap-3">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={statusFilters.connected}
+                onChange={(e) => setStatusFilters(prev => ({
+                  ...prev,
+                  connected: e.target.checked
+                }))}
+                className="w-4 h-4 text-green-600 bg-slate-900 border-slate-600 rounded focus:ring-green-500 focus:ring-1"
+              />
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-sm text-slate-300">Connected</span>
+              </div>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={statusFilters.ready}
+                onChange={(e) => setStatusFilters(prev => ({
+                  ...prev,
+                  ready: e.target.checked
+                }))}
+                className="w-4 h-4 text-yellow-600 bg-slate-900 border-slate-600 rounded focus:ring-yellow-500 focus:ring-1"
+              />
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                <span className="text-sm text-slate-300">Ready</span>
+              </div>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={statusFilters.invalid}
+                onChange={(e) => setStatusFilters(prev => ({
+                  ...prev,
+                  invalid: e.target.checked
+                }))}
+                className="w-4 h-4 text-red-600 bg-slate-900 border-slate-600 rounded focus:ring-red-500 focus:ring-1"
+              />
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 rounded-full bg-red-500" />
+                <span className="text-sm text-slate-300">Invalid</span>
+              </div>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -263,7 +369,7 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
       </div>
 
       {/* OPC List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" ref={opcListRef}>
         {filteredConnections.length === 0 ? (
           <div className="p-4 text-center text-slate-400">
             {searchTerm ? 'No OPC connections match your search' : 'No OPC connections found'}
@@ -282,6 +388,7 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
               return (
                 <div
                   key={connection.referenceText}
+                  data-connection-ref={connection.referenceText}
                   className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden"
                 >
                   {/* Header - Clickable */}
@@ -292,16 +399,30 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
                     <div className="flex items-center justify-between">
                       {/* Left: Expand arrow + Reference + Status */}
                       <div className="flex items-center space-x-3">
-                        <span className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+                        <span className={`transition-transform duration-200 text-xs ${isExpanded ? 'rotate-90' : ''}`}>
                           ▶
                         </span>
-                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-violet-500/20 text-violet-400 border border-violet-400">
+                        <span className="text-sm font-mono text-white">
                           {connection.referenceText}
                         </span>
                         <div className={`w-2 h-2 rounded-full ${status.dot}`} />
                         <span className={`text-xs ${status.text}`}>
                           {status.label}
                         </span>
+                        {connection.status === 'connected' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDisconnect(connection);
+                            }}
+                            className="ml-2 p-1 rounded-full text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-colors"
+                            title="Disconnect"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                       
                       {/* Right: Page buttons */}
@@ -353,7 +474,16 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
                                 </>
                               ) : (
                                 <>
-                                  <span className="text-sm text-white font-mono">{tag.text}</span>
+                                  <span 
+                                    className="text-sm text-white font-mono cursor-pointer hover:text-blue-400 hover:underline transition-colors" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTagClick(tag);
+                                    }}
+                                    title={`Click to go to page ${tag.page} and center on tag`}
+                                  >
+                                    {tag.text}
+                                  </span>
                                   <EditButton onClick={() => handleEditTag(tag.id, tag.text)} />
                                   <DeleteButton onClick={() => handleDeleteTag(tag.id)} />
                                 </>
@@ -372,36 +502,16 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex justify-center">
-                        {connection.status === 'connected' && (
-                          <button
-                            onClick={() => handleDisconnect(connection)}
-                            className="px-3 py-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-400/50 rounded text-sm font-medium transition-colors"
-                          >
-                            Disconnect
-                          </button>
-                        )}
-                        {connection.status === 'ready' && (
+                      {connection.status === 'ready' && (
+                        <div className="flex justify-center">
                           <button
                             onClick={() => handleConnect(connection)}
                             className="px-3 py-1.5 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-400/50 rounded text-sm font-medium transition-colors"
                           >
                             Connect
                           </button>
-                        )}
-                        {connection.status === 'invalid' && connection.tags.length === 1 && (
-                          <button
-                            onClick={() => {
-                              const missingPage = connection.tags[0].page === 1 ? 2 : 1;
-                              setCurrentPage(missingPage);
-                              // TODO: Activate OPC creation mode
-                            }}
-                            className="px-3 py-1.5 bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-400/50 rounded text-sm font-medium transition-colors"
-                          >
-                            Create OPC on P{connection.tags[0].page === 1 ? 2 : 1}
-                          </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

@@ -116,6 +116,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   getCommentsForTarget,
   // Color settings
   colorSettings,
+  // OPC Panel focus
+  focusOPCConnection,
+  onOPCTagClick,
   // Performance settings
   showAllRelationships,
   setShowAllRelationships,
@@ -394,6 +397,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           setShowAllRelationships={setShowAllRelationships}
           showOnlySelectedRelationships={showOnlySelectedRelationships}
           setShowOnlySelectedRelationships={setShowOnlySelectedRelationships}
+          onOPCTagClick={onOPCTagClick}
         />
       </div>
       <SelectionPanel
@@ -809,6 +813,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             isVisible={isOPCPanelVisible}
             onUpdateTagText={onUpdateTagText}
             onDeleteTags={onDeleteTags}
+            onPingTag={handlePingTag}
+            focusOPCConnection={focusOPCConnection}
           />
         </div>
       )}

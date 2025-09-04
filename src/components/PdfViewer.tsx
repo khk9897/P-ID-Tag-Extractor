@@ -105,6 +105,7 @@ const PdfViewerComponent = ({
   setShowAllRelationships,
   showOnlySelectedRelationships,
   setShowOnlySelectedRelationships,
+  onOPCTagClick,
 }) => {
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
@@ -1022,6 +1023,11 @@ const PdfViewerComponent = ({
 
     if (mode === 'select') {
       const clickedTag = tags.find(t => t.id === tagId);
+      
+      // Check if this is an OPC tag - call onOPCTagClick if provided
+      if (clickedTag && clickedTag.category === Category.OffPageConnector && onOPCTagClick) {
+        onOPCTagClick(clickedTag.text);
+      }
       
       // Check if this is an OPC tag and if it's connected
       if (clickedTag && clickedTag.category === Category.OffPageConnector) {

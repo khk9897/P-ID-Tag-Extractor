@@ -95,6 +95,29 @@ const calculateBbox = (item, viewBoxOffsetX = 0, viewBoxOffsetY = 0, viewport = 
     return pdfBbox;
 };
 
+// Get the right-bottom corner coordinates considering PDF rotation
+// PDF coordinates: Y=0 is TOP, Y=height is BOTTOM
+const getRightBottomCorner = (viewport, rotation) => {
+    const { width: pageWidth, height: pageHeight } = viewport;
+    
+    switch (rotation) {
+        case 0:
+            // Normal orientation: right-bottom corner is at (pageWidth, pageHeight)
+            return { x: pageWidth, y: pageHeight };
+        case 90:
+            // 90° rotation: right-bottom becomes (0, pageHeight) in transformed coordinates  
+            return { x: 0, y: pageHeight };
+        case 180:
+            // 180° rotation: right-bottom becomes (0, 0) in transformed coordinates
+            return { x: 0, y: 0 };
+        case 270:
+            // 270° rotation: right-bottom becomes (pageHeight, 0) in transformed coordinates
+            return { x: pageHeight, y: 0 };
+        default:
+            // Fallback to normal orientation
+            return { x: pageWidth, y: pageHeight };
+    }
+};
 
 export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSettings = { autoRemoveWhitespace: true }) => {
     const page = await pdfDoc.getPage(pageNum);
@@ -279,11 +302,13 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
     if (drawingNumberRegexString) {
         try {
             const drawingNumberRegex = new RegExp(drawingNumberRegexString, 'i');
-            const { width: pageWidth, height: pageHeight } = page.getViewport({ scale: 1.0 });
+            const rightBottomCorner = getRightBottomCorner(viewport, rotation);
 
             let bestCandidate = null;
             let minDistanceSq = Infinity;
+            const candidates = []; // For debugging
 
+            // First pass: collect all Drawing Number candidates with metadata
             for (let i = 0; i < textItems.length; i++) {
                 if (consumedIndices.has(i)) continue;
                 
@@ -292,17 +317,82 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
                 
                 if (match) {
                     const bbox = calculateBbox(item, viewBoxOffsetX, viewBoxOffsetY, viewport, rotation);
-                    // Calculate squared distance from bottom-right corner of the bbox 
-                    // to the bottom-right corner of the page (pageWidth, 0).
-                    const dx = pageWidth - bbox.x2;
-                    const dy = bbox.y1 - 0;
-                    const distanceSq = dx * dx + dy * dy;
-
-                    if (distanceSq < minDistanceSq) {
-                        minDistanceSq = distanceSq;
-                        bestCandidate = { item, index: i, bbox, text: match[0] };
+                    
+                    // Calculate distance to bottom-right corner
+                    // Use the bottom-right point of the text bbox for distance calculation
+                    const dx = rightBottomCorner.x - bbox.x2;  // Distance from right edge
+                    let targetY;
+                    switch (rotation) {
+                        case 0:
+                            // 0°: Y increases downward, so max Y is bottom
+                            targetY = Math.max(bbox.y1, bbox.y2);
+                            break;
+                        case 90:
+                            // 90°: After rotation, max Y is still bottom
+                            targetY = Math.max(bbox.y1, bbox.y2);
+                            break;
+                        case 180:
+                            // 180°: After rotation, min Y is bottom
+                            targetY = Math.min(bbox.y1, bbox.y2);
+                            break;
+                        case 270:
+                            // 270°: After rotation, min Y is bottom  
+                            targetY = Math.min(bbox.y1, bbox.y2);
+                            break;
+                        default:
+                            targetY = Math.max(bbox.y1, bbox.y2);
+                            break;
                     }
+                    const dy = rightBottomCorner.y - targetY;   // Distance from bottom edge
+                    const distanceSq = dx * dx + dy * dy;
+                    const distance = Math.sqrt(distanceSq);
+
+                    // Store candidate for debugging
+                    candidates.push({
+                        item,
+                        index: i,
+                        bbox,
+                        text: match[0],
+                        distance,
+                        distanceSq,
+                        dx,
+                        dy,
+                        targetY,
+                        isSelected: false
+                    });
                 }
+            }
+
+            // Simple selection: closest distance to bottom-right corner
+            for (const candidate of candidates) {
+                if (candidate.distanceSq < minDistanceSq) {
+                    minDistanceSq = candidate.distanceSq;
+                    bestCandidate = candidate;
+                }
+            }
+
+            // Mark selected candidate for debugging
+            if (bestCandidate) {
+                candidates.forEach(c => {
+                    c.isSelected = (c.index === bestCandidate.index);
+                });
+            }
+
+            // Debug logging for Drawing Number selection
+            if (candidates.length > 0) {
+                console.log(`🎯 DRAWING NUMBER DEBUG - Page ${pageNum}`);
+                console.log(`🔄 Page rotation: ${rotation}°, Right-bottom corner: (${rightBottomCorner.x.toFixed(1)}, ${rightBottomCorner.y.toFixed(1)})`);
+                console.log(`📊 Found ${candidates.length} candidates:`);
+                
+                // Sort by distance for easier reading
+                const sortedCandidates = [...candidates].sort((a, b) => a.distance - b.distance);
+                sortedCandidates.forEach((candidate, index) => {
+                    const marker = candidate.isSelected ? '🏆 SELECTED:' : `${index + 1}.`;
+                    console.log(`${marker} "${candidate.text}"`);
+                    console.log(`   📍 Position: X=${candidate.bbox.x1.toFixed(1)}-${candidate.bbox.x2.toFixed(1)}, Y=${candidate.bbox.y1.toFixed(1)}-${candidate.bbox.y2.toFixed(1)}`);
+                    console.log(`   📏 Distance: ${candidate.distance.toFixed(2)} (dx=${candidate.dx.toFixed(1)}, dy=${candidate.dy.toFixed(1)}, targetY=${candidate.targetY.toFixed(1)})`);
+                });
+                console.log(`════════════════════════════════════════`);
             }
 
             if (bestCandidate) {
@@ -321,9 +411,10 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
     }
 
     // OPC Pass: Find Off-Page Connector tags (Drawing Number + Reference combination)
-    const drawingNumberRegex = new RegExp(drawingNumberRegexString);
-    const opcReferenceRegex = new RegExp(patterns[Category.OffPageConnector]);
-    const opcTolerances = tolerances[Category.OffPageConnector] || { vertical: 15, horizontal: 20 };
+    if (drawingNumberRegexString && patterns[Category.OffPageConnector]) {
+        const drawingNumberRegex = new RegExp(drawingNumberRegexString);
+        const opcReferenceRegex = new RegExp(patterns[Category.OffPageConnector]);
+        const opcTolerances = tolerances[Category.OffPageConnector] || { vertical: 15, horizontal: 20 };
     
     try {
         // Find all Drawing Number matches (including already consumed ones for OPC purposes)
@@ -412,6 +503,7 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
         }
     } catch (error) {
     }
+    } // End of OPC Pass conditional block
 
     // Final Pass: Collect all un-tagged items as raw text
     for (let i = 0; i < textItems.length; i++) {

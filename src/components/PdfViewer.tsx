@@ -988,6 +988,66 @@ const PdfViewerComponent = ({
     if (mode === 'select') {
       const clickedTag = tags.find(t => t.id === tagId);
       
+      // Debug all tag selections
+      if (clickedTag) {
+        console.log(`🏷️ TAG CLICKED: "${clickedTag.text}" (Category: ${clickedTag.category})`);
+        console.log(`📍 Position: X=${clickedTag.bbox.x1.toFixed(1)}-${clickedTag.bbox.x2.toFixed(1)}, Y=${clickedTag.bbox.y1.toFixed(1)}-${clickedTag.bbox.y2.toFixed(1)}, Page: ${clickedTag.page}`);
+      }
+      
+      // Detailed Drawing Number debug
+      if (clickedTag && clickedTag.category === Category.DrawingNumber) {
+        console.log(`🎯 DRAWING NUMBER DEBUG - Selected: "${clickedTag.text}"`);
+        console.log(`📍 Position: X=${clickedTag.bbox.x1.toFixed(1)}-${clickedTag.bbox.x2.toFixed(1)}, Y=${clickedTag.bbox.y1.toFixed(1)}-${clickedTag.bbox.y2.toFixed(1)}`);
+        console.log(`📄 Page: ${clickedTag.page}`);
+        
+        // Calculate distance to right-bottom corner
+        if (pdfDoc) {
+          pdfDoc.getPage(clickedTag.page).then(page => {
+            const viewport = page.getViewport({ scale: 1.0 });
+            const rotation = viewport.rotation || 0;
+            const { width: pageWidth, height: pageHeight } = viewport;
+            
+            // Get rotation-aware right-bottom corner
+            let rightBottomCorner;
+            switch (rotation) {
+              case 0:   rightBottomCorner = { x: pageWidth, y: 0 }; break;
+              case 90:  rightBottomCorner = { x: pageHeight, y: 0 }; break;
+              case 180: rightBottomCorner = { x: 0, y: pageHeight }; break;
+              case 270: rightBottomCorner = { x: 0, y: pageWidth }; break;
+              default:  rightBottomCorner = { x: pageWidth, y: 0 }; break;
+            }
+            
+            const dx = rightBottomCorner.x - clickedTag.bbox.x2;
+            let targetY;
+            switch (rotation) {
+              case 0:
+              case 90:
+                // 0° and 90°: smaller Y is closer to bottom
+                targetY = Math.min(clickedTag.bbox.y1, clickedTag.bbox.y2);
+                break;
+              case 180:
+              case 270:
+                // 180° and 270°: larger Y is closer to bottom  
+                targetY = Math.max(clickedTag.bbox.y1, clickedTag.bbox.y2);
+                break;
+              default:
+                targetY = Math.min(clickedTag.bbox.y1, clickedTag.bbox.y2);
+                break;
+            }
+            const dy = rightBottomCorner.y - targetY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            console.log(`📏 Distance to right-bottom corner: ${distance.toFixed(2)} (dx=${dx.toFixed(1)}, dy=${dy.toFixed(1)})`);
+            console.log(`🔄 Page rotation: ${rotation}°`);
+            console.log(`📐 Page dimensions: ${pageWidth.toFixed(1)} x ${pageHeight.toFixed(1)}`);
+            console.log(`🎯 Right-bottom corner: (${rightBottomCorner.x.toFixed(1)}, ${rightBottomCorner.y.toFixed(1)})`);
+            console.log(`────────────────────────────────`);
+          }).catch(err => {
+            console.log(`❌ Error calculating distance: ${err.message}`);
+          });
+        }
+      }
+      
       // Check if this is an OPC tag - call onOPCTagClick if provided
       if (clickedTag && clickedTag.category === Category.OffPageConnector && onOPCTagClick) {
         onOPCTagClick(clickedTag.text);
@@ -1073,17 +1133,16 @@ const PdfViewerComponent = ({
     isClickOnItem.current = true;
     const isMultiSelect = e.ctrlKey || e.metaKey;
 
-    // Find the clicked item and log its coordinates for instrument tag debugging
+    // Debug raw text item selection
     const clickedItem = rawTextItems.find(item => item.id === rawTextItemId);
     if (clickedItem) {
+        console.log(`📝 RAW TEXT CLICKED: "${clickedItem.text}"`);
+        console.log(`📍 Position: X=${clickedItem.bbox.x1.toFixed(1)}-${clickedItem.bbox.x2.toFixed(1)}, Y=${clickedItem.bbox.y1.toFixed(1)}-${clickedItem.bbox.y2.toFixed(1)}, Page: ${clickedItem.page}`);
         
-        // Check if it matches instrument patterns
-        const funcPattern = /^[A-Z]{2,4}$/;
-        const numPattern = /^\d{3,4}(?:\s?[A-Z])?$/;
-        
-        if (funcPattern.test(clickedItem.text)) {
-        } else if (numPattern.test(clickedItem.text)) {
-        } else {
+        // Check if it matches Drawing Number pattern for debugging
+        const drawingNumberPattern = /[A-Z\d-]{5,}-[A-Z\d-]{5,}-\d{3,}/i;
+        if (drawingNumberPattern.test(clickedItem.text)) {
+            console.log(`🎯 This raw text matches Drawing Number pattern!`);
         }
     }
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, startTransition } from 'react';
 import { Category, RelationshipType, Comment, CommentPriority } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
 import { exportToExcel } from '../services/excelExporter.ts';
@@ -848,6 +848,16 @@ export const SidePanel = ({
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Debounce search query for better performance
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 150); // 150ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
   const [loopSearchQuery, setLoopSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('tags');
   const [editingLoopId, setEditingLoopId] = useState(null);
@@ -890,6 +900,25 @@ export const SidePanel = ({
   const listRef = useRef(null);
   const descriptionListRef = useRef(null);
   const lastClickedIndex = useRef(-1);
+
+  // Ultra-fast page index for O(1) page filtering
+  const pageIndex = useMemo(() => {
+    const startTime = performance.now();
+    const index = new Map();
+    const nonOPCTags = tags.filter(tag => tag.category !== Category.OffPageConnector);
+    
+    nonOPCTags.forEach(tag => {
+      if (!index.has(tag.page)) {
+        index.set(tag.page, []);
+      }
+      index.get(tag.page).push(tag);
+    });
+    
+    const buildTime = performance.now() - startTime;
+    debugLog('PERF', `🚀 Page index built: ${index.size} pages, ${nonOPCTags.length} tags in ${buildTime.toFixed(2)}ms`);
+    
+    return { index, nonOPCTags, totalCount: nonOPCTags.length };
+  }, [tags]);
   
   const toggleSection = useCallback((sectionName) => {
     setSections(prev => ({ ...prev, [sectionName]: !prev[sectionName] }));
@@ -1134,7 +1163,7 @@ export const SidePanel = ({
   
   const sortedAndFilteredTags = useMemo(() => {
     // Add caching for expensive filtering operation
-    const cacheKey = `filter_${tags.length}_${showCurrentPageOnly}_${currentPage}_${filterCategory}_${reviewFilter}_${commentFilter}_${searchQuery}_${sortOrder}`;
+    const cacheKey = `filter_${tags.length}_${showCurrentPageOnly}_${currentPage}_${filterCategory}_${reviewFilter}_${commentFilter}_${debouncedSearchQuery}_${sortOrder}`;
     
     if (!(window as any).tagFilterCache) {
       (window as any).tagFilterCache = new Map();
@@ -1154,20 +1183,25 @@ export const SidePanel = ({
       filterCategory, 
       reviewFilter, 
       commentFilter, 
-      searchQuery, 
+      debouncedSearchQuery, 
       sortOrder
     ]);
     
-    const lowerSearchQuery = searchQuery.toLowerCase(); // Pre-calculate for performance
+    const lowerSearchQuery = debouncedSearchQuery.toLowerCase(); // Pre-calculate for performance
     
-    // Optimized single-pass filtering to reduce iterations
+    // Use page index for ultra-fast page filtering (O(n) → O(1))
+    const tagsToProcess = showCurrentPageOnly 
+      ? (pageIndex.index.get(currentPage) || [])
+      : pageIndex.nonOPCTags;
+    
+    debugLog('PERF', `📊 Processing ${tagsToProcess.length}/${pageIndex.totalCount} tags (page filter: ${showCurrentPageOnly ? 'ON' : 'OFF'})`);
+    
+    // Optimized single-pass filtering with pre-filtered tags
     const filtered = [];
-    for (let i = 0; i < tags.length; i++) {
-      const tag = tags[i];
+    for (let i = 0; i < tagsToProcess.length; i++) {
+      const tag = tagsToProcess[i];
       
-      // Quick early exits for performance
-      if (tag.category === Category.OffPageConnector) continue;
-      if (showCurrentPageOnly && tag.page !== currentPage) continue;
+      // OPC and page filtering already handled by index
       if (filterCategory !== 'All' && tag.category !== filterCategory) continue;
       
       // Review filter check
@@ -1276,42 +1310,61 @@ export const SidePanel = ({
         
         return sorted;
     }
-  }, [tags, showCurrentPageOnly, currentPage, filterCategory, reviewFilter, commentFilter, searchQuery, sortOrder, commentCountsByTag]);
+  }, [tags, showCurrentPageOnly, currentPage, filterCategory, reviewFilter, commentFilter, debouncedSearchQuery, sortOrder, commentCountsByTag]);
 
-  // Virtualized tags for performance - threshold lowered for better performance
+  // Virtualized tags for performance - ultra-aggressive virtualization
   const virtualizedTags = useMemo(() => {
+    // Ultra-aggressive virtualization threshold: start at 30 items
     if (sortedAndFilteredTags.length <= 30) {
-      return sortedAndFilteredTags; // Don't virtualize small lists - lower threshold for better performance
+      return sortedAndFilteredTags; 
     }
     
-    // Ensure selected tag is always in the virtual range (optimized for speed)
+    // Much smaller viewport for faster rendering
+    const baseViewport = Math.min(50, Math.max(20, Math.floor(sortedAndFilteredTags.length * 0.05)));
+    
+    // Ensure we don't exceed array bounds
+    const safeStart = Math.max(0, Math.min(virtualizedRange.start, sortedAndFilteredTags.length));
+    const safeEnd = Math.max(safeStart, Math.min(virtualizedRange.end || baseViewport, sortedAndFilteredTags.length));
+    
+    // Even smaller viewport for ultra-fast rendering
+    const actualEnd = Math.min(safeEnd, safeStart + baseViewport);
+    
+    const result = sortedAndFilteredTags.slice(safeStart, actualEnd);
+    debugLog('PERF', `🚀 Ultra-fast render: ${result.length}/${sortedAndFilteredTags.length} tags (${safeStart}-${actualEnd})`);
+    
+    return result;
+  }, [sortedAndFilteredTags, virtualizedRange]);
+
+  // Separate effect to handle selection-based virtualization range updates
+  useEffect(() => {
+    if (sortedAndFilteredTags.length <= 30) return;
+    
+    const bufferSize = Math.min(100, Math.max(20, Math.floor(sortedAndFilteredTags.length / 50)));
+    
     if (selectedTagIds.length === 1) {
       const selectedIndex = sortedAndFilteredTags.findIndex(tag => tag.id === selectedTagIds[0]);
       if (selectedIndex !== -1) {
-        const bufferSize = 30; // Increased buffer for smoother scrolling
-        const newStart = Math.max(0, selectedIndex - bufferSize);
-        const newEnd = Math.min(sortedAndFilteredTags.length, selectedIndex + bufferSize * 2);
-        
         // Only update if the selected tag is completely outside current range
         const isOutsideRange = selectedIndex < virtualizedRange.start || selectedIndex >= virtualizedRange.end;
         
         if (isOutsideRange) {
-          // Use immediate update for tag selection to be responsive
+          const newStart = Math.max(0, selectedIndex - bufferSize);
+          const newEnd = Math.min(sortedAndFilteredTags.length, selectedIndex + bufferSize * 2);
           setVirtualizedRange({ start: newStart, end: newEnd });
         }
       }
+    } else if (virtualizedRange.start === 0 && virtualizedRange.end === 100) {
+      // For large lists without selection, show first items for immediate feedback
+      const initialSize = Math.min(200, sortedAndFilteredTags.length);
+      setVirtualizedRange({ start: 0, end: initialSize });
     }
-    
-    // Ensure we don't exceed array bounds and handle edge cases
-    const safeStart = Math.max(0, Math.min(virtualizedRange.start, sortedAndFilteredTags.length));
-    const safeEnd = Math.max(safeStart, Math.min(virtualizedRange.end, sortedAndFilteredTags.length));
-    
-    // Return a safe slice that won't cause rendering issues
-    return sortedAndFilteredTags.slice(safeStart, safeEnd);
-  }, [sortedAndFilteredTags, virtualizedRange, selectedTagIds]);
+  }, [selectedTagIds, sortedAndFilteredTags]);
 
   const filteredDescriptions = useMemo(() => {
-    return descriptions.filter(desc => !showCurrentPageOnly || desc.page === currentPage);
+    if (!showCurrentPageOnly) return descriptions;
+    const filtered = descriptions.filter(desc => desc.page === currentPage);
+    debugLog('PERF', `📊 Filtered descriptions: ${filtered.length}/${descriptions.length} (page ${currentPage})`);
+    return filtered;
   }, [descriptions, showCurrentPageOnly, currentPage]);
 
   // Reset virtualization range when show page only changes or filter changes
@@ -1325,7 +1378,7 @@ export const SidePanel = ({
     lastScrollUpdateRef.current = 0;
     
     setVirtualizedRange({ start: 0, end: 100 });
-  }, [showCurrentPageOnly, filterCategory, searchQuery]);
+  }, [showCurrentPageOnly, filterCategory, debouncedSearchQuery]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1337,36 +1390,46 @@ export const SidePanel = ({
   }, []);
 
   const filteredEquipmentShortSpecs = useMemo(() => {
-    return equipmentShortSpecs.filter(spec => !showCurrentPageOnly || spec.page === currentPage);
+    if (!showCurrentPageOnly) return equipmentShortSpecs;
+    const filtered = equipmentShortSpecs.filter(spec => spec.page === currentPage);
+    debugLog('PERF', `📊 Filtered equipment specs: ${filtered.length}/${equipmentShortSpecs.length} (page ${currentPage})`);
+    return filtered;
   }, [equipmentShortSpecs, showCurrentPageOnly, currentPage]);
 
   const filteredLoops = useMemo(() => {
-    return loops.filter(loop => !showCurrentPageOnly || loop.tagIds.some(tagId => {
-      const tag = tags.find(t => t.id === tagId);
-      return tag && tag.page === currentPage;
-    }));
-  }, [loops, showCurrentPageOnly, currentPage, tags]);
+    if (!showCurrentPageOnly) return loops;
+    
+    const currentPageTagIds = new Set((pageIndex.index.get(currentPage) || []).map(tag => tag.id));
+    const filtered = loops.filter(loop => 
+      loop.tagIds.some(tagId => currentPageTagIds.has(tagId))
+    );
+    debugLog('PERF', `📊 Filtered loops: ${filtered.length}/${loops.length} (page ${currentPage})`);
+    return filtered;
+  }, [loops, showCurrentPageOnly, currentPage, pageIndex]);
 
   const filteredRelationships = useMemo(() => {
     if (!showCurrentPageOnly) return relationships;
     
-    // Filter relationships where both source and target are on the current page
-    return relationships.filter(rel => {
-      const fromTag = tags.find(t => t.id === rel.from);
-      const toTag = tags.find(t => t.id === rel.to);
-      const fromDesc = descriptions.find(d => d.id === rel.from);
-      const toDesc = descriptions.find(d => d.id === rel.to);
-      const fromRawItem = rawTextItems.find(r => r.id === rel.from);
-      const toRawItem = rawTextItems.find(r => r.id === rel.to);
+    // Create fast lookup sets for current page entities
+    const currentPageTagIds = new Set((pageIndex.index.get(currentPage) || []).map(tag => tag.id));
+    const currentPageDescIds = new Set(descriptions.filter(d => d.page === currentPage).map(d => d.id));
+    const currentPageRawItemIds = new Set(rawTextItems.filter(r => r.page === currentPage).map(r => r.id));
+    
+    const filtered = relationships.filter(rel => {
+      // Check if either source or target is on current page using fast Set lookups
+      const fromOnPage = currentPageTagIds.has(rel.from) || 
+                        currentPageDescIds.has(rel.from) || 
+                        currentPageRawItemIds.has(rel.from);
+      const toOnPage = currentPageTagIds.has(rel.to) || 
+                      currentPageDescIds.has(rel.to) || 
+                      currentPageRawItemIds.has(rel.to);
       
-      const fromPage = fromTag?.page || fromDesc?.page || fromRawItem?.page;
-      const toPage = toTag?.page || toDesc?.page || toRawItem?.page;
-      
-      // Show relationships if at least one entity is on the current page
-      // or if showCurrentPageOnly is false (show all relationships)
-      return !showCurrentPageOnly || fromPage === currentPage || toPage === currentPage;
+      return fromOnPage || toOnPage;
     });
-  }, [relationships, showCurrentPageOnly, currentPage, tags, descriptions, rawTextItems]);
+    
+    debugLog('PERF', `📊 Filtered relationships: ${filtered.length}/${relationships.length} (page ${currentPage})`);
+    return filtered;
+  }, [relationships, showCurrentPageOnly, currentPage, pageIndex, descriptions, rawTextItems]);
 
   // Auto-scroll to selected tag only when selection comes from PDF viewer
   useEffect(() => {
@@ -1479,7 +1542,7 @@ export const SidePanel = ({
     // Check if tag is visible with current filters
     const isTagVisible = !showCurrentPageOnly || tag.page === currentPage;
     const isTagInCategory = filterCategory === 'All' || tag.category === filterCategory;
-    const isTagInSearch = tag.text.toLowerCase().includes(searchQuery.toLowerCase());
+    const isTagInSearch = tag.text.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
     
     // Adjust filters immediately and synchronously
     if (!isTagVisible) {
@@ -1488,7 +1551,7 @@ export const SidePanel = ({
     if (!isTagInCategory) {
       setFilterCategory('All');
     }
-    if (!isTagInSearch && searchQuery) {
+    if (!isTagInSearch && debouncedSearchQuery) {
       setSearchQuery('');
     }
     
@@ -1508,7 +1571,7 @@ export const SidePanel = ({
         }
       }
     }, 100);
-  }, [setCurrentPage, setSelectedTagIds, activeTab, setActiveTab, tags, showCurrentPageOnly, currentPage, filterCategory, searchQuery, setShowCurrentPageOnly, setFilterCategory, setSearchQuery, onPingTag]);
+  }, [setCurrentPage, setSelectedTagIds, activeTab, setActiveTab, tags, showCurrentPageOnly, currentPage, filterCategory, debouncedSearchQuery, setShowCurrentPageOnly, setFilterCategory, setSearchQuery, onPingTag]);
 
   const handleBulkDelete = useCallback(() => {
     if (selectedTagIds.length > 0) {
@@ -1795,10 +1858,16 @@ export const SidePanel = ({
   const filterCategories = ['All', Category.Equipment, Category.Line, Category.SpecialItem, Category.Instrument, Category.NotesAndHolds, Category.DrawingNumber];
   
   const totalTagCount = useMemo(() => {
-    return tags
-      .filter(tag => tag.category !== Category.OffPageConnector) // Exclude OPC tags from count
-      .filter(tag => !showCurrentPageOnly || tag.page === currentPage).length;
-  }, [tags, showCurrentPageOnly, currentPage]);
+    // Use page index for ultra-fast count calculation
+    if (showCurrentPageOnly) {
+      const pageTagCount = pageIndex.index.get(currentPage)?.length || 0;
+      debugLog('PERF', `📊 Total tag count (page ${currentPage}): ${pageTagCount}`);
+      return pageTagCount;
+    } else {
+      debugLog('PERF', `📊 Total tag count (all pages): ${pageIndex.totalCount}`);
+      return pageIndex.totalCount;
+    }
+  }, [pageIndex, showCurrentPageOnly, currentPage]);
   
   return (
     <aside 
@@ -1823,7 +1892,11 @@ export const SidePanel = ({
                     type="text"
                     placeholder="Search tags..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      startTransition(() => {
+                        setSearchQuery(e.target.value);
+                      });
+                    }}
                     className="w-full bg-slate-900 border border-slate-600 rounded-md px-2 py-1.5 pr-8 text-sm focus:ring-sky-500 focus:border-sky-500"
                   />
                   {searchQuery && (
@@ -1890,7 +1963,11 @@ export const SidePanel = ({
                         <select
                           id="sort-order"
                           value={sortOrder}
-                          onChange={(e) => setSortOrder(e.target.value)}
+                          onChange={(e) => {
+                            startTransition(() => {
+                              setSortOrder(e.target.value);
+                            });
+                          }}
                           className="flex-1 bg-slate-700 border-slate-600 rounded-md px-2 py-1 text-sm focus:ring-sky-500 focus:border-sky-500"
                         >
                           <option value="default">Default (A-Z)</option>
@@ -1955,14 +2032,16 @@ export const SidePanel = ({
                             }
                             
                             const handleClick = () => {
-                              if (filterOption.key === 'All') {
-                                setReviewFilter('All');
-                                setCommentFilter('All');
-                              } else if (filterOption.key === 'Reviewed' || filterOption.key === 'NotReviewed') {
-                                setReviewFilter(filterOption.key);
-                              } else {
-                                setCommentFilter(filterOption.key);
-                              }
+                              startTransition(() => {
+                                if (filterOption.key === 'All') {
+                                  setReviewFilter('All');
+                                  setCommentFilter('All');
+                                } else if (filterOption.key === 'Reviewed' || filterOption.key === 'NotReviewed') {
+                                  setReviewFilter(filterOption.key);
+                                } else {
+                                  setCommentFilter(filterOption.key);
+                                }
+                              });
                             };
                             
                             return (
@@ -2018,6 +2097,9 @@ export const SidePanel = ({
                           perfTimer.start(filterTimerId);
                           debugLog('EVENT', `🔍 Filter category change started: ${filterCategory} → ${cat}`);
                           
+                          // Reset virtualization range for immediate feedback on new filter
+                          setVirtualizedRange({ start: 0, end: 200 });
+                          
                           // Use React's batching for better performance
                           React.startTransition(() => {
                             setFilterCategory(cat);
@@ -2063,11 +2145,11 @@ export const SidePanel = ({
               className="flex-grow overflow-y-auto p-2 divide-y divide-slate-700/80"
               onScroll={handleScroll}
             >
-                {sortedAndFilteredTags.length > 50 && (
+                {sortedAndFilteredTags.length > 30 && (
                   <div style={{ height: `${virtualizedRange.start * 90}px` }} />
                 )}
                 {virtualizedTags.map((tag, virtualIndex) => {
-                  const actualIndex = sortedAndFilteredTags.length > 50 ? 
+                  const actualIndex = sortedAndFilteredTags.length > 30 ? 
                     virtualizedRange.start + virtualIndex : 
                     virtualIndex;
                   return (

@@ -1,30 +1,42 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Category, RelationshipType, Tag, Relationship } from '../types.ts';
+import { EditButton, DeleteButton, SaveButton, CancelButton } from './UIButtons.tsx';
+import { v4 as uuid } from 'uuid';
 
 interface OPCPanelProps {
   tags: Tag[];
   relationships: Relationship[];
+  setRelationships: React.Dispatch<React.SetStateAction<Relationship[]>>;
   currentPage: number;
   setCurrentPage: (page: number) => void;
   isVisible: boolean;
+  onUpdateTagText: (tagId: string, newText: string) => void;
+  onDeleteTags: (tagIds: string[]) => void;
 }
 
 interface OPCConnection {
   referenceText: string;
   tags: Tag[];
-  isConnected: boolean;
+  status: 'connected' | 'ready' | 'invalid';
   pages: number[];
+  relationship?: Relationship;
 }
 
 export const OPCPanel: React.FC<OPCPanelProps> = ({
   tags,
   relationships,
+  setRelationships,
   currentPage,
   setCurrentPage,
   isVisible,
+  onUpdateTagText,
+  onDeleteTags,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [showCurrentPageOnly, setShowCurrentPageOnly] = useState<boolean>(false);
+  const [showCurrentPageOnly, setShowCurrentPageOnly] = useState<boolean>(true);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
+  const [editText, setEditText] = useState<string>('');
   
   console.log(`[OPC Panel] isVisible: ${isVisible}`);
 
@@ -43,8 +55,9 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
         groups[refText] = {
           referenceText: refText,
           tags: [],
-          isConnected: false,
+          status: 'invalid',
           pages: [],
+          relationship: undefined,
         };
       }
       groups[refText].tags.push(tag);
@@ -53,26 +66,30 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
       }
     });
 
-    // Check if connections exist
+    // Check connection status
     Object.values(groups).forEach(group => {
       if (group.tags.length === 2 && group.pages.length === 2) {
         const [tag1, tag2] = group.tags;
-        const hasConnection = opcRelationships.some(rel => 
+        const relationship = opcRelationships.find(rel => 
           (rel.from === tag1.id && rel.to === tag2.id) ||
           (rel.from === tag2.id && rel.to === tag1.id)
         );
-        group.isConnected = hasConnection;
+        
+        if (relationship) {
+          group.status = 'connected';
+          group.relationship = relationship;
+        } else {
+          group.status = 'ready';
+        }
         
         console.log(`[OPC Panel] Checking connection for "${group.referenceText}":`, {
           tag1: `${tag1.id} (page ${tag1.page})`,
           tag2: `${tag2.id} (page ${tag2.page})`,
-          opcRelationshipsCount: opcRelationships.length,
-          hasConnection,
-          matchingRels: opcRelationships.filter(rel => 
-            (rel.from === tag1.id && rel.to === tag2.id) ||
-            (rel.from === tag2.id && rel.to === tag1.id)
-          )
+          status: group.status,
+          hasRelationship: !!relationship
         });
+      } else {
+        group.status = 'invalid';
       }
     });
 
@@ -105,6 +122,78 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
 
   const clearSearch = () => {
     setSearchTerm('');
+  };
+
+  const toggleExpanded = (referenceText: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(referenceText)) {
+        next.delete(referenceText);
+      } else {
+        next.add(referenceText);
+      }
+      return next;
+    });
+  };
+
+  const handleConnect = (connection: OPCConnection) => {
+    if (connection.tags.length === 2 && connection.status === 'ready') {
+      const [tag1, tag2] = connection.tags;
+      const newRelationship: Relationship = {
+        id: uuid(),
+        type: RelationshipType.OffPageConnection,
+        from: tag1.id,
+        to: tag2.id,
+      };
+      setRelationships(prev => [...prev, newRelationship]);
+      console.log(`[OPC Panel] Creating connection between ${tag1.text} on P${tag1.page} and ${tag2.text} on P${tag2.page}`);
+    }
+  };
+
+  const handleDisconnect = (connection: OPCConnection) => {
+    if (connection.relationship) {
+      setRelationships(prev => 
+        prev.filter(r => r.id !== connection.relationship?.id)
+      );
+      console.log(`[OPC Panel] Disconnecting ${connection.referenceText}`);
+    }
+  };
+
+  const handleEditTag = (tagId: string, text: string) => {
+    setEditingTagId(tagId);
+    setEditText(text);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingTagId && editText.trim()) {
+      onUpdateTagText(editingTagId, editText.trim());
+      setEditingTagId(null);
+      setEditText('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTagId(null);
+    setEditText('');
+  };
+
+  const handleDeleteTag = (tagId: string) => {
+    if (window.confirm('Are you sure you want to delete this OPC tag?')) {
+      // Find and delete associated relationships
+      const associatedRelationships = relationships.filter(r => 
+        (r.type === RelationshipType.OffPageConnection) && 
+        (r.from === tagId || r.to === tagId)
+      );
+      
+      if (associatedRelationships.length > 0) {
+        setRelationships(prev => 
+          prev.filter(r => !associatedRelationships.some(ar => ar.id === r.id))
+        );
+      }
+      
+      onDeleteTags([tagId]);
+      console.log(`[OPC Panel] Deleting tag ${tagId}`);
+    }
   };
 
   if (!isVisible) return null;
@@ -157,9 +246,19 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
       <div className="px-4 py-3 bg-slate-900/50 border-b border-slate-700 text-sm">
         <div className="flex justify-between text-slate-300">
           <span>
-            {showCurrentPageOnly ? 'Current Page' : 'Total'} OPC: {filteredConnections.length}
+            {showCurrentPageOnly ? 'Current Page' : 'Total'}: {filteredConnections.length}
           </span>
-          <span>Connected: {filteredConnections.filter(conn => conn.isConnected).length}</span>
+          <div className="flex space-x-3">
+            <span className="text-green-400">
+              Connected: {filteredConnections.filter(conn => conn.status === 'connected').length}
+            </span>
+            <span className="text-yellow-400">
+              Ready: {filteredConnections.filter(conn => conn.status === 'ready').length}
+            </span>
+            <span className="text-red-400">
+              Invalid: {filteredConnections.filter(conn => conn.status === 'invalid').length}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -171,42 +270,143 @@ export const OPCPanel: React.FC<OPCPanelProps> = ({
           </div>
         ) : (
           <div className="space-y-2 p-2">
-            {filteredConnections.map((connection) => (
-              <div
-                key={connection.referenceText}
-                className="bg-slate-900 rounded-lg border border-slate-700 p-2 hover:bg-slate-800/50 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  {/* Left: Reference + Status */}
-                  <div className="flex items-center space-x-3">
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-violet-500/20 text-violet-400 border border-violet-400">
-                      {connection.referenceText}
-                    </span>
-                    <div className={`w-2 h-2 rounded-full ${connection.isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span className={`text-xs ${connection.isConnected ? 'text-green-400' : 'text-red-400'}`}>
-                      {connection.isConnected ? 'Connected' : 'Invalid'}
-                    </span>
+            {filteredConnections.map((connection) => {
+              const isExpanded = expandedGroups.has(connection.referenceText);
+              const statusColors = {
+                connected: { dot: 'bg-green-500', text: 'text-green-400', label: 'Connected' },
+                ready: { dot: 'bg-yellow-500', text: 'text-yellow-400', label: 'Ready to Connect' },
+                invalid: { dot: 'bg-red-500', text: 'text-red-400', label: 'Invalid' }
+              };
+              const status = statusColors[connection.status];
+
+              return (
+                <div
+                  key={connection.referenceText}
+                  className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden"
+                >
+                  {/* Header - Clickable */}
+                  <div
+                    className="p-2 hover:bg-slate-800/50 transition-colors cursor-pointer"
+                    onClick={() => toggleExpanded(connection.referenceText)}
+                  >
+                    <div className="flex items-center justify-between">
+                      {/* Left: Expand arrow + Reference + Status */}
+                      <div className="flex items-center space-x-3">
+                        <span className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+                          ▶
+                        </span>
+                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-violet-500/20 text-violet-400 border border-violet-400">
+                          {connection.referenceText}
+                        </span>
+                        <div className={`w-2 h-2 rounded-full ${status.dot}`} />
+                        <span className={`text-xs ${status.text}`}>
+                          {status.label}
+                        </span>
+                      </div>
+                      
+                      {/* Right: Page buttons */}
+                      <div className="flex items-center space-x-1">
+                        {connection.pages.sort((a, b) => a - b).map(page => (
+                          <button
+                            key={page}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePageNavigation(page);
+                            }}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              page === currentPage
+                                ? 'bg-violet-500/20 text-violet-400 border border-violet-400'
+                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                            }`}
+                          >
+                            P{page}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  
-                  {/* Right: Page buttons */}
-                  <div className="flex items-center space-x-1">
-                    {connection.pages.sort((a, b) => a - b).map(page => (
-                      <button
-                        key={page}
-                        onClick={() => handlePageNavigation(page)}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          page === currentPage
-                            ? 'bg-violet-500/20 text-violet-400 border border-violet-400'
-                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
-                        }`}
-                      >
-                        P{page}
-                      </button>
-                    ))}
-                  </div>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="border-t border-slate-700 p-3 bg-slate-800/30">
+                      {/* Tags */}
+                      <div className="space-y-2 mb-3">
+                        {connection.tags.sort((a, b) => a.page - b.page).map(tag => (
+                          <div key={tag.id} className="group flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-slate-400">P{tag.page}:</span>
+                              {editingTagId === tag.id ? (
+                                <>
+                                  <input
+                                    type="text"
+                                    value={editText}
+                                    onChange={(e) => setEditText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleSaveEdit();
+                                      if (e.key === 'Escape') handleCancelEdit();
+                                    }}
+                                    className="px-2 py-1 text-xs bg-slate-700 border border-violet-400 rounded text-white focus:outline-none focus:ring-1 focus:ring-violet-500"
+                                    autoFocus
+                                  />
+                                  <SaveButton onClick={handleSaveEdit} />
+                                  <CancelButton onClick={handleCancelEdit} />
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-sm text-white font-mono">{tag.text}</span>
+                                  <EditButton onClick={() => handleEditTag(tag.id, tag.text)} />
+                                  <DeleteButton onClick={() => handleDeleteTag(tag.id)} />
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {/* Missing tag indicator */}
+                        {connection.status === 'invalid' && connection.tags.length === 1 && (
+                          <div className="flex items-center space-x-2 text-red-400">
+                            <span className="text-xs">P{connection.tags[0].page === 1 ? 2 : 1}:</span>
+                            <span className="text-xs italic">(Missing OPC tag)</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex justify-center">
+                        {connection.status === 'connected' && (
+                          <button
+                            onClick={() => handleDisconnect(connection)}
+                            className="px-3 py-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-400/50 rounded text-sm font-medium transition-colors"
+                          >
+                            Disconnect
+                          </button>
+                        )}
+                        {connection.status === 'ready' && (
+                          <button
+                            onClick={() => handleConnect(connection)}
+                            className="px-3 py-1.5 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-400/50 rounded text-sm font-medium transition-colors"
+                          >
+                            Connect
+                          </button>
+                        )}
+                        {connection.status === 'invalid' && connection.tags.length === 1 && (
+                          <button
+                            onClick={() => {
+                              const missingPage = connection.tags[0].page === 1 ? 2 : 1;
+                              setCurrentPage(missingPage);
+                              // TODO: Activate OPC creation mode
+                            }}
+                            className="px-3 py-1.5 bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-400/50 rounded text-sm font-medium transition-colors"
+                          >
+                            Create OPC on P{connection.tags[0].page === 1 ? 2 : 1}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -662,6 +662,19 @@ const PdfViewerComponent = ({
           }, 100);
         }
         e.preventDefault();
+      } else if (e.key === '6') {
+        // OPC hotkey
+        if (selectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.OffPageConnector);
+          setSelectedRawTextItemIds([]);
+        } else {
+          onManualAreaSelect();
+          setTimeout(() => {
+            const event = new CustomEvent('manualTagCreate', { detail: { category: Category.OffPageConnector } });
+            window.dispatchEvent(event);
+          }, 100);
+        }
+        e.preventDefault();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedTagIds.length > 0) {
           e.preventDefault(); // Prevent browser back navigation on Backspace

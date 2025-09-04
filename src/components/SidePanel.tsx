@@ -194,6 +194,7 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
     [Category.Instrument]: 'I',
     [Category.DrawingNumber]: 'D',
     [Category.NotesAndHolds]: 'N',
+    [Category.SpecialItem]: 'S',
     [Category.Uncategorized]: 'U'
   };
   const tagMap = useMemo(() => new Map(allTags.map(t => [t.id, t])), [allTags]);

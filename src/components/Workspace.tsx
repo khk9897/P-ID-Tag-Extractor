@@ -803,9 +803,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           <OPCPanel
             tags={tags}
             relationships={relationships}
+            setRelationships={setRelationships}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
             isVisible={isOPCPanelVisible}
+            onUpdateTagText={onUpdateTagText}
+            onDeleteTags={onDeleteTags}
           />
         </div>
       )}

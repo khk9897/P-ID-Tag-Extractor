@@ -4,6 +4,7 @@ import { CATEGORY_COLORS } from '../constants.ts';
 import { exportToExcel } from '../services/excelExporter.ts';
 import { CommentModal } from './CommentModal.tsx';
 import { CommentIndicator } from './CommentIndicator.tsx';
+import { debugLog, perfTimer, trackRender, trackMemoRecalculation, trackClickEvent } from '../utils/debugLogger.ts';
 
 const DeleteRelationshipButton = React.memo(({ onClick }) => (
   <button
@@ -199,6 +200,60 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
   };
   const tagMap = useMemo(() => new Map(allTags.map(t => [t.id, t])), [allTags]);
   const rawTextItemMap = useMemo(() => new Map(allRawTextItems.map(item => [item.id, item])), [allRawTextItems]);
+
+  // Pre-indexed relationships for O(1) access with global caching
+  const relationshipIndexes = useMemo(() => {
+    const cacheKey = `relIndex_${relationships.length}_${relationships.map(r => r.id).join('|').slice(0, 100)}`;
+    
+    // Initialize global cache
+    if (!(window as any).relationshipIndexCache) {
+      (window as any).relationshipIndexCache = new Map();
+    }
+    
+    const cache = (window as any).relationshipIndexCache;
+    if (cache.has(cacheKey)) {
+      // Cache usage is expected behavior - no need to log
+      return cache.get(cacheKey);
+    }
+    
+    // Only log when building indexes for substantial datasets
+    if (relationships.length > 10) {
+      debugLog('PERF', `Building new relationship indexes for ${relationships.length} relationships`);
+    }
+    perfTimer.start('buildRelationshipIndexes');
+    
+    const outgoingByTag = new Map(); // tagId -> array of relationships where tag is 'from'
+    const incomingByTag = new Map(); // tagId -> array of relationships where tag is 'to'
+    const byType = new Map(); // type -> array of relationships
+    
+    relationships.forEach(rel => {
+      // Outgoing relationships (from this tag)
+      if (!outgoingByTag.has(rel.from)) {
+        outgoingByTag.set(rel.from, []);
+      }
+      outgoingByTag.get(rel.from).push(rel);
+      
+      // Incoming relationships (to this tag)
+      if (!incomingByTag.has(rel.to)) {
+        incomingByTag.set(rel.to, []);
+      }
+      incomingByTag.get(rel.to).push(rel);
+      
+      // By type
+      if (!byType.has(rel.type)) {
+        byType.set(rel.type, []);
+      }
+      byType.get(rel.type).push(rel);
+    });
+    
+    const indexes = { outgoingByTag, incomingByTag, byType };
+    cache.set(cacheKey, indexes);
+    
+    perfTimer.end('buildRelationshipIndexes');
+    debugLog('PERF', `Relationship indexes built and cached: ${outgoingByTag.size} outgoing, ${incomingByTag.size} incoming`);
+    
+    return indexes;
+  }, [relationships.length]);
   
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -252,16 +307,20 @@ const TagListItem: React.FC<TagListItemProps> = React.memo(({ tag, isSelected, o
   }, [allTags, tag.page]);
 
 
-  const outgoingConnections = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Connection);
-  const incomingConnections = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Connection);
-  const installationTarget = relationships.find(r => r.from === tag.id && r.type === RelationshipType.Installation);
-  const installedInstruments = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Installation);
-  const annotationRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Annotation);
-  const noteRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Note);
-  const notedByRelationships = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Note);
-  const descriptionRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Description);
-  const describedByRelationships = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Description);
-  const equipmentShortSpecRelationships = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.EquipmentShortSpec);
+  // Ultra-fast relationship lookups using pre-built indexes - major performance improvement
+  const outgoing = relationshipIndexes.outgoingByTag.get(tag.id) || [];
+  const incoming = relationshipIndexes.incomingByTag.get(tag.id) || [];
+  
+  const outgoingConnections = outgoing.filter(r => r.type === RelationshipType.Connection);
+  const incomingConnections = incoming.filter(r => r.type === RelationshipType.Connection);
+  const installationTarget = outgoing.find(r => r.type === RelationshipType.Installation);
+  const installedInstruments = incoming.filter(r => r.type === RelationshipType.Installation);
+  const annotationRelationships = outgoing.filter(r => r.type === RelationshipType.Annotation);
+  const noteRelationships = outgoing.filter(r => r.type === RelationshipType.Note);
+  const notedByRelationships = incoming.filter(r => r.type === RelationshipType.Note);
+  const descriptionRelationships = outgoing.filter(r => r.type === RelationshipType.Description);
+  const describedByRelationships = incoming.filter(r => r.type === RelationshipType.Description);
+  const equipmentShortSpecRelationships = outgoing.filter(r => r.type === RelationshipType.EquipmentShortSpec);
   
   const hasRelationships = outgoingConnections.length > 0 || incomingConnections.length > 0 || installationTarget || installedInstruments.length > 0 || annotationRelationships.length > 0 || noteRelationships.length > 0 || notedByRelationships.length > 0 || descriptionRelationships.length > 0 || describedByRelationships.length > 0 || equipmentShortSpecRelationships.length > 0;
 
@@ -775,6 +834,17 @@ export const SidePanel = ({
   // Comment props
   comments, onCreateComment, onUpdateComment, onDeleteComment, getCommentsForTarget
 }) => {
+  // Track SidePanel render performance - reduce frequency
+  const renderCountRef = React.useRef(0);
+  renderCountRef.current++;
+  if (renderCountRef.current % 3 === 0) { // Track every 3rd render
+    trackRender('SidePanel', { 
+      tagCount: tags.length, 
+      selectedCount: selectedTagIds.length,
+      currentPage 
+    });
+  }
+  
   const [showCurrentPageOnly, setShowCurrentPageOnly] = useState(true);
   const [showRelationshipDetails, setShowRelationshipDetails] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1044,27 +1114,80 @@ export const SidePanel = ({
     return filtered;
   }, [comments, commentsTabFilter]);
   
-  const sortedAndFilteredTags = useMemo(() => {
-    let baseTags = tags;
+  // Pre-indexed comment counts for ultra-fast filtering
+  const commentCountsByTag = useMemo(() => {
+    debugLog('PERF', `Building comment indexes for ${comments.length} comments`);
+    perfTimer.start('buildCommentIndexes');
     
-    const filtered = baseTags
-      .filter(tag => tag.category !== Category.OffPageConnector) // Hide OPC tags from left panel
-      .filter(tag => !showCurrentPageOnly || tag.page === currentPage)
-      .filter(tag => filterCategory === 'All' || tag.category === filterCategory)
-      .filter(tag => {
-        if (reviewFilter === 'All') return true;
-        if (reviewFilter === 'Reviewed') return tag.isReviewed === true;
-        if (reviewFilter === 'NotReviewed') return tag.isReviewed !== true;
-        return true;
-      })
-      .filter(tag => {
-        if (commentFilter === 'All') return true;
-        const tagComments = comments.filter(c => c.targetId === tag.id);
-        if (commentFilter === 'WithComments') return tagComments.length > 0;
-        if (commentFilter === 'WithoutComments') return tagComments.length === 0;
-        return true;
-      })
-      .filter(tag => tag.text.toLowerCase().includes(searchQuery.toLowerCase()));
+    const counts = new Map();
+    comments.forEach(comment => {
+      if (comment.targetType === 'tag') {
+        counts.set(comment.targetId, (counts.get(comment.targetId) || 0) + 1);
+      }
+    });
+    
+    perfTimer.end('buildCommentIndexes');
+    debugLog('PERF', `Comment indexes built: ${counts.size} tags have comments`);
+    
+    return counts;
+  }, [comments]);
+  
+  const sortedAndFilteredTags = useMemo(() => {
+    // Add caching for expensive filtering operation
+    const cacheKey = `filter_${tags.length}_${showCurrentPageOnly}_${currentPage}_${filterCategory}_${reviewFilter}_${commentFilter}_${searchQuery}_${sortOrder}`;
+    
+    if (!(window as any).tagFilterCache) {
+      (window as any).tagFilterCache = new Map();
+    }
+    
+    const cache = (window as any).tagFilterCache;
+    if (cache.has(cacheKey)) {
+      debugLog('PERF', `Using cached tag filtering result for ${tags.length} tags`);
+      return cache.get(cacheKey);
+    }
+    
+    perfTimer.start('filterTags');
+    trackMemoRecalculation('sortedAndFilteredTags', [
+      tags.length, 
+      showCurrentPageOnly, 
+      currentPage, 
+      filterCategory, 
+      reviewFilter, 
+      commentFilter, 
+      searchQuery, 
+      sortOrder
+    ]);
+    
+    const lowerSearchQuery = searchQuery.toLowerCase(); // Pre-calculate for performance
+    
+    // Optimized single-pass filtering to reduce iterations
+    const filtered = [];
+    for (let i = 0; i < tags.length; i++) {
+      const tag = tags[i];
+      
+      // Quick early exits for performance
+      if (tag.category === Category.OffPageConnector) continue;
+      if (showCurrentPageOnly && tag.page !== currentPage) continue;
+      if (filterCategory !== 'All' && tag.category !== filterCategory) continue;
+      
+      // Review filter check
+      if (reviewFilter !== 'All') {
+        if (reviewFilter === 'Reviewed' && tag.isReviewed !== true) continue;
+        if (reviewFilter === 'NotReviewed' && tag.isReviewed === true) continue;
+      }
+      
+      // Comment filter check
+      if (commentFilter !== 'All') {
+        const commentCount = commentCountsByTag.get(tag.id) || 0;
+        if (commentFilter === 'WithComments' && commentCount === 0) continue;
+        if (commentFilter === 'WithoutComments' && commentCount > 0) continue;
+      }
+      
+      // Search query check (most expensive, do last)
+      if (lowerSearchQuery && !tag.text.toLowerCase().includes(lowerSearchQuery)) continue;
+      
+      filtered.push(tag);
+    }
 
     switch (sortOrder) {
       case 'length-asc':
@@ -1140,17 +1263,25 @@ export const SidePanel = ({
         });
       case 'default':
       default:
-        return [...filtered].sort((a, b) => {
+        const sorted = [...filtered].sort((a, b) => {
           if (a.page !== b.page) return a.page - b.page;
           return a.text.localeCompare(b.text);
         });
+        
+        // Cache the result
+        cache.set(cacheKey, sorted);
+        
+        perfTimer.end('filterTags');
+        debugLog('PERF', `Tag filtering completed and cached: ${filtered.length}/${tags.length} tags shown after filtering and sorting`);
+        
+        return sorted;
     }
-  }, [tags, showCurrentPageOnly, currentPage, filterCategory, reviewFilter, commentFilter, searchQuery, sortOrder, comments]);
+  }, [tags, showCurrentPageOnly, currentPage, filterCategory, reviewFilter, commentFilter, searchQuery, sortOrder, commentCountsByTag]);
 
-  // Virtualized tags for performance
+  // Virtualized tags for performance - threshold lowered for better performance
   const virtualizedTags = useMemo(() => {
-    if (sortedAndFilteredTags.length <= 100) {
-      return sortedAndFilteredTags; // Don't virtualize small lists
+    if (sortedAndFilteredTags.length <= 30) {
+      return sortedAndFilteredTags; // Don't virtualize small lists - lower threshold for better performance
     }
     
     // Ensure selected tag is always in the virtual range (optimized for speed)
@@ -1242,13 +1373,46 @@ export const SidePanel = ({
     // Only scroll if selection came from PDF and we have a single selected tag
     if (tagSelectionSource === 'pdf' && selectedTagIds.length === 1 && activeTab === 'tags' && listRef.current) {
       const selectedId = selectedTagIds[0];
-      // Small delay to ensure DOM is updated
+      const scrollTimerId = `tag_scroll_${selectedId}_${Date.now()}`;
+      perfTimer.start(scrollTimerId);
+      debugLog('EVENT', `🎯 Tag selection processing started: ${selectedId}`);
+      
+      // Check if the selected tag is in the current filtered list
+      const isTagVisible = sortedAndFilteredTags.some(tag => tag.id === selectedId);
+      if (!isTagVisible) {
+        debugLog('EVENT', `Selected tag ${selectedId} is not visible in current filter - temporarily clearing filters`);
+        // Temporarily clear filters to show the selected tag
+        setFilterCategory('All');
+        setReviewFilter('All');
+        setCommentFilter('All');
+        setSearchQuery('');
+        perfTimer.end(scrollTimerId);
+        return;
+      }
+      
+      debugLog('EVENT', `Tag is visible in current filter, proceeding to scroll`);
+      
+      // Longer delay to ensure DOM is updated after caching changes
       setTimeout(() => {
-        const element = listRef.current.querySelector(`[data-tag-id='${selectedId}']`);
+        const searchStartTime = performance.now();
+        const element = listRef.current?.querySelector(`[data-tag-id='${selectedId}']`);
+        const searchEndTime = performance.now();
+        
         if (element) {
+          debugLog('EVENT', `DOM element found in ${(searchEndTime - searchStartTime).toFixed(2)}ms, scrolling to tag: ${selectedId}`);
+          
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Complete tracking immediately after scroll starts
+          setTimeout(() => {
+            const totalDuration = perfTimer.end(scrollTimerId);
+            debugLog('EVENT', `🎯 Tag scroll complete: total ${totalDuration ? totalDuration.toFixed(2) + 'ms' : 'N/A'}`);
+          }, 50); // Just enough time for scroll to start
+        } else {
+          debugLog('EVENT', `❌ Could not find DOM element after ${(searchEndTime - searchStartTime).toFixed(2)}ms search for tag: ${selectedId}`);
+          perfTimer.end(scrollTimerId);
         }
-      }, 100);
+      }, 300); // Increased delay for caching
     }
   }, [selectedTagIds, tagSelectionSource, activeTab, sortedAndFilteredTags]);
 
@@ -1264,8 +1428,12 @@ export const SidePanel = ({
   }, [selectedDescriptionIds, activeTab, filteredDescriptions]);
 
   const handleTagClick = useCallback((tag, index, e) => {
+    const completeClick = trackClickEvent('tag_click', `${tag.text}_page_${tag.page}`);
+    
     const isMultiSelect = e.ctrlKey || e.metaKey;
     const isShiftSelect = e.shiftKey;
+    
+    debugLog('EVENT', `📍 Tag click in panel: ${tag.text} (${tag.id}), page ${tag.page}, currentPage ${currentPage}`);
 
     if (isShiftSelect && lastClickedIndex.current !== -1) {
       const start = Math.min(lastClickedIndex.current, index);
@@ -1284,13 +1452,23 @@ export const SidePanel = ({
       lastClickedIndex.current = index;
     } else {
       // This is a simple click.
-      setCurrentPage(tag.page);
+      // Only change page if necessary to avoid triggering page change events
+      if (tag.page !== currentPage) {
+        debugLog('EVENT', `📍 Changing page from ${currentPage} to ${tag.page}`);
+        setCurrentPage(tag.page);
+      } else {
+        debugLog('EVENT', `📍 Same page click, no page change needed`);
+      }
+      debugLog('EVENT', `📍 Setting selected tag: ${tag.id}`);
       setSelectedTagIds([tag.id]);
       lastClickedIndex.current = index;
       // Always ping tag on click to center it on screen
       onPingTag(tag.id);
     }
-  }, [sortedAndFilteredTags, selectedTagIds, setSelectedTagIds, setCurrentPage, onPingTag]);
+    
+    // Complete click tracking after all operations
+    setTimeout(completeClick, 0);
+  }, [sortedAndFilteredTags, selectedTagIds, setSelectedTagIds, setCurrentPage, currentPage, onPingTag]);
   
   const goToTag = useCallback((tag) => {
     // First, switch to tags tab if not already on it
@@ -1373,7 +1551,7 @@ export const SidePanel = ({
   const handleScroll = useCallback((e) => {
     // Skip virtualization updates during bulk operations
     if (selectedTagIds.length > 1) return;
-    if (sortedAndFilteredTags.length <= 100) return;
+    if (sortedAndFilteredTags.length <= 50) return;
     
     // Clear any existing timeout
     if (scrollTimeoutRef.current) {
@@ -1677,7 +1855,22 @@ export const SidePanel = ({
                             <input
                                 type="checkbox"
                                 checked={showCurrentPageOnly}
-                                onChange={(e) => setShowCurrentPageOnly(e.target.checked)}
+                                onChange={(e) => {
+                                  const pageFilterTimerId = `page_only_filter_${Date.now()}`;
+                                  const checked = e.target.checked;
+                                  perfTimer.start(pageFilterTimerId);
+                                  debugLog('EVENT', `🔍 Page filter change started: ${showCurrentPageOnly} → ${checked}`);
+                                  
+                                  // Use React's batching for better performance
+                                  React.startTransition(() => {
+                                    setShowCurrentPageOnly(checked);
+                                  });
+                                  
+                                  setTimeout(() => {
+                                    const duration = perfTimer.end(pageFilterTimerId);
+                                    debugLog('EVENT', `🔍 Page filter change complete: ${duration ? duration.toFixed(2) + 'ms' : 'N/A'}`);
+                                  }, 0);
+                                }}
                                 className="rounded bg-slate-700 border-slate-500 text-sky-500 focus:ring-sky-600"
                             />
                             <span>Show page only</span>
@@ -1820,7 +2013,21 @@ export const SidePanel = ({
                     return (
                       <button 
                         key={cat} 
-                        onClick={() => setFilterCategory(cat)} 
+                        onClick={() => {
+                          const filterTimerId = `filter_category_${cat}_${Date.now()}`;
+                          perfTimer.start(filterTimerId);
+                          debugLog('EVENT', `🔍 Filter category change started: ${filterCategory} → ${cat}`);
+                          
+                          // Use React's batching for better performance
+                          React.startTransition(() => {
+                            setFilterCategory(cat);
+                          });
+                          
+                          setTimeout(() => {
+                            const duration = perfTimer.end(filterTimerId);
+                            debugLog('EVENT', `🔍 Filter category change complete: ${duration ? duration.toFixed(2) + 'ms' : 'N/A'}`);
+                          }, 0);
+                        }} 
                         className={`flex-1 py-1.5 px-1 font-semibold text-center border-r border-slate-600 last:border-r-0 ${
                           isActive ? 'bg-slate-700/50 text-sky-400' : 'text-slate-300'
                         }`} 
@@ -1856,11 +2063,11 @@ export const SidePanel = ({
               className="flex-grow overflow-y-auto p-2 divide-y divide-slate-700/80"
               onScroll={handleScroll}
             >
-                {sortedAndFilteredTags.length > 100 && (
+                {sortedAndFilteredTags.length > 50 && (
                   <div style={{ height: `${virtualizedRange.start * 90}px` }} />
                 )}
                 {virtualizedTags.map((tag, virtualIndex) => {
-                  const actualIndex = sortedAndFilteredTags.length > 100 ? 
+                  const actualIndex = sortedAndFilteredTags.length > 50 ? 
                     virtualizedRange.start + virtualIndex : 
                     virtualIndex;
                   return (
@@ -1890,7 +2097,7 @@ export const SidePanel = ({
                     />
                   );
                 })}
-                {sortedAndFilteredTags.length > 100 && (
+                {sortedAndFilteredTags.length > 50 && (
                   <div style={{ height: `${Math.max(0, (sortedAndFilteredTags.length - virtualizedRange.end) * 90)}px` }} />
                 )}
             </ul>

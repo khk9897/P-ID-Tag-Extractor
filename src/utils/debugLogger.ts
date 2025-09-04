@@ -89,10 +89,9 @@ export const trackFunctionCall = (funcName: string, args?: any[]) => {
   const count = (store.functionCalls.get(funcName) || 0) + 1;
   store.functionCalls.set(funcName, count);
   
-  if (DEBUG_LEVEL === 'VERBOSE') {
-    debugLog('FUNC', `${funcName} called (${count}x)`, args);
-  } else if (count % 1000 === 0) {
-    debugLog('FUNC', `🚨 PERFORMANCE WARNING: ${funcName} called ${count} times`);
+  // Only log critical performance warnings at higher thresholds
+  if (count === 5000 || count % 10000 === 0) {
+    debugLog('FUNC', `🚨 CRITICAL: ${funcName} called ${count} times - needs optimization`);
   }
 };
 
@@ -104,10 +103,9 @@ export const trackRender = (componentName: string, props?: any) => {
   const count = (store.renderCounts.get(componentName) || 0) + 1;
   store.renderCounts.set(componentName, count);
   
-  // Only log every 10th render to reduce spam
-  if (count % 10 === 0 || DEBUG_LEVEL === 'VERBOSE') {
-    debugLog('RENDER', `${componentName} rendered (${count}x)`, 
-      DEBUG_LEVEL === 'VERBOSE' ? props : undefined);
+  // Only log excessive render warnings at higher thresholds
+  if (count === 50 || count % 100 === 0) {
+    debugLog('RENDER', `⚠️ ${componentName} rendered ${count} times`);
   }
 };
 
@@ -121,21 +119,20 @@ export const trackStateChange = (stateName: string, oldValue: any, newValue: any
   state.lastValue = newValue;
   store.stateChanges.set(stateName, state);
   
-  // Calculate difference for arrays and objects
-  let difference = '';
-  if (Array.isArray(oldValue) && Array.isArray(newValue)) {
-    const diff = newValue.length - oldValue.length;
-    difference = ` (${diff > 0 ? '+' : ''}${diff} items)`;
-  } else if (typeof oldValue === 'object' && typeof newValue === 'object' && oldValue && newValue) {
-    const oldKeys = Object.keys(oldValue).length;
-    const newKeys = Object.keys(newValue).length;
-    const diff = newKeys - oldKeys;
-    if (diff !== 0) {
-      difference = ` (${diff > 0 ? '+' : ''}${diff} keys)`;
+  // Only log major state changes or excessive updates
+  if (state.count === 1 || state.count % 20 === 0) {
+    let difference = '';
+    if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+      const diff = newValue.length - oldValue.length;
+      if (Math.abs(diff) > 0) difference = ` (${diff > 0 ? '+' : ''}${diff} items)`;
+    }
+    
+    if (state.count === 1) {
+      debugLog('STATE', `${stateName} initialized${difference}`);
+    } else {
+      debugLog('STATE', `${stateName} updated ${state.count} times${difference}`);
     }
   }
-  
-  debugLog('STATE', `${stateName} updated: ${JSON.stringify(oldValue)?.slice(0, 50)} → ${JSON.stringify(newValue)?.slice(0, 50)}${difference}`);
 };
 
 // Memoization tracker
@@ -146,8 +143,10 @@ export const trackMemoRecalculation = (memoName: string, dependencies: any[]) =>
   const count = (store.memoRecalculations.get(memoName) || 0) + 1;
   store.memoRecalculations.set(memoName, count);
   
-  debugLog('MEMO', `${memoName} recalculated (${count}x)`, 
-    DEBUG_LEVEL === 'VERBOSE' ? { dependencies } : undefined);
+  // Only log frequent memoization issues
+  if (count === 10 || count % 50 === 0) {
+    debugLog('MEMO', `🔄 ${memoName} recalculated ${count} times - check dependencies`);
+  }
 };
 
 // Memory usage tracker
@@ -167,6 +166,25 @@ export const trackMemoryUsage = (label?: string) => {
     
     debugLog('MEMORY', `Memory usage: ${memory.toFixed(2)} MB${label ? ` (${label})` : ''}`);
   }
+};
+
+// Click event tracker
+export const trackClickEvent = (eventName: string, target?: string) => {
+  if (!DEBUG_MODE || !DEBUG_CATEGORIES.EVENT) return;
+  
+  const clickId = `click_${eventName}_${Date.now()}`;
+  perfTimer.start(clickId);
+  debugLog('EVENT', `🖱️ Click started: ${eventName}${target ? ` (${target})` : ''}`);
+  
+  // Return a completion function
+  return () => {
+    const duration = perfTimer.end(clickId);
+    if (duration > 100) {
+      debugLog('EVENT', `🖱️ Click completed: ${eventName} - ${duration.toFixed(2)}ms${duration > 500 ? ' ⚠️ SLOW' : ''}`);
+    } else {
+      debugLog('EVENT', `🖱️ Click completed: ${eventName} - ${duration.toFixed(2)}ms`);
+    }
+  };
 };
 
 // Performance report generator

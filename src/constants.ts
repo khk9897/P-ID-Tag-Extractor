@@ -2,18 +2,18 @@ import { Category, ColorSettings } from './types.ts';
 
 // Debug configuration
 export const DEBUG_MODE = true; // Master switch for debug logging
-export const DEBUG_LEVEL = 'DETAILED' as 'BASIC' | 'DETAILED' | 'VERBOSE'; // Debug detail level
+export const DEBUG_LEVEL = 'BASIC' as 'BASIC' | 'DETAILED' | 'VERBOSE'; // Debug detail level
 
 export const DEBUG_CATEGORIES = {
-  STATE: true,      // State changes tracking
-  RENDER: true,     // Component render tracking
-  PERF: true,       // Performance measurements
-  MEMO: true,       // Memoization tracking
-  FUNC: true,       // Function call counts
-  EXTRACT: true,    // Tag extraction process
-  RELATION: true,   // Relationship calculations
-  EVENT: true,      // Event handler tracking
-  MEMORY: true,     // Memory usage monitoring
+  STATE: false,     // State changes tracking (too verbose)
+  RENDER: true,     // Component render tracking (warnings only)
+  PERF: true,       // Performance measurements (important)
+  MEMO: true,       // Memoization tracking (warnings only)
+  FUNC: true,       // Function call counts (critical warnings only)
+  EXTRACT: true,    // Tag extraction process (important)
+  RELATION: false,  // Relationship calculations (too verbose)
+  EVENT: true,      // Event handler tracking (click timing)
+  MEMORY: true,     // Memory usage monitoring (important)
 } as const;
 
 export const DEFAULT_PATTERNS = {

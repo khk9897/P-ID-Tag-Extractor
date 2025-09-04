@@ -121,8 +121,10 @@ const getRightBottomCorner = (viewport, rotation) => {
 };
 
 export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSettings = { autoRemoveWhitespace: true }) => {
-    perfTimer.start(`extractTags_page_${pageNum}`);
-    debugLog('EXTRACT', `Starting tag extraction for page ${pageNum}`);
+    // Only log for first page to avoid spam
+    if (pageNum === 1) {
+        debugLog('EXTRACT', `Starting tag extraction process`);
+    }
     
     perfTimer.start(`getPage_${pageNum}`);
     const page = await pdfDoc.getPage(pageNum);
@@ -131,7 +133,6 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
     perfTimer.start(`getTextContent_${pageNum}`);
     const textContent = await page.getTextContent();
     perfTimer.end(`getTextContent_${pageNum}`);
-    debugLog('EXTRACT', `Page ${pageNum}: Found ${textContent.items.length} text items`);
     const viewport = page.getViewport({ scale: 1.0 });
     const rotation = viewport.rotation || 0;
     
@@ -514,9 +515,10 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
          });
     }
 
-    perfTimer.end(`extractTags_page_${pageNum}`);
-    debugLog('EXTRACT', `Page ${pageNum} extraction complete: ${foundTags.length} tags, ${rawTextItems.length} raw text items`);
-    trackMemoryUsage(`After extracting page ${pageNum}`);
+    // Only log memory usage for last page to avoid spam
+    if (pageNum === 1) {
+        trackMemoryUsage(`After extracting first page`);
+    }
     
     return { tags: foundTags, rawTextItems };
 };

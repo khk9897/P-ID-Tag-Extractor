@@ -385,19 +385,16 @@ const App: React.FC = () => {
       perfTimer.start('extractAllPages');
       
       for (let i = 1; i <= doc.numPages; i++) {
-        perfTimer.start(`extractPage${i}`);
         const { tags: pageTags, rawTextItems: pageRawTextItems } = await extractTags(doc, i, patternsToUse, tolerancesToUse, appSettings);
-        perfTimer.end(`extractPage${i}`);
         
         allTags = [...allTags, ...pageTags];
         allRawTextItems = [...allRawTextItems, ...pageRawTextItems];
         setProgress(p => ({ ...p, current: i }));
-        
-        debugLog('EXTRACT', `Page ${i}: Found ${pageTags.length} tags, ${pageRawTextItems.length} raw text items`);
       }
       
       perfTimer.end('extractAllPages');
-      debugLog('EXTRACT', `Total extracted: ${allTags.length} tags, ${allRawTextItems.length} raw text items`);
+      const extractDuration = perfTimer.end('extractAllPages');
+      debugLog('EXTRACT', `✅ PDF processing complete: ${allTags.length} tags, ${allRawTextItems.length} raw text items from ${doc.numPages} pages - ${extractDuration ? extractDuration.toFixed(2) + 'ms' : ''}`);
       
       setTags(allTags);
       trackStateChange('tags', [], allTags);
@@ -425,7 +422,8 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
       trackMemoryUsage('After PDF processing');
-      perfTimer.end('processPdf');
+      const totalDuration = perfTimer.end('processPdf');
+      debugLog('EXTRACT', `🏁 Total PDF processing time: ${totalDuration ? totalDuration.toFixed(2) + 'ms' : 'N/A'}`);
     }
   }, [appSettings]);
 

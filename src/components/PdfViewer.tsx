@@ -101,6 +101,7 @@ const PdfViewerComponent = ({
   colorSettings,
   scrollToCenter,
   setScrollToCenter,
+  onScrollToCenter,
   showAutoLinkRanges,
   tolerances,
   showAllRelationships,
@@ -383,9 +384,54 @@ const PdfViewerComponent = ({
   const renderTaskRef = useRef(null);
   const renderIdRef = useRef(0);
   const renderQueueRef = useRef(Promise.resolve());
+  
+  // Canvas caching for rendered pages
+  const canvasCacheRef = useRef(new Map());
+  const maxCacheSize = 5; // Cache up to 5 pages
+  
+  // Background render queue for pre-rendering adjacent pages
+  const backgroundRenderQueueRef = useRef(Promise.resolve());
+  const lastRenderedRef = useRef(null);
 
-  const renderPage = useCallback(async (pageNumber) => {
+  const renderPage = useCallback(async (pageNumber, isBackground = false) => {
     if (!pdfDoc) return;
+    
+    const currentRenderKey = `${pageNumber}_${scale}`;
+    
+    // Check cache first
+    const cache = canvasCacheRef.current;
+    if (cache.has(currentRenderKey)) {
+      if (!isBackground) {
+        const cachedImageData = cache.get(currentRenderKey);
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          if (context && cachedImageData) {
+            // CRITICAL: Set canvas size BEFORE restoring image data
+            canvas.width = cachedImageData.width;
+            canvas.height = cachedImageData.height;
+            context.putImageData(cachedImageData.data, 0, 0);
+            
+            // CRITICAL: Update viewport BEFORE setting lastRenderedRef to ensure SVG sync
+            setViewport(cachedImageData.viewport);
+            setRotation(cachedImageData.viewport.rotation);
+            
+            // CRITICAL: Update lastRenderedRef to ensure SVG overlay synchronization
+            lastRenderedRef.current = currentRenderKey;
+            
+            debugLog('RENDER', `Using cached page ${pageNumber} at scale ${scale} (${cachedImageData.width}x${cachedImageData.height})`);
+            return;
+          }
+        }
+      }
+    }
+    
+    // Skip render if we're already showing this page at this scale (non-background)
+    if (!isBackground && lastRenderedRef.current === currentRenderKey) {
+      debugLog('RENDER', `Skipping render - page ${pageNumber} at scale ${scale} already rendered`);
+      return;
+    }
+    
     perfTimer.start(`renderPage_${pageNumber}`);
     debugLog('RENDER', `Starting render for page ${pageNumber} at scale ${scale}`);
 
@@ -425,7 +471,7 @@ const PdfViewerComponent = ({
         
         if (!canvas) return;
         
-        const context = canvas.getContext('2d');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
         if (!context) return;
 
         // Clear and resize canvas
@@ -439,16 +485,47 @@ const PdfViewerComponent = ({
           return;
         }
 
+        // Use optimized render settings for better performance
         const renderContext = {
           canvasContext: context,
           viewport: vp,
+          // Optimize rendering for speed
+          intent: 'display',
+          // Use lower quality for faster rendering
+          renderInteractiveForms: false,
+          includeAnnotationStorage: false,
         };
         
         renderTaskRef.current = page.render(renderContext);
         await renderTaskRef.current.promise;
         
-        // Only update state if this render is still current
-        if (renderIdRef.current === currentRenderId) {
+        // Cache the rendered page (only for foreground renders)
+        if (!isBackground && renderIdRef.current === currentRenderId) {
+          try {
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Manage cache size - remove oldest entries if cache is full
+            if (cache.size >= maxCacheSize) {
+              const firstKey = cache.keys().next().value;
+              if (firstKey) cache.delete(firstKey);
+            }
+            
+            cache.set(currentRenderKey, {
+              data: imageData,
+              viewport: vp,
+              width: canvas.width,
+              height: canvas.height
+            });
+            
+            debugLog('RENDER', `Cached page ${pageNumber} at scale ${scale}`);
+          } catch (cacheError) {
+            // Cache storage failed, continue without caching
+            debugLog('RENDER', `Failed to cache page ${pageNumber}: ${cacheError.message}`);
+          }
+        }
+        
+        // Only update state if this render is still current and not background
+        if (!isBackground && renderIdRef.current === currentRenderId) {
           setViewport(vp);
           setRotation(vp.rotation);
         }
@@ -460,17 +537,28 @@ const PdfViewerComponent = ({
         if (renderTaskRef.current) {
           renderTaskRef.current = null;
         }
+        // Update last rendered key to avoid re-rendering same page (only for foreground)
+        if (!isBackground) {
+          lastRenderedRef.current = currentRenderKey;
+        }
+        perfTimer.end(`renderPage_${pageNumber}`);
+        debugLog('RENDER', `Page ${pageNumber} render completed at scale ${scale}${isBackground ? ' (background)' : ''}`);
       }
     });
 
     return renderQueueRef.current;
   }, [pdfDoc, scale]);
 
+  // Background pre-rendering disabled for performance optimization
+
   useLayoutEffect(() => {
+    // Render current page only (disabled background pre-rendering for performance)
     renderPage(currentPage);
     
     // Cleanup function to cancel render task on unmount or dependency change
     return () => {
+      // No pre-render timer to clear
+      
       // Invalidate current render ID to cancel any queued renders
       renderIdRef.current++;
       
@@ -484,6 +572,33 @@ const PdfViewerComponent = ({
       }
     };
   }, [currentPage, renderPage, scale]); // Rerender on scale change
+
+  // Clear cache when scale changes to free memory
+  useEffect(() => {
+    canvasCacheRef.current.clear();
+    debugLog('RENDER', `Cleared canvas cache due to scale change: ${scale}`);
+  }, [scale]);
+
+  // Clear selections ONLY when page actually changes
+  const prevPageRef = useRef(currentPage);
+  useEffect(() => {
+    if (prevPageRef.current !== currentPage) {
+      // Page actually changed - clear selections
+      setSelectedTagIds([]);
+      setSelectedRawTextItemIds([]);
+      setRelationshipStartTag(null);
+      debugLog('EVENT', `Page changed from ${prevPageRef.current} to ${currentPage}, cleared selections`);
+      prevPageRef.current = currentPage;
+    }
+    
+    // Clear scroll target if it doesn't match current page
+    if (scrollToCenter?.tagId) {
+      const targetTag = tags.find(t => t.id === scrollToCenter.tagId);
+      if (!targetTag || targetTag.page !== currentPage) {
+        onScrollToCenter(null); // Clear invalid scroll target
+      }
+    }
+  }, [currentPage, scrollToCenter, tags, onScrollToCenter]);
 
   useEffect(() => {
     let newRelatedTagIds = new Set();
@@ -1102,61 +1217,15 @@ const PdfViewerComponent = ({
     }
   };
 
-  // Pre-indexed page data for O(1) access - built once when tags/rawTextItems change
-  const pageIndex = useMemo(() => {
-    const indexKey = `pageIndex_${tags.length}_${rawTextItems.length}`;
-    
-    if (!(window as any).pageIndexCache) {
-      (window as any).pageIndexCache = new Map();
-    }
-    
-    const cache = (window as any).pageIndexCache;
-    if (cache.has(indexKey)) {
-      debugLog('PERF', `Using cached page index for ${tags.length} tags, ${rawTextItems.length} items`);
-      return cache.get(indexKey);
-    }
-    
-    debugLog('PERF', `Building page index for ${tags.length} tags, ${rawTextItems.length} items`);
-    perfTimer.start('buildPageIndex');
-    
-    const tagsByPage = new Map();
-    const rawTextByPage = new Map();
-    
-    // Build tag index
-    tags.forEach(tag => {
-      if (!tagsByPage.has(tag.page)) {
-        tagsByPage.set(tag.page, []);
-      }
-      tagsByPage.get(tag.page).push(tag);
-    });
-    
-    // Build raw text index
-    rawTextItems.forEach(item => {
-      if (!rawTextByPage.has(item.page)) {
-        rawTextByPage.set(item.page, []);
-      }
-      rawTextByPage.get(item.page).push(item);
-    });
-    
-    const index = { tagsByPage, rawTextByPage };
-    cache.set(indexKey, index);
-    
-    perfTimer.end('buildPageIndex');
-    debugLog('PERF', `Page index built: ${tagsByPage.size} pages indexed`);
-    
-    return index;
-  }, [tags.length, rawTextItems.length]); // Only rebuild when data changes
   
-  // Ultra-fast O(1) page data access
+  // Simple direct filtering for current page (no complex caching)
   const currentTags = useMemo(() => {
-    debugLog('MEMO', `Getting tags for page ${currentPage} from index`);
-    return pageIndex.tagsByPage.get(currentPage) || [];
-  }, [pageIndex, currentPage]);
-  
+    return tags.filter(tag => tag.page === currentPage);
+  }, [tags, currentPage]);
+
   const currentRawTextItems = useMemo(() => {
-    debugLog('MEMO', `Getting raw text for page ${currentPage} from index`);
-    return pageIndex.rawTextByPage.get(currentPage) || [];
-  }, [pageIndex, currentPage]);
+    return rawTextItems.filter(item => item.page === currentPage);
+  }, [rawTextItems, currentPage]);
   
   // Memoize current page descriptions for performance
   const currentDescriptions = useMemo(() => 
@@ -1516,11 +1585,11 @@ const PdfViewerComponent = ({
     // Early return if no viewport
     if (!viewport) return { rectX: 0, rectY: 0, rectWidth: 0, rectHeight: 0 };
     
-    // Create cache key with rounded coordinates to improve hit rate
-    const roundedX1 = Math.round(x1 * 100) / 100;
-    const roundedY1 = Math.round(y1 * 100) / 100;
-    const roundedX2 = Math.round(x2 * 100) / 100;
-    const roundedY2 = Math.round(y2 * 100) / 100;
+    // Create cache key with integer rounding to maximize hit rate
+    const roundedX1 = Math.round(x1);
+    const roundedY1 = Math.round(y1);
+    const roundedX2 = Math.round(x2);
+    const roundedY2 = Math.round(y2);
     const cacheKey = `${roundedX1},${roundedY1},${roundedX2},${roundedY2}`;
     
     if (coordinatesCache.has(cacheKey)) {
@@ -1534,8 +1603,7 @@ const PdfViewerComponent = ({
       };
     }
     
-    // Only track function calls for cache misses to reduce log spam
-    trackFunctionCall('transformCoordinates');
+    // Removed function call tracking - transformCoordinates is called frequently
     
     let baseX, baseY, baseWidth, baseHeight;
     

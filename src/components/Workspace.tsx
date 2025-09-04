@@ -211,12 +211,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   };
 
   const handlePingTag = useCallback((tagId) => {
-    // Find the tag to get its page
-    const tag = tags.find(t => t.id === tagId);
-    if (tag && tag.page !== currentPage) {
-      setCurrentPage(tag.page);
-    }
-    
+    // Don't change page here - let the caller handle page changes
+    // This prevents duplicate page changes and selection clearing
     setPingedTagId(tagId);
     // Clear after animation is over
     setTimeout(() => setPingedTagId(null), 2000);
@@ -225,7 +221,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setScrollToCenter({ tagId, timestamp: Date.now() });
     // Clear scroll request after a short delay
     setTimeout(() => setScrollToCenter(null), 100);
-  }, [tags, currentPage, setCurrentPage]);
+  }, []);
 
   const handlePingDescription = useCallback((descriptionId) => {
     // Find the description to get its page

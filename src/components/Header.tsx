@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { EXTERNAL_LINKS } from '../constants.ts';
+import { trackClickEvent } from '../utils/debugLogger.ts';
 
 // --- Components moved from App.tsx for colocation ---
 
@@ -399,9 +400,17 @@ export const Header = ({
           <div className="flex items-center gap-2">
             {pdfDoc && (
               <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-2">
-                <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">←</button>
+                <button onClick={() => {
+                  const completeClick = trackClickEvent('page_prev', `page_${currentPage - 1}`);
+                  setCurrentPage(Math.max(1, currentPage - 1));
+                  setTimeout(completeClick, 0); // Complete after state update
+                }} disabled={currentPage === 1} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">←</button>
                 <span className="text-sm whitespace-nowrap">Page {currentPage}/{pdfDoc.numPages}</span>
-                <button onClick={() => setCurrentPage(Math.min(pdfDoc.numPages, currentPage + 1))} disabled={currentPage === pdfDoc.numPages} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">→</button>
+                <button onClick={() => {
+                  const completeClick = trackClickEvent('page_next', `page_${currentPage + 1}`);
+                  setCurrentPage(Math.min(pdfDoc.numPages, currentPage + 1));
+                  setTimeout(completeClick, 0); // Complete after state update
+                }} disabled={currentPage === pdfDoc.numPages} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">→</button>
               </div>
             )}
             

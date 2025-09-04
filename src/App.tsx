@@ -122,7 +122,7 @@ const App: React.FC = () => {
   // Keep backward compatibility - derive showRelationships from relationships settings
   const showRelationships = Object.values(visibilitySettings.relationships).some(Boolean);
   const [isSidePanelVisible, setIsSidePanelVisible] = useState<boolean>(true);
-  const [isOPCPanelVisible, setIsOPCPanelVisible] = useState<boolean>(true); // 임시로 true로 설정
+  const [isOPCPanelVisible, setIsOPCPanelVisible] = useState<boolean>(false);
   const [showAutoLinkRanges, setShowAutoLinkRanges] = useState<boolean>(false);
   const [focusOPCConnection, setFocusOPCConnection] = useState<string | null>(null);
   

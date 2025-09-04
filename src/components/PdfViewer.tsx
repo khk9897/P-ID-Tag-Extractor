@@ -3,6 +3,7 @@ import { RelationshipType, Category } from '../types.ts';
 import { CATEGORY_COLORS, DEFAULT_COLORS } from '../constants.ts';
 import { TagHighlight, getHighlightTypeFromEntity, getHighlightEffect } from './TagHighlight.tsx';
 import { v4 as uuidv4 } from 'uuid';
+import { debugLog, perfTimer, trackRender, trackMemoRecalculation, trackFunctionCall } from '../utils/debugLogger.ts';
 
 // Throttle function for performance
 const throttle = (func, delay) => {
@@ -108,6 +109,15 @@ const PdfViewerComponent = ({
   setShowOnlySelectedRelationships,
   onOPCTagClick,
 }) => {
+  // Track component render - reduce frequency for performance
+  const renderCountRef = useRef(0);
+  renderCountRef.current++;
+  
+  // Only track every few renders to reduce overhead
+  if (renderCountRef.current % 5 === 0) {
+    trackRender('PdfViewer', { currentPage, scale, mode, tagCount: tags.length });
+  }
+  
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
   const scrollContainerRef = useRef(null);
@@ -376,6 +386,8 @@ const PdfViewerComponent = ({
 
   const renderPage = useCallback(async (pageNumber) => {
     if (!pdfDoc) return;
+    perfTimer.start(`renderPage_${pageNumber}`);
+    debugLog('RENDER', `Starting render for page ${pageNumber} at scale ${scale}`);
 
     // Generate unique render ID for this operation
     const currentRenderId = ++renderIdRef.current;
@@ -988,65 +1000,7 @@ const PdfViewerComponent = ({
     if (mode === 'select') {
       const clickedTag = tags.find(t => t.id === tagId);
       
-      // Debug all tag selections
-      if (clickedTag) {
-        console.log(`🏷️ TAG CLICKED: "${clickedTag.text}" (Category: ${clickedTag.category})`);
-        console.log(`📍 Position: X=${clickedTag.bbox.x1.toFixed(1)}-${clickedTag.bbox.x2.toFixed(1)}, Y=${clickedTag.bbox.y1.toFixed(1)}-${clickedTag.bbox.y2.toFixed(1)}, Page: ${clickedTag.page}`);
-      }
       
-      // Detailed Drawing Number debug
-      if (clickedTag && clickedTag.category === Category.DrawingNumber) {
-        console.log(`🎯 DRAWING NUMBER DEBUG - Selected: "${clickedTag.text}"`);
-        console.log(`📍 Position: X=${clickedTag.bbox.x1.toFixed(1)}-${clickedTag.bbox.x2.toFixed(1)}, Y=${clickedTag.bbox.y1.toFixed(1)}-${clickedTag.bbox.y2.toFixed(1)}`);
-        console.log(`📄 Page: ${clickedTag.page}`);
-        
-        // Calculate distance to right-bottom corner
-        if (pdfDoc) {
-          pdfDoc.getPage(clickedTag.page).then(page => {
-            const viewport = page.getViewport({ scale: 1.0 });
-            const rotation = viewport.rotation || 0;
-            const { width: pageWidth, height: pageHeight } = viewport;
-            
-            // Get rotation-aware right-bottom corner
-            let rightBottomCorner;
-            switch (rotation) {
-              case 0:   rightBottomCorner = { x: pageWidth, y: 0 }; break;
-              case 90:  rightBottomCorner = { x: pageHeight, y: 0 }; break;
-              case 180: rightBottomCorner = { x: 0, y: pageHeight }; break;
-              case 270: rightBottomCorner = { x: 0, y: pageWidth }; break;
-              default:  rightBottomCorner = { x: pageWidth, y: 0 }; break;
-            }
-            
-            const dx = rightBottomCorner.x - clickedTag.bbox.x2;
-            let targetY;
-            switch (rotation) {
-              case 0:
-              case 90:
-                // 0° and 90°: smaller Y is closer to bottom
-                targetY = Math.min(clickedTag.bbox.y1, clickedTag.bbox.y2);
-                break;
-              case 180:
-              case 270:
-                // 180° and 270°: larger Y is closer to bottom  
-                targetY = Math.max(clickedTag.bbox.y1, clickedTag.bbox.y2);
-                break;
-              default:
-                targetY = Math.min(clickedTag.bbox.y1, clickedTag.bbox.y2);
-                break;
-            }
-            const dy = rightBottomCorner.y - targetY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            console.log(`📏 Distance to right-bottom corner: ${distance.toFixed(2)} (dx=${dx.toFixed(1)}, dy=${dy.toFixed(1)})`);
-            console.log(`🔄 Page rotation: ${rotation}°`);
-            console.log(`📐 Page dimensions: ${pageWidth.toFixed(1)} x ${pageHeight.toFixed(1)}`);
-            console.log(`🎯 Right-bottom corner: (${rightBottomCorner.x.toFixed(1)}, ${rightBottomCorner.y.toFixed(1)})`);
-            console.log(`────────────────────────────────`);
-          }).catch(err => {
-            console.log(`❌ Error calculating distance: ${err.message}`);
-          });
-        }
-      }
       
       // Check if this is an OPC tag - call onOPCTagClick if provided
       if (clickedTag && clickedTag.category === Category.OffPageConnector && onOPCTagClick) {
@@ -1135,16 +1089,6 @@ const PdfViewerComponent = ({
 
     // Debug raw text item selection
     const clickedItem = rawTextItems.find(item => item.id === rawTextItemId);
-    if (clickedItem) {
-        console.log(`📝 RAW TEXT CLICKED: "${clickedItem.text}"`);
-        console.log(`📍 Position: X=${clickedItem.bbox.x1.toFixed(1)}-${clickedItem.bbox.x2.toFixed(1)}, Y=${clickedItem.bbox.y1.toFixed(1)}-${clickedItem.bbox.y2.toFixed(1)}, Page: ${clickedItem.page}`);
-        
-        // Check if it matches Drawing Number pattern for debugging
-        const drawingNumberPattern = /[A-Z\d-]{5,}-[A-Z\d-]{5,}-\d{3,}/i;
-        if (drawingNumberPattern.test(clickedItem.text)) {
-            console.log(`🎯 This raw text matches Drawing Number pattern!`);
-        }
-    }
 
     if (isMultiSelect) {
         // Add to or remove from raw text selection without affecting tag selection
@@ -1158,17 +1102,61 @@ const PdfViewerComponent = ({
     }
   };
 
-  // Show all tags for interaction, but apply different styling based on visibility
-  // Memoize current page tags for performance
-  const currentTags = useMemo(() => 
-    tags.filter(t => t.page === currentPage),
-    [tags, currentPage]
-  );
-  // Memoize current page raw text items for performance
-  const currentRawTextItems = useMemo(() => 
-    rawTextItems.filter(t => t.page === currentPage),
-    [rawTextItems, currentPage]
-  );
+  // Pre-indexed page data for O(1) access - built once when tags/rawTextItems change
+  const pageIndex = useMemo(() => {
+    const indexKey = `pageIndex_${tags.length}_${rawTextItems.length}`;
+    
+    if (!(window as any).pageIndexCache) {
+      (window as any).pageIndexCache = new Map();
+    }
+    
+    const cache = (window as any).pageIndexCache;
+    if (cache.has(indexKey)) {
+      debugLog('PERF', `Using cached page index for ${tags.length} tags, ${rawTextItems.length} items`);
+      return cache.get(indexKey);
+    }
+    
+    debugLog('PERF', `Building page index for ${tags.length} tags, ${rawTextItems.length} items`);
+    perfTimer.start('buildPageIndex');
+    
+    const tagsByPage = new Map();
+    const rawTextByPage = new Map();
+    
+    // Build tag index
+    tags.forEach(tag => {
+      if (!tagsByPage.has(tag.page)) {
+        tagsByPage.set(tag.page, []);
+      }
+      tagsByPage.get(tag.page).push(tag);
+    });
+    
+    // Build raw text index
+    rawTextItems.forEach(item => {
+      if (!rawTextByPage.has(item.page)) {
+        rawTextByPage.set(item.page, []);
+      }
+      rawTextByPage.get(item.page).push(item);
+    });
+    
+    const index = { tagsByPage, rawTextByPage };
+    cache.set(indexKey, index);
+    
+    perfTimer.end('buildPageIndex');
+    debugLog('PERF', `Page index built: ${tagsByPage.size} pages indexed`);
+    
+    return index;
+  }, [tags.length, rawTextItems.length]); // Only rebuild when data changes
+  
+  // Ultra-fast O(1) page data access
+  const currentTags = useMemo(() => {
+    debugLog('MEMO', `Getting tags for page ${currentPage} from index`);
+    return pageIndex.tagsByPage.get(currentPage) || [];
+  }, [pageIndex, currentPage]);
+  
+  const currentRawTextItems = useMemo(() => {
+    debugLog('MEMO', `Getting raw text for page ${currentPage} from index`);
+    return pageIndex.rawTextByPage.get(currentPage) || [];
+  }, [pageIndex, currentPage]);
   
   // Memoize current page descriptions for performance
   const currentDescriptions = useMemo(() => 
@@ -1503,51 +1491,78 @@ const PdfViewerComponent = ({
     }
     
     return { x: screenX, y: screenY };
-  }
+  };
 
-  // Helper function to transform PDF coordinates to screen coordinates
-  const transformCoordinates = (x1, y1, x2, y2) => {
+  // Scale-independent coordinate cache - only depends on viewport and rotation
+  const coordinatesCache = useMemo(() => {
+    const cacheKey = `${viewport?.width || 0}_${viewport?.height || 0}_${rotation}`;
+    
+    if (!(window as any).globalCoordinatesCache) {
+      (window as any).globalCoordinatesCache = new Map();
+      debugLog('PERF', 'Global coordinate cache initialized');
+    }
+    
+    const globalCache = (window as any).globalCoordinatesCache;
+    if (!globalCache.has(cacheKey)) {
+      globalCache.set(cacheKey, new Map());
+      debugLog('PERF', `New cache created for transformation: ${cacheKey} (scale-independent)`);
+    }
+    
+    return globalCache.get(cacheKey);
+  }, [viewport?.width, viewport?.height, rotation]); // Remove scale dependency
+  
+  // Helper function to transform PDF coordinates to base coordinates (scale = 1)
+  const transformCoordinates = useCallback((x1, y1, x2, y2) => {
+    // Early return if no viewport
     if (!viewport) return { rectX: 0, rectY: 0, rectWidth: 0, rectHeight: 0 };
     
-    let rectX, rectY, rectWidth, rectHeight;
+    // Create cache key with rounded coordinates to improve hit rate
+    const roundedX1 = Math.round(x1 * 100) / 100;
+    const roundedY1 = Math.round(y1 * 100) / 100;
+    const roundedX2 = Math.round(x2 * 100) / 100;
+    const roundedY2 = Math.round(y2 * 100) / 100;
+    const cacheKey = `${roundedX1},${roundedY1},${roundedX2},${roundedY2}`;
+    
+    if (coordinatesCache.has(cacheKey)) {
+      const cached = coordinatesCache.get(cacheKey);
+      // Apply scale to cached base coordinates
+      return {
+        rectX: cached.baseX * scale,
+        rectY: cached.baseY * scale,
+        rectWidth: cached.baseWidth * scale,
+        rectHeight: cached.baseHeight * scale
+      };
+    }
+    
+    // Only track function calls for cache misses to reduce log spam
+    trackFunctionCall('transformCoordinates');
+    
+    let baseX, baseY, baseWidth, baseHeight;
     
     switch (rotation) {
       case 90:
-        // For 90-degree rotation, coordinates are already swapped in taggingService
-        // Use them directly without additional transformation
-        rectX = x1 * scale;
-        rectY = y1 * scale;
-        rectWidth = (x2 - x1) * scale;
-        rectHeight = (y2 - y1) * scale;
-        break;
       case 180:
-        // For 180-degree rotation, coordinates are already transformed in taggingService
-        // Use them directly without additional transformation
-        rectX = x1 * scale;
-        rectY = y1 * scale;
-        rectWidth = (x2 - x1) * scale;
-        rectHeight = (y2 - y1) * scale;
-        break;
       case 270:
-        // For 270-degree rotation, coordinates are already transformed in taggingService
-        // Use them directly without additional transformation
-        rectX = x1 * scale;
-        rectY = y1 * scale;
-        rectWidth = (x2 - x1) * scale;
-        rectHeight = (y2 - y1) * scale;
-        break;
-      default: // 0 degrees
-        // For non-rotated documents, coordinates are already flipped in taggingService
-        // Use them directly without additional y-coordinate transformation
-        rectX = x1 * scale;
-        rectY = y1 * scale;
-        rectWidth = (x2 - x1) * scale;
-        rectHeight = (y2 - y1) * scale;
+      default: // All rotations - coordinates already processed in taggingService
+        // Store base coordinates without scale
+        baseX = x1;
+        baseY = y1;
+        baseWidth = x2 - x1;
+        baseHeight = y2 - y1;
         break;
     }
     
-    return { rectX, rectY, rectWidth, rectHeight };
-  };
+    const baseResult = { baseX, baseY, baseWidth, baseHeight };
+    coordinatesCache.set(cacheKey, baseResult);
+    
+    // Return scaled coordinates
+    return {
+      rectX: baseX * scale,
+      rectY: baseY * scale,
+      rectWidth: baseWidth * scale,
+      rectHeight: baseHeight * scale
+    };
+  }, [viewport, scale, rotation, coordinatesCache]);
 
   const getModeStyles = () => {
     switch(mode){

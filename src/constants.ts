@@ -1,5 +1,21 @@
 import { Category, ColorSettings } from './types.ts';
 
+// Debug configuration
+export const DEBUG_MODE = true; // Master switch for debug logging
+export const DEBUG_LEVEL = 'DETAILED' as 'BASIC' | 'DETAILED' | 'VERBOSE'; // Debug detail level
+
+export const DEBUG_CATEGORIES = {
+  STATE: true,      // State changes tracking
+  RENDER: true,     // Component render tracking
+  PERF: true,       // Performance measurements
+  MEMO: true,       // Memoization tracking
+  FUNC: true,       // Function call counts
+  EXTRACT: true,    // Tag extraction process
+  RELATION: true,   // Relationship calculations
+  EVENT: true,      // Event handler tracking
+  MEMORY: true,     // Memory usage monitoring
+} as const;
+
 export const DEFAULT_PATTERNS = {
   [Category.Equipment]: '^([^-]*-){2}[^-]*$',
   [Category.Line]: '^(?=.{10,25}$)(?=.*")([^-]*-){3,}[^-]*$',

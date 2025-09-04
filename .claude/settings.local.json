@@ -37,7 +37,10 @@
       "Bash(git pull:*)",
       "Bash(npx surge:*)",
       "Bash(git merge:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(taskkill:*)",
+      "Bash(if exist \"node_modules\\.vite\" rmdir /s /q \"node_modules\\.vite\")"
     ],
     "deny": [],
     "ask": []

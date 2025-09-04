@@ -1,5 +1,6 @@
 import { Category } from '../types.ts';
 import { v4 as uuidv4 } from 'uuid';
+import { debugLog, perfTimer, trackMemoryUsage } from '../utils/debugLogger.ts';
 
 // Helper function to remove whitespace from tag text (except for NotesAndHolds)
 const removeWhitespace = (text, category, shouldRemoveWhitespace) => {
@@ -120,8 +121,17 @@ const getRightBottomCorner = (viewport, rotation) => {
 };
 
 export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSettings = { autoRemoveWhitespace: true }) => {
+    perfTimer.start(`extractTags_page_${pageNum}`);
+    debugLog('EXTRACT', `Starting tag extraction for page ${pageNum}`);
+    
+    perfTimer.start(`getPage_${pageNum}`);
     const page = await pdfDoc.getPage(pageNum);
+    perfTimer.end(`getPage_${pageNum}`);
+    
+    perfTimer.start(`getTextContent_${pageNum}`);
     const textContent = await page.getTextContent();
+    perfTimer.end(`getTextContent_${pageNum}`);
+    debugLog('EXTRACT', `Page ${pageNum}: Found ${textContent.items.length} text items`);
     const viewport = page.getViewport({ scale: 1.0 });
     const rotation = viewport.rotation || 0;
     
@@ -378,22 +388,6 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
                 });
             }
 
-            // Debug logging for Drawing Number selection
-            if (candidates.length > 0) {
-                console.log(`🎯 DRAWING NUMBER DEBUG - Page ${pageNum}`);
-                console.log(`🔄 Page rotation: ${rotation}°, Right-bottom corner: (${rightBottomCorner.x.toFixed(1)}, ${rightBottomCorner.y.toFixed(1)})`);
-                console.log(`📊 Found ${candidates.length} candidates:`);
-                
-                // Sort by distance for easier reading
-                const sortedCandidates = [...candidates].sort((a, b) => a.distance - b.distance);
-                sortedCandidates.forEach((candidate, index) => {
-                    const marker = candidate.isSelected ? '🏆 SELECTED:' : `${index + 1}.`;
-                    console.log(`${marker} "${candidate.text}"`);
-                    console.log(`   📍 Position: X=${candidate.bbox.x1.toFixed(1)}-${candidate.bbox.x2.toFixed(1)}, Y=${candidate.bbox.y1.toFixed(1)}-${candidate.bbox.y2.toFixed(1)}`);
-                    console.log(`   📏 Distance: ${candidate.distance.toFixed(2)} (dx=${candidate.dx.toFixed(1)}, dy=${candidate.dy.toFixed(1)}, targetY=${candidate.targetY.toFixed(1)})`);
-                });
-                console.log(`════════════════════════════════════════`);
-            }
 
             if (bestCandidate) {
                 const cleanedText = removeWhitespace(bestCandidate.text, Category.DrawingNumber, appSettings.autoRemoveWhitespace);
@@ -520,6 +514,10 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
          });
     }
 
+    perfTimer.end(`extractTags_page_${pageNum}`);
+    debugLog('EXTRACT', `Page ${pageNum} extraction complete: ${foundTags.length} tags, ${rawTextItems.length} raw text items`);
+    trackMemoryUsage(`After extracting page ${pageNum}`);
+    
     return { tags: foundTags, rawTextItems };
 };
 

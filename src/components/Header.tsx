@@ -436,11 +436,11 @@ export const Header = ({
                 {showPageDropdown && (
                   <div
                     ref={pageDropdownRef}
-                    className="absolute top-full mt-1 left-0 right-0 max-h-96 overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50"
+                    className="absolute top-full mt-1 left-0 w-96 max-h-96 overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50"
                   >
-                    <div className="p-2">
+                    <div className="p-3">
                       <div className="text-xs text-slate-400 mb-2 px-2">Select Page:</div>
-                      <div className="grid grid-cols-4 gap-1">
+                      <div className="grid grid-cols-10 gap-1">
                         {Array.from({ length: pdfDoc.numPages }, (_, i) => i + 1).map(page => (
                           <button
                             key={page}
@@ -449,9 +449,9 @@ export const Header = ({
                               setShowPageDropdown(false);
                               debugLog('EVENT', `📄 Page navigation: ${currentPage} → ${page}`);
                             }}
-                            className={`px-2 py-1 text-sm rounded transition-colors ${
+                            className={`px-1 py-1.5 text-xs rounded transition-colors min-w-[28px] ${
                               page === currentPage
-                                ? 'bg-sky-600 text-white'
+                                ? 'bg-sky-600 text-white font-bold'
                                 : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
                             }`}
                           >

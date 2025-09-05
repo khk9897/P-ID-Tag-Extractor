@@ -152,21 +152,31 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       
       const container = pdfViewerScrollRef.current;
       const { x1, y1, x2, y2 } = tag.bbox;
-      const pdfCenterX = (x1 + x2) / 2;
-      const pdfCenterY = (y1 + y2) / 2;
       
-      // For now, using simplified coordinate transformation
-      // This may need to be adjusted based on the actual PDF rendering scale and rotation
-      // Use the actual scale from props
-      const centerX = pdfCenterX * scale;
-      const centerY = pdfCenterY * scale;
+      // Use the same coordinate transformation as PdfViewer's transformCoordinates
+      // This accounts for rotation and proper scaling
+      const baseX = x1;
+      const baseY = y1;
+      const baseWidth = x2 - x1;
+      const baseHeight = y2 - y1;
+      
+      // Apply scale to get screen coordinates
+      const rectX = baseX * scale;
+      const rectY = baseY * scale;
+      const rectWidth = baseWidth * scale;
+      const rectHeight = baseHeight * scale;
+      
+      // Calculate center of the transformed rectangle
+      const centerX = rectX + rectWidth / 2;
+      const centerY = rectY + rectHeight / 2;
       
       const containerRect = container.getBoundingClientRect();
       const targetScrollLeft = centerX - containerRect.width / 2;
       const targetScrollTop = centerY - containerRect.height / 2;
       
       console.log('Scrolling to coordinates:', {
-        pdfCenter: { x: pdfCenterX, y: pdfCenterY },
+        bbox: { x1, y1, x2, y2 },
+        transformed: { rectX, rectY, rectWidth, rectHeight },
         screenCenter: { x: centerX, y: centerY },
         targetScroll: { left: Math.max(0, targetScrollLeft), top: Math.max(0, targetScrollTop) }
       });
@@ -177,7 +187,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         behavior: 'smooth'
       });
     }, delay);
-  }, [tags]);
+  }, [tags, scale]);
   
   // Direct scroll function for descriptions
   const scrollToDescription = useCallback((descriptionId, delay = 50) => {
@@ -192,13 +202,20 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       
       const container = pdfViewerScrollRef.current;
       const { x1, y1, x2, y2 } = description.bbox;
-      const pdfCenterX = (x1 + x2) / 2;
-      const pdfCenterY = (y1 + y2) / 2;
       
-      // Using simplified coordinate transformation
-      // Use the actual scale from props
-      const centerX = pdfCenterX * scale;
-      const centerY = pdfCenterY * scale;
+      // Use the same coordinate transformation as PdfViewer
+      const baseX = x1;
+      const baseY = y1;
+      const baseWidth = x2 - x1;
+      const baseHeight = y2 - y1;
+      
+      const rectX = baseX * scale;
+      const rectY = baseY * scale;
+      const rectWidth = baseWidth * scale;
+      const rectHeight = baseHeight * scale;
+      
+      const centerX = rectX + rectWidth / 2;
+      const centerY = rectY + rectHeight / 2;
       
       const containerRect = container.getBoundingClientRect();
       const targetScrollLeft = centerX - containerRect.width / 2;
@@ -210,7 +227,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         behavior: 'smooth'
       });
     }, delay);
-  }, [descriptions]);
+  }, [descriptions, scale]);
   
   // Direct scroll function for equipment short specs
   const scrollToEquipmentShortSpec = useCallback((equipmentShortSpecId, delay = 50) => {
@@ -225,13 +242,20 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       
       const container = pdfViewerScrollRef.current;
       const { x1, y1, x2, y2 } = spec.bbox;
-      const pdfCenterX = (x1 + x2) / 2;
-      const pdfCenterY = (y1 + y2) / 2;
       
-      // Using simplified coordinate transformation
-      // Use the actual scale from props
-      const centerX = pdfCenterX * scale;
-      const centerY = pdfCenterY * scale;
+      // Use the same coordinate transformation as PdfViewer
+      const baseX = x1;
+      const baseY = y1;
+      const baseWidth = x2 - x1;
+      const baseHeight = y2 - y1;
+      
+      const rectX = baseX * scale;
+      const rectY = baseY * scale;
+      const rectWidth = baseWidth * scale;
+      const rectHeight = baseHeight * scale;
+      
+      const centerX = rectX + rectWidth / 2;
+      const centerY = rectY + rectHeight / 2;
       
       const containerRect = container.getBoundingClientRect();
       const targetScrollLeft = centerX - containerRect.width / 2;
@@ -243,7 +267,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         behavior: 'smooth'
       });
     }, delay);
-  }, [equipmentShortSpecs]);
+  }, [equipmentShortSpecs, scale]);
   
   // Get store selection state for auto-scroll handling
   const storeSelectedTagIds = useSidePanelStore(state => state.selectedTagIds);

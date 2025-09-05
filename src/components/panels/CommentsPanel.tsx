@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { Comment, Tag, Description } from '../../types';
 import { useSidePanelStore } from '../../stores/sidePanelStore';
@@ -105,6 +105,29 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
   onCreateComment
 }) => {
   const { commentsTabFilter, openCommentModal } = useSidePanelStore();
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(600);
+
+  // Calculate list height dynamically
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current) {
+        const containerHeight = containerRef.current.offsetHeight;
+        setListHeight(containerHeight);
+      }
+    };
+
+    updateHeight();
+    const resizeObserver = new ResizeObserver(updateHeight);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
   
   // Create lookup maps
   const targetNameMap = useMemo(() => {
@@ -153,8 +176,8 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
   }, [filteredComments, targetNameMap, handleToggleResolved, handleEditComment, onDeleteComment]);
   
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className="mb-2 px-3">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="mb-2 px-3 flex-shrink-0">
         <div className="flex justify-between items-center">
           <span className="text-sm text-slate-400">
             {filteredComments.length} comments
@@ -167,23 +190,25 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
         </div>
       </div>
       
-      {filteredComments.length > 0 ? (
-        <List
-          height={600}
-          itemCount={filteredComments.length}
-          itemSize={100}
-          width="100%"
-          className="scrollbar-thin scrollbar-thumb-slate-600"
-        >
-          {Row}
-        </List>
-      ) : (
-        <div className="px-3 py-8 text-center text-slate-500">
-          {commentsTabFilter === 'all' 
-            ? 'No comments yet'
-            : `No ${commentsTabFilter} comments`}
-        </div>
-      )}
+      <div ref={containerRef} className="flex-1 min-h-0">
+        {filteredComments.length > 0 ? (
+          <List
+            height={listHeight}
+            itemCount={filteredComments.length}
+            itemSize={100}
+            width="100%"
+            className="scrollbar-thin scrollbar-thumb-slate-600"
+          >
+            {Row}
+          </List>
+        ) : (
+          <div className="px-3 py-8 text-center text-slate-500">
+            {commentsTabFilter === 'all' 
+              ? 'No comments yet'
+              : `No ${commentsTabFilter} comments`}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

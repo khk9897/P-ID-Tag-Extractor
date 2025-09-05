@@ -171,6 +171,8 @@ export const DescriptionsPanel: React.FC<DescriptionsPanelProps> = ({
   
   const listRef = useRef<List>(null);
   const lastClickedIndex = useRef<number>(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(600);
   
   // Filter and sort descriptions
   const filteredDescriptions = useMemo(() => {
@@ -226,6 +228,26 @@ export const DescriptionsPanel: React.FC<DescriptionsPanelProps> = ({
     setTempDescriptionText('');
     setTempDescriptionMetadata({});
   }, [setEditingDescriptionId, setTempDescriptionText, setTempDescriptionMetadata]);
+
+  // Calculate list height dynamically
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current) {
+        const containerHeight = containerRef.current.offsetHeight;
+        setListHeight(containerHeight);
+      }
+    };
+
+    updateHeight();
+    const resizeObserver = new ResizeObserver(updateHeight);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
   
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const description = filteredDescriptions[index];
@@ -261,8 +283,8 @@ export const DescriptionsPanel: React.FC<DescriptionsPanelProps> = ({
   ]);
   
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className="mb-2 px-3">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="mb-2 px-3 flex-shrink-0">
         <div className="flex justify-between items-center">
           <span className="text-sm text-slate-400">
             {filteredDescriptions.length} descriptions
@@ -289,22 +311,24 @@ export const DescriptionsPanel: React.FC<DescriptionsPanelProps> = ({
         </div>
       </div>
       
-      {filteredDescriptions.length > 0 ? (
-        <List
-          ref={listRef}
-          height={600}
-          itemCount={filteredDescriptions.length}
-          itemSize={80}
-          width="100%"
-          className="scrollbar-thin scrollbar-thumb-slate-600"
-        >
-          {Row}
-        </List>
-      ) : (
-        <div className="px-3 py-8 text-center text-slate-500">
-          No descriptions found
-        </div>
-      )}
+      <div ref={containerRef} className="flex-1 min-h-0">
+        {filteredDescriptions.length > 0 ? (
+          <List
+            ref={listRef}
+            height={listHeight}
+            itemCount={filteredDescriptions.length}
+            itemSize={80}
+            width="100%"
+            className="scrollbar-thin scrollbar-thumb-slate-600"
+          >
+            {Row}
+          </List>
+        ) : (
+          <div className="px-3 py-8 text-center text-slate-500">
+            No descriptions found
+          </div>
+        )}
+      </div>
     </div>
   );
 };

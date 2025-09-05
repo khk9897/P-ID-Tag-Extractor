@@ -40,7 +40,12 @@
       "Bash(git show:*)",
       "mcp__ide__getDiagnostics",
       "Bash(taskkill:*)",
-      "Bash(if exist \"node_modules\\.vite\" rmdir /s /q \"node_modules\\.vite\")"
+      "Bash(if exist \"node_modules\\.vite\" rmdir /s /q \"node_modules\\.vite\")",
+      "Bash(git rev-parse:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(echo:*)",
+      "Bash(sed:*)"
     ],
     "deny": [],
     "ask": []

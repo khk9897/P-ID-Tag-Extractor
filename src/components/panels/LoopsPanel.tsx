@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { Loop, Tag } from '../../types';
 import { useSidePanelStore } from '../../stores/sidePanelStore';
@@ -114,6 +114,31 @@ export const LoopsPanel: React.FC<LoopsPanelProps> = ({
     editingLoopValue,
     setEditingLoopValue
   } = useSidePanelStore();
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(600);
+
+  // Calculate list height dynamically
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current) {
+        const containerHeight = containerRef.current.offsetHeight;
+        if (containerHeight > 200 && containerHeight !== listHeight) {
+          setListHeight(containerHeight);
+        }
+      }
+    };
+
+    updateHeight();
+    const resizeObserver = new ResizeObserver(updateHeight);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
   
   // Filter loops
   const filteredLoops = useMemo(() => {
@@ -184,8 +209,8 @@ export const LoopsPanel: React.FC<LoopsPanelProps> = ({
   }, [filteredLoops, tags, editingLoopId, editingLoopValue, handleEditStart, handleSave, handleCancel, onDeleteLoops, setEditingLoopValue]);
   
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className="mb-2 px-3">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="mb-2 px-3 flex-shrink-0">
         <div className="flex justify-between items-center">
           <span className="text-sm text-slate-400">
             {filteredLoops.length} loops
@@ -209,21 +234,23 @@ export const LoopsPanel: React.FC<LoopsPanelProps> = ({
         </div>
       </div>
       
-      {filteredLoops.length > 0 ? (
-        <List
-          height={600}
-          itemCount={filteredLoops.length}
-          itemSize={70}
-          width="100%"
-          className="scrollbar-thin scrollbar-thumb-slate-600"
-        >
-          {Row}
-        </List>
-      ) : (
-        <div className="px-3 py-8 text-center text-slate-500">
-          No loops found
-        </div>
-      )}
+      <div ref={containerRef} className="flex-1 min-h-0">
+        {filteredLoops.length > 0 ? (
+          <List
+            height={listHeight}
+            itemCount={filteredLoops.length}
+            itemSize={70}
+            width="100%"
+            className="scrollbar-thin scrollbar-thumb-slate-600"
+          >
+            {Row}
+          </List>
+        ) : (
+          <div className="px-3 py-8 text-center text-slate-500">
+            No loops found
+          </div>
+        )}
+      </div>
     </div>
   );
 };

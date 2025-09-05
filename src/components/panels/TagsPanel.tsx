@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { Tag, Relationship, Comment, Category } from '../../types';
 import { CATEGORY_COLORS } from '../../constants';
@@ -167,6 +167,7 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
     reviewFilter,
     commentFilter,
     sortOrder,
+    showRelationshipDetails,
     openCommentModal,
     // Get selection state from zustand
     currentPage,
@@ -177,6 +178,8 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
   
   const listRef = useRef<List>(null);
   const lastClickedIndex = useRef<number>(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   
   // Filter and sort tags
   const filteredAndSortedTags = useMemo(() => {
@@ -229,6 +232,63 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
     }
   }, [onUpdateTagText]);
   
+  // Calculate screen-aware dynamic height
+  const [listHeight, setListHeight] = useState(400);
+  
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current && headerRef.current) {
+        // 화면 크기 정보
+        const windowHeight = window.innerHeight;
+        const windowWidth = window.innerWidth;
+        
+        // 컨테이너 위치 및 크기
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const headerRect = headerRef.current.getBoundingClientRect();
+        
+        // 사용 가능한 실제 높이 계산
+        const availableHeight = Math.floor(
+          windowHeight - containerRect.top - headerRect.height - 10 // 10px 여유 공간
+        );
+        
+        // console.log('🔍 Screen-aware height calculation:', {
+        //   windowHeight,
+        //   windowWidth,
+        //   containerTop: containerRect.top,
+        //   containerHeight: containerRect.height,
+        //   headerHeight: headerRect.height,
+        //   calculatedAvailable: availableHeight,
+        //   currentListHeight: listHeight,
+        //   resolution: windowWidth + 'x' + windowHeight
+        // });
+        
+        if (availableHeight > 200 && availableHeight !== listHeight) {
+          setListHeight(availableHeight);
+        }
+      }
+    };
+
+    updateHeight();
+    
+    // ResizeObserver for container changes
+    const resizeObserver = new ResizeObserver(updateHeight);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    
+    // Window resize for screen/resolution changes
+    const handleResize = () => {
+      setTimeout(updateHeight, 50); // 약간의 지연으로 레이아웃 정착 후 측정
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
   // Auto-scroll to selected tag (only when selection source is viewer)
   useEffect(() => {
     if (tagSelectionSource === 'viewer' && selectedTagIds.length === 1 && listRef.current) {
@@ -243,7 +303,8 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
       return () => clearTimeout(timeoutId);
     }
   }, [selectedTagIds, tagSelectionSource]); // Remove filteredAndSortedTags dependency
-  
+
+
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const tag = filteredAndSortedTags[index];
     const isSelected = selectedTagIds.includes(tag.id);
@@ -266,30 +327,35 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
   }, [filteredAndSortedTags, selectedTagIds, visibleRelationships, handleTagSelect, onDeleteTags, onPingTag, handleEditTag, openCommentModal, getCommentsForTarget]);
   
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className="mb-2 px-3 text-sm text-slate-400">
+    <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden">
+      <div ref={headerRef} className="mb-2 px-3 text-sm text-slate-400 flex-shrink-0">
         {filteredAndSortedTags.length} tags
         {selectedTagIds.length > 0 && (
           <span className="ml-2 text-sky-400">({selectedTagIds.length} selected)</span>
         )}
       </div>
       
-      {filteredAndSortedTags.length > 0 ? (
-        <List
-          ref={listRef}
-          height={600}
-          itemCount={filteredAndSortedTags.length}
-          itemSize={60}
-          width="100%"
-          className="scrollbar-thin scrollbar-thumb-slate-600"
-        >
-          {Row}
-        </List>
-      ) : (
-        <div className="px-3 py-8 text-center text-slate-500">
-          No tags found
-        </div>
-      )}
+      <div 
+        className="flex-1 min-h-0"
+        style={{ height: listHeight }}
+      >
+        {filteredAndSortedTags.length > 0 ? (
+          <List
+            ref={listRef}
+            height={listHeight} // 동적으로 계산된 높이
+            itemCount={filteredAndSortedTags.length}
+            itemSize={60}
+            width="100%"
+            className="scrollbar-thin scrollbar-thumb-slate-600"
+          >
+            {Row}
+          </List>
+        ) : (
+          <div className="px-3 py-8 text-center text-slate-500">
+            No tags found
+          </div>
+        )}
+      </div>
     </div>
   );
 };

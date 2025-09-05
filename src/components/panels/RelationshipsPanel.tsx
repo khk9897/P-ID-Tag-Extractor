@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { Relationship, Tag, RelationshipTypeValue } from '../../types';
 import { useSidePanelStore } from '../../stores/sidePanelStore';
@@ -100,6 +100,31 @@ export const RelationshipsPanel: React.FC<RelationshipsPanelProps> = ({
     debouncedSearchQuery,
     currentPage 
   } = useSidePanelStore();
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(600);
+
+  // Calculate list height dynamically
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current) {
+        const containerHeight = containerRef.current.offsetHeight;
+        if (containerHeight > 200 && containerHeight !== listHeight) {
+          setListHeight(containerHeight);
+        }
+      }
+    };
+
+    updateHeight();
+    const resizeObserver = new ResizeObserver(updateHeight);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
   
   // Create tag map for quick lookups
   const tagMap = useMemo(() => 
@@ -145,26 +170,28 @@ export const RelationshipsPanel: React.FC<RelationshipsPanelProps> = ({
   }, [filteredRelationships, tagMap, handleDeleteRelationship, onPingRelationship]);
   
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className="mb-2 px-3 text-sm text-slate-400">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="mb-2 px-3 text-sm text-slate-400 flex-shrink-0">
         {filteredRelationships.length} relationships
       </div>
       
-      {filteredRelationships.length > 0 ? (
-        <List
-          height={600}
-          itemCount={filteredRelationships.length}
-          itemSize={50}
-          width="100%"
-          className="scrollbar-thin scrollbar-thumb-slate-600"
-        >
-          {Row}
-        </List>
-      ) : (
-        <div className="px-3 py-8 text-center text-slate-500">
-          No relationships found
-        </div>
-      )}
+      <div ref={containerRef} className="flex-1 min-h-0">
+        {filteredRelationships.length > 0 ? (
+          <List
+            height={listHeight}
+            itemCount={filteredRelationships.length}
+            itemSize={50}
+            width="100%"
+            className="scrollbar-thin scrollbar-thumb-slate-600"
+          >
+            {Row}
+          </List>
+        ) : (
+          <div className="px-3 py-8 text-center text-slate-500">
+            No relationships found
+          </div>
+        )}
+      </div>
     </div>
   );
 };

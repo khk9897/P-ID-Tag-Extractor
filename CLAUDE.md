@@ -100,3 +100,38 @@ Core entities:
 - No external server dependencies - fully client-side processing
 - Korean documentation in README.md for end users
 - Enhanced Line pattern regex: `^(?=.{10,25}$)(?=.*")([^-]*-){3,}[^-]*$` for improved accuracy
+
+## Development Principles - 기초부터 차근차근
+
+### Problem-Solving Approach
+ALWAYS start with the most basic, fundamental solutions before attempting complex implementations:
+
+#### 1. Environment and Context First
+- **Screen/Resolution Issues**: Consider `window.innerHeight`, `getBoundingClientRect()`, and actual viewport dimensions FIRST
+- **Layout Problems**: Verify basic CSS flexbox, positioning, and container relationships  
+- **Dynamic Sizing**: Use browser APIs to measure real available space, not assumed values
+
+#### 2. Basic APIs Before Complex Logic
+- Use standard web APIs (`getBoundingClientRect`, `ResizeObserver`, `window` properties) before custom calculations
+- Prefer simple, direct measurements over complex mathematical formulas
+- Test basic functionality before adding advanced features
+
+#### 3. Step-by-Step Problem Isolation
+1. **Identify Root Cause**: What is the actual problem? (e.g., "different monitor resolutions" not "height calculation")
+2. **Simplest Solution First**: Try the most straightforward approach
+3. **Incremental Improvement**: Add complexity only when basic solution is proven to work
+4. **Verify Each Step**: Ensure each component works before moving to the next
+
+#### 4. Common Pitfalls to Avoid
+- ❌ Assuming fixed pixel values work across different screen sizes
+- ❌ Implementing complex dynamic calculations without understanding basic layout
+- ❌ Ignoring browser environment (screen size, resolution, viewport)
+- ❌ Adding multiple solutions simultaneously instead of testing one at a time
+
+#### 5. React Component Layout Best Practices
+- **Dynamic Height**: Always consider screen dimensions and actual container positions
+- **react-window**: Use real measured heights, not hardcoded values
+- **Responsive Design**: Account for different monitor resolutions and window sizes
+- **ResizeObserver**: Essential for dynamic layouts that adapt to screen changes
+
+**Key Lesson**: Most UI layout problems have simple, fundamental solutions using basic web APIs. Complex custom logic is rarely the answer.

@@ -15,8 +15,17 @@ interface SidePanelState {
   selectedEquipmentShortSpecIds: string[];
   tagSelectionSource: 'viewer' | 'panel' | null;
   
+  // Relationship Maps for O(1) lookup performance
+  relationshipsByFrom: Map<string, any[]>;
+  relationshipsByTo: Map<string, any[]>;
+  relationshipsByType: Map<string, any[]>;
+  
   // Page state
   currentPage: number;
+  
+  // Performance mode for large files
+  isLargeFile: boolean;
+  performanceMode: boolean;
   
   // Filter state
   searchQuery: string;
@@ -50,6 +59,9 @@ interface SidePanelState {
   
   // Actions
   setActiveTab: (tab: string) => void;
+  
+  // Relationship Map actions
+  updateRelationshipMaps: (relationships: any[]) => void;
   setShowCurrentPageOnly: (show: boolean) => void;
   setShowRelationshipDetails: (show: boolean) => void;
   setSidebarWidth: (width: number) => void;
@@ -63,6 +75,10 @@ interface SidePanelState {
   
   // Page actions
   setCurrentPage: (page: number) => void;
+  
+  // Performance mode actions
+  setIsLargeFile: (isLarge: boolean) => void;
+  setPerformanceMode: (enabled: boolean) => void;
   
   setSearchQuery: (query: string) => void;
   setDebouncedSearchQuery: (query: string) => void;
@@ -115,8 +131,17 @@ export const useSidePanelStore = create<SidePanelState>((set) => ({
   selectedEquipmentShortSpecIds: [],
   tagSelectionSource: null,
   
+  // Relationship Maps
+  relationshipsByFrom: new Map(),
+  relationshipsByTo: new Map(),
+  relationshipsByType: new Map(),
+  
   // Page state
   currentPage: 1,
+  
+  // Performance mode
+  isLargeFile: false,
+  performanceMode: false,
   
   searchQuery: '',
   debouncedSearchQuery: '',
@@ -146,6 +171,40 @@ export const useSidePanelStore = create<SidePanelState>((set) => ({
   
   // Actions
   setActiveTab: (tab) => set({ activeTab: tab }),
+  
+  // Relationship Map update function for O(1) lookup performance
+  updateRelationshipMaps: (relationships) => {
+    const byFrom = new Map();
+    const byTo = new Map();
+    const byType = new Map();
+    
+    relationships.forEach(rel => {
+      // Group by 'from'
+      if (!byFrom.has(rel.from)) {
+        byFrom.set(rel.from, []);
+      }
+      byFrom.get(rel.from).push(rel);
+      
+      // Group by 'to'
+      if (!byTo.has(rel.to)) {
+        byTo.set(rel.to, []);
+      }
+      byTo.get(rel.to).push(rel);
+      
+      // Group by 'type'
+      if (!byType.has(rel.type)) {
+        byType.set(rel.type, []);
+      }
+      byType.get(rel.type).push(rel);
+    });
+    
+    set({
+      relationshipsByFrom: byFrom,
+      relationshipsByTo: byTo,
+      relationshipsByType: byType
+    });
+  },
+  
   setShowCurrentPageOnly: (show) => set({ showCurrentPageOnly: show }),
   setShowRelationshipDetails: (show) => set({ showRelationshipDetails: show }),
   setSidebarWidth: (width) => {
@@ -170,6 +229,14 @@ export const useSidePanelStore = create<SidePanelState>((set) => ({
   
   // Page actions
   setCurrentPage: (page) => set({ currentPage: page }),
+  
+  // Performance mode actions
+  setIsLargeFile: (isLarge) => set({ 
+    isLargeFile: isLarge,
+    // Auto-enable performance mode for files > 100 pages
+    performanceMode: isLarge 
+  }),
+  setPerformanceMode: (enabled) => set({ performanceMode: enabled }),
   
   setSearchQuery: (query) => set({ searchQuery: query }),
   setDebouncedSearchQuery: (query) => set({ debouncedSearchQuery: query }),

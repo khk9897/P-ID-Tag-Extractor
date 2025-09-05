@@ -10,6 +10,7 @@ import PerformanceMonitor from './components/PerformanceMonitor.tsx';
 import { extractTags, createOPCRelationships } from './services/taggingService.ts';
 import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES, DEFAULT_SETTINGS, DEFAULT_COLORS } from './constants.ts';
 import { debugLog, perfTimer, trackStateChange, trackMemoryUsage } from './utils/debugLogger.ts';
+import { useSidePanelStore } from './stores/sidePanelStore.ts';
 import { 
   Category, 
   RelationshipType, 
@@ -80,13 +81,26 @@ const App: React.FC = () => {
   const [pdfDoc, setPdfDoc] = useState<any>(null); // TODO: Add proper PDF.js type
   const [tags, setTags] = useState<Tag[]>([]);
   const [rawTextItems, setRawTextItems] = useState<RawTextItem[]>([]);
-  const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [relationships, setRelationshipsState] = useState<Relationship[]>([]);
+  
+  // Wrapper to update both state and Maps
+  const setRelationships = useCallback((newRelationships: Relationship[] | ((prev: Relationship[]) => Relationship[])) => {
+    setRelationshipsState((prev) => {
+      const updated = typeof newRelationships === 'function' ? newRelationships(prev) : newRelationships;
+      // Update Maps for O(1) lookup
+      updateRelationshipMaps(updated);
+      return updated;
+    });
+  }, [updateRelationshipMaps]);
   const [descriptions, setDescriptions] = useState<Description[]>([]);
   const [equipmentShortSpecs, setEquipmentShortSpecs] = useState<EquipmentShortSpec[]>([]);
   const [loops, setLoops] = useState<Loop[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [progress, setProgress] = useState<ProcessingProgress>({ current: 0, total: 0 });
+  
+  // Performance mode from store
+  const { setIsLargeFile, updateRelationshipMaps, performanceMode, showAllRelationships, setShowAllRelationships } = useSidePanelStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [confirmation, setConfirmation] = useState<{
     isOpen: boolean;
@@ -446,6 +460,18 @@ const App: React.FC = () => {
       const doc = await loadingTask.promise;
       perfTimer.end('loadPDF');
       setPdfDoc(doc);
+      
+      // Check if it's a large file and enable performance mode
+      const isLarge = doc.numPages > 100;
+      setIsLargeFile(isLarge);
+      if (isLarge) {
+        debugLog('PERF', `Large file detected (${doc.numPages} pages), enabling performance mode`);
+        // Auto-disable relationship lines for large files
+        if (showAllRelationships) {
+          setShowAllRelationships(false);
+        }
+      }
+      
       await processPdf(doc, patterns, tolerances, appSettings);
       perfTimer.end('handleFileSelect');
     } catch (error) {

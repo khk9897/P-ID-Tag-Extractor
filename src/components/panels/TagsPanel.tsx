@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import { VariableSizeList as List } from 'react-window';
 import { Tag, Relationship, Comment, Category } from '../../types';
 import { CATEGORY_COLORS } from '../../constants';
 import { useSidePanelStore } from '../../stores/sidePanelStore';
@@ -24,25 +24,51 @@ const TagListItem = React.memo(({
   tag, 
   isSelected, 
   relationships,
+  allTags,
   onSelect,
   onDelete,
   onPing,
   onEdit,
   onOpenCommentModal,
-  getCommentsForTarget
+  getCommentsForTarget,
+  onPingTag,
+  onSelectRelatedTag
 }: {
   tag: Tag;
   isSelected: boolean;
   relationships: Relationship[];
+  allTags: Tag[];
   onSelect: (tagId: string, event: React.MouseEvent) => void;
   onDelete: () => void;
   onPing: () => void;
   onEdit: () => void;
   onOpenCommentModal: () => void;
   getCommentsForTarget: (targetId: string, targetType: string) => Comment[];
+  onPingTag?: (tagId: string) => void;
+  onSelectRelatedTag?: (tagId: string) => void;
 }) => {
   const showRelationshipDetails = useSidePanelStore(state => state.showRelationshipDetails);
   const tagComments = getCommentsForTarget(tag.id, 'tag');
+  
+  // Create tag map for ID to text conversion and category mapping
+  const tagMap = useMemo(() => 
+    new Map(allTags.map(t => [t.id, t.text])),
+    [allTags]
+  );
+  
+  const tagCategoryMap = useMemo(() => 
+    new Map(allTags.map(t => [t.id, t.category])),
+    [allTags]
+  );
+  
+  // Handle related tag click
+  const handleRelatedTagClick = useCallback((targetId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent parent click
+    
+    if (onSelectRelatedTag) {
+      onSelectRelatedTag(targetId);
+    }
+  }, [onSelectRelatedTag]);
   
   // Get related items for this tag
   const relatedInfo = useMemo(() => {
@@ -80,7 +106,16 @@ const TagListItem = React.memo(({
             >
               {tag.category}
             </span>
-            <span className="text-sm text-slate-300 break-all">{tag.text}</span>
+            <button
+              className="text-sm text-slate-300 break-all hover:text-sky-400 transition-colors cursor-pointer text-left"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPingTag?.(tag.id);
+              }}
+              title="Highlight in PDF"
+            >
+              {tag.text}
+            </button>
             {tag.isReviewed && (
               <span className="text-xs text-green-400" title="Reviewed">✓</span>
             )}
@@ -92,24 +127,70 @@ const TagListItem = React.memo(({
                 <div className="mt-1 ml-2">
                   <span className="text-xs text-amber-400">Connected to:</span>
                   <ul className="ml-2">
-                    {relatedInfo.connections.map(rel => (
-                      <li key={rel.id} className="text-xs text-slate-400">
-                        • {rel.from === tag.id ? `→ ${rel.to}` : `← ${rel.from}`}
-                      </li>
-                    ))}
+                    {relatedInfo.connections.map(rel => {
+                      const targetId = rel.from === tag.id ? rel.to : rel.from;
+                      const targetText = tagMap.get(targetId) || targetId;
+                      return (
+                        <li key={rel.id} className="text-xs text-slate-400 flex items-center gap-1">
+                          • <button
+                              className="text-slate-300 hover:text-sky-400 transition-colors cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onPingTag?.(targetId);
+                              }}
+                              title="Highlight in PDF"
+                            >
+                              {targetText}
+                            </button>
+                          <button 
+                            onClick={(e) => handleRelatedTagClick(targetId, e)}
+                            className="p-0.5 rounded text-slate-500 hover:text-sky-400 hover:bg-sky-500/20 transition-colors"
+                            title="Go to tag in panel"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
               
               {relatedInfo.installations.length > 0 && (
                 <div className="mt-1 ml-2">
-                  <span className="text-xs text-lime-400">Installed on:</span>
+                  <span className="text-xs text-lime-400">
+                    {tag.category === 'Line' ? 'Installed instrument:' : 'Installed on:'}
+                  </span>
                   <ul className="ml-2">
-                    {relatedInfo.installations.map(rel => (
-                      <li key={rel.id} className="text-xs text-slate-400">
-                        • {rel.from === tag.id ? `→ ${rel.to}` : `← ${rel.from}`}
-                      </li>
-                    ))}
+                    {relatedInfo.installations.map(rel => {
+                      const targetId = rel.from === tag.id ? rel.to : rel.from;
+                      const targetText = tagMap.get(targetId) || targetId;
+                      return (
+                        <li key={rel.id} className="text-xs text-slate-400 flex items-center gap-1">
+                          • <button
+                              className="text-slate-300 hover:text-sky-400 transition-colors cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onPingTag?.(targetId);
+                              }}
+                              title="Highlight in PDF"
+                            >
+                              {targetText}
+                            </button>
+                          <button 
+                            onClick={(e) => handleRelatedTagClick(targetId, e)}
+                            className="p-0.5 rounded text-slate-500 hover:text-sky-400 hover:bg-sky-500/20 transition-colors"
+                            title="Go to tag in panel"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -232,6 +313,31 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
     }
   }, [onUpdateTagText]);
   
+  // Handle related tag selection - ensure both selection and scrolling
+  const handleSelectRelatedTag = useCallback((targetId: string) => {
+    // First, select the tag
+    setSelectedTagIds([targetId], 'panel');
+    
+    // Find the target tag in the filtered list
+    const targetIndex = filteredAndSortedTags.findIndex(t => t.id === targetId);
+    
+    if (targetIndex !== -1 && listRef.current) {
+      // If found in filtered list, scroll to it
+      setTimeout(() => {
+        if (listRef.current) {
+          listRef.current.scrollToItem(targetIndex, 'smart');
+        }
+      }, 100);
+    } else {
+      // If not in filtered list, try to find in all tags and temporarily show it
+      const allTagIndex = tags.findIndex(t => t.id === targetId);
+      if (allTagIndex !== -1) {
+        console.log(`Target tag "${tags[allTagIndex].text}" not visible in current filter. Tag is on page ${tags[allTagIndex].page}.`);
+        // Could potentially clear filters here if needed, but for now just select it
+      }
+    }
+  }, [filteredAndSortedTags, setSelectedTagIds, tags]);
+  
   // Calculate screen-aware dynamic height
   const [listHeight, setListHeight] = useState(400);
   
@@ -289,6 +395,13 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
     };
   }, []);
 
+  // Reset List cache when relationships or visibility settings change
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.resetAfterIndex(0);
+    }
+  }, [visibleRelationships, showRelationshipDetails]);
+
   // Auto-scroll to selected tag (only when selection source is viewer)
   useEffect(() => {
     if (tagSelectionSource === 'viewer' && selectedTagIds.length === 1 && listRef.current) {
@@ -305,6 +418,34 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
   }, [selectedTagIds, tagSelectionSource]); // Remove filteredAndSortedTags dependency
 
 
+  // Calculate dynamic item size based on relationship details
+  const getItemSize = useCallback((index: number) => {
+    const tag = filteredAndSortedTags[index];
+    if (!showRelationshipDetails) return 60; // Base height
+    
+    const connections = visibleRelationships.filter(r => 
+      (r.from === tag.id || r.to === tag.id) && r.type === 'Connection'
+    );
+    const installations = visibleRelationships.filter(r => 
+      (r.from === tag.id || r.to === tag.id) && r.type === 'Installation'
+    );
+    
+    const baseHeight = 60;
+    const connectionLines = connections.length;
+    const installationLines = installations.length;
+    
+    // Add extra height for relationship sections
+    let extraHeight = 0;
+    if (connectionLines > 0) {
+      extraHeight += 20 + (connectionLines * 16); // Header + lines
+    }
+    if (installationLines > 0) {
+      extraHeight += 20 + (installationLines * 16); // Header + lines
+    }
+    
+    return baseHeight + extraHeight;
+  }, [filteredAndSortedTags, visibleRelationships, showRelationshipDetails]);
+
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const tag = filteredAndSortedTags[index];
     const isSelected = Array.isArray(selectedTagIds) && selectedTagIds.includes(tag.id);
@@ -315,16 +456,19 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
           tag={tag}
           isSelected={isSelected}
           relationships={visibleRelationships}
+          allTags={tags}
           onSelect={handleTagSelect}
           onDelete={() => onDeleteTags([tag.id])}
           onPing={() => onPingTag(tag.id)}
           onEdit={() => handleEditTag(tag)}
           onOpenCommentModal={() => openCommentModal(tag.id, tag.text, 'tag')}
           getCommentsForTarget={getCommentsForTarget}
+          onPingTag={onPingTag}
+          onSelectRelatedTag={handleSelectRelatedTag}
         />
       </div>
     );
-  }, [filteredAndSortedTags, selectedTagIds, visibleRelationships, handleTagSelect, onDeleteTags, onPingTag, handleEditTag, openCommentModal, getCommentsForTarget]);
+  }, [filteredAndSortedTags, selectedTagIds, visibleRelationships, tags, handleTagSelect, onDeleteTags, onPingTag, handleEditTag, openCommentModal, getCommentsForTarget, handleSelectRelatedTag]);
   
   return (
     <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden">
@@ -344,7 +488,7 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
             ref={listRef}
             height={listHeight} // 동적으로 계산된 높이
             itemCount={filteredAndSortedTags.length}
-            itemSize={60}
+            itemSize={getItemSize}
             width="100%"
             className="scrollbar-thin scrollbar-thumb-slate-600"
           >

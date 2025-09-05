@@ -100,9 +100,7 @@ const PdfViewerComponent = ({
   pingedEquipmentShortSpecId,
   pingedRelationshipId,
   colorSettings,
-  scrollToCenter,
-  setScrollToCenter,
-  onScrollToCenter,
+  scrollContainerRef: externalScrollRef,
   showAutoLinkRanges,
   tolerances,
   showAllRelationships,
@@ -114,6 +112,7 @@ const PdfViewerComponent = ({
   // Track component render - reduce frequency for performance
   const renderCountRef = useRef(0);
   renderCountRef.current++;
+  
   
   // Only track every few renders to reduce overhead
   if (renderCountRef.current % 5 === 0) {
@@ -143,7 +142,8 @@ const PdfViewerComponent = ({
   
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
-  const scrollContainerRef = useRef(null);
+  // Use the ref passed from Workspace, or create a new one if not provided
+  const internalScrollRef = externalScrollRef || useRef(null);
   const startPoint = useRef({ x: 0, y: 0 });
   const isClickOnItem = useRef(false); // Ref to track if mousedown was on an item
   
@@ -214,9 +214,7 @@ const PdfViewerComponent = ({
           // Set highlight
           setHighlightedTagIds(new Set([targetTagId]));
           
-          // Scroll to center the target tag
-          const scrollData = { tagId: targetTagId, timestamp: Date.now() };
-          setScrollToCenter(scrollData);
+          // Note: Scroll to center will be handled by Workspace
           
           
           // Clear pending target AFTER processing is complete
@@ -232,7 +230,7 @@ const PdfViewerComponent = ({
       } else {
       }
     }
-  }, [currentPage, pendingOpcTarget, viewport, tags, actualSetSelectedTagIds, setScrollToCenter]);
+  }, [currentPage, pendingOpcTarget, viewport, tags, actualSetSelectedTagIds]);
   
   // State to track visual highlight separately from selection
   const [highlightedTagIds, setHighlightedTagIds] = useState(new Set());
@@ -619,14 +617,7 @@ const PdfViewerComponent = ({
       prevPageRef.current = currentPage;
     }
     
-    // Clear scroll target if it doesn't match current page
-    if (scrollToCenter?.tagId) {
-      const targetTag = tags.find(t => t.id === scrollToCenter.tagId);
-      if (!targetTag || targetTag.page !== currentPage) {
-        onScrollToCenter(null); // Clear invalid scroll target
-      }
-    }
-  }, [currentPage, scrollToCenter, tags, onScrollToCenter]);
+  }, [currentPage]);
 
   useEffect(() => {
     let newRelatedTagIds = new Set();
@@ -658,69 +649,7 @@ const PdfViewerComponent = ({
   }, [actualSelectedTagIds, relationships, tags]);
 
 
-  // Handle scrollToCenter requests
-  useEffect(() => {
-    if (scrollToCenter && viewport && scrollContainerRef.current) {
-      const { tagId, descriptionId, equipmentShortSpecId, x, y } = scrollToCenter;
-      
-      // Find the item to get its coordinates if not provided
-      let centerX = x;
-      let centerY = y;
-      
-      if (tagId && (!x || !y)) {
-        const tag = tags.find(t => t.id === tagId);
-        if (tag) {
-          const { x1, y1, x2, y2 } = tag.bbox;
-          const pdfCenterX = (x1 + x2) / 2;
-          const pdfCenterY = (y1 + y2) / 2;
-          
-          // Transform PDF coordinates to screen coordinates
-          const screenCenter = transformPdfCoordinates(pdfCenterX, pdfCenterY);
-          centerX = screenCenter.x;
-          centerY = screenCenter.y;
-        }
-      } else if (descriptionId && (!x || !y)) {
-        const description = descriptions.find(d => d.id === descriptionId);
-        if (description) {
-          const { x1, y1, x2, y2 } = description.bbox;
-          const pdfCenterX = (x1 + x2) / 2;
-          const pdfCenterY = (y1 + y2) / 2;
-          
-          // Transform PDF coordinates to screen coordinates
-          const screenCenter = transformPdfCoordinates(pdfCenterX, pdfCenterY);
-          centerX = screenCenter.x;
-          centerY = screenCenter.y;
-        }
-      } else if (equipmentShortSpecId && (!x || !y)) {
-        const spec = equipmentShortSpecs.find(s => s.id === equipmentShortSpecId);
-        if (spec) {
-          const { x1, y1, x2, y2 } = spec.bbox;
-          const pdfCenterX = (x1 + x2) / 2;
-          const pdfCenterY = (y1 + y2) / 2;
-          
-          // Transform PDF coordinates to screen coordinates
-          const screenCenter = transformPdfCoordinates(pdfCenterX, pdfCenterY);
-          centerX = screenCenter.x;
-          centerY = screenCenter.y;
-        }
-      }
-      
-      if (centerX !== undefined && centerY !== undefined) {
-        const container = scrollContainerRef.current;
-        const containerRect = container.getBoundingClientRect();
-        
-        // Calculate scroll position to center the target
-        const targetScrollLeft = centerX - containerRect.width / 2;
-        const targetScrollTop = centerY - containerRect.height / 2;
-        
-        container.scrollTo({
-          left: Math.max(0, targetScrollLeft),
-          top: Math.max(0, targetScrollTop),
-          behavior: 'smooth'
-        });
-      }
-    }
-  }, [scrollToCenter, viewport, tags, descriptions, equipmentShortSpecs]);
+  // Scroll logic is now handled in Workspace.tsx
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1071,7 +1000,7 @@ const PdfViewerComponent = ({
   // Add wheel and scroll event listeners
   useEffect(() => {
     const viewer = viewerRef.current;
-    const scrollContainer = scrollContainerRef.current;
+    const scrollContainer = internalScrollRef.current;
     if (!viewer) return;
 
     const handleWheelEvent = (e) => {
@@ -1118,79 +1047,7 @@ const PdfViewerComponent = ({
     };
   }, [scale]);
 
-  useLayoutEffect(() => {
-    // Auto-scroll when selection comes from panel
-    if (actualSelectedTagIds.length === 1 && 
-        scrollContainerRef.current && 
-        viewport &&
-        !isUserScrolling) {
-      
-      const tagId = actualSelectedTagIds[0];
-      const tag = tags.find(t => t.id === tagId);
-      const now = Date.now();
-
-
-      if (tag && (now - lastAutoScrollRef.current > 300)) {
-        lastAutoScrollRef.current = now;
-        
-        // If tag is on different page, change page first
-        if (tag.page !== currentPage) {
-          // Use both store and props setCurrentPage for compatibility
-          if (storeSetCurrentPage) storeSetCurrentPage(tag.page);
-          if (setCurrentPage) setCurrentPage(tag.page);
-          
-          // Wait for page change, then scroll
-          setTimeout(() => {
-            if (!isUserScrolling) {
-              setScrollToCenter({ tagId: tag.id, timestamp: now });
-              setTimeout(() => setScrollToCenter(null), 100);
-            }
-          }, 200); // Wait for page rendering
-        } else {
-          // Tag is on current page, scroll immediately
-          setTimeout(() => {
-            if (!isUserScrolling) {
-              setScrollToCenter({ tagId: tag.id, timestamp: now });
-              setTimeout(() => setScrollToCenter(null), 100);
-            }
-          }, 50);
-        }
-      }
-    }
-  }, [actualSelectedTagIds, currentPage, viewport, tags, scale, setScrollToCenter, isUserScrolling, setCurrentPage, storeSetCurrentPage]);
-
-  // Auto-scroll to pinged tag - now handled by scrollToCenter in Workspace
-  // This useLayoutEffect is no longer needed as pinged tag scrolling is handled by scrollToCenter
-
-  // Auto-scroll to selected description
-  useLayoutEffect(() => {
-    if (actualSelectedDescriptionIds.length === 1 && scrollContainerRef.current && viewport) {
-      const descriptionId = actualSelectedDescriptionIds[0];
-      const description = descriptions.find(d => d.id === descriptionId);
-      if (description && description.page === currentPage) {
-        // Use the unified scrollToCenter approach with proper rotation handling
-        setTimeout(() => {
-          setScrollToCenter({ descriptionId: description.id, timestamp: Date.now() });
-          setTimeout(() => setScrollToCenter(null), 100);
-        }, 50);
-      }
-    }
-  }, [actualSelectedDescriptionIds, descriptions, currentPage, viewport, scale, setScrollToCenter]);
-
-  // Auto-scroll to selected equipment short spec
-  useLayoutEffect(() => {
-    if (actualSelectedEquipmentShortSpecIds.length === 1 && scrollContainerRef.current && viewport) {
-      const specId = actualSelectedEquipmentShortSpecIds[0];
-      const spec = equipmentShortSpecs.find(s => s.id === specId);
-      if (spec && spec.page === currentPage) {
-        // Use the unified scrollToCenter approach with proper rotation handling
-        setTimeout(() => {
-          setScrollToCenter({ equipmentShortSpecId: spec.id, timestamp: Date.now() });
-          setTimeout(() => setScrollToCenter(null), 100);
-        }, 50);
-      }
-    }
-  }, [actualSelectedEquipmentShortSpecIds, equipmentShortSpecs, currentPage, viewport, scale, setScrollToCenter]);
+  // Auto-scroll logic is now handled in Workspace.tsx to avoid state synchronization issues
 
   const handleTagMouseDown = (e, tagId) => {
     e.stopPropagation();
@@ -1356,12 +1213,12 @@ const PdfViewerComponent = ({
         startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
         setIsDragging(true);
         setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
-    } else if (!isSelectionModifier && mode === 'select' && scrollContainerRef.current) {
+    } else if (!isSelectionModifier && mode === 'select' && internalScrollRef.current) {
         // Panning Logic
         setIsPanning(true);
         panStart.current = {
-            scrollX: scrollContainerRef.current.scrollLeft,
-            scrollY: scrollContainerRef.current.scrollTop,
+            scrollX: internalScrollRef.current.scrollLeft,
+            scrollY: internalScrollRef.current.scrollTop,
             clientX: e.clientX,
             clientY: e.clientY,
         };
@@ -1376,11 +1233,11 @@ const PdfViewerComponent = ({
       isMoved.current = true;
     }
 
-    if (isPanning && scrollContainerRef.current) {
+    if (isPanning && internalScrollRef.current) {
       const dx = e.clientX - panStart.current.clientX;
       const dy = e.clientY - panStart.current.clientY;
-      scrollContainerRef.current.scrollLeft = panStart.current.scrollX - dx;
-      scrollContainerRef.current.scrollTop = panStart.current.scrollY - dy;
+      internalScrollRef.current.scrollLeft = panStart.current.scrollX - dx;
+      internalScrollRef.current.scrollTop = panStart.current.scrollY - dy;
       return;
     }
 
@@ -1727,7 +1584,7 @@ const PdfViewerComponent = ({
 
   return (
     <div className="relative h-full w-full">
-      <div ref={scrollContainerRef} className={`h-full w-full overflow-auto ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}>
+      <div ref={internalScrollRef} className={`h-full w-full overflow-auto ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}>
         <div className="p-4 grid place-items-center min-h-full">
             <div 
                 ref={viewerRef} 

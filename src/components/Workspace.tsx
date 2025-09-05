@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { PdfViewer } from './PdfViewer.tsx';
 import { SidePanel } from './SidePanel.tsx';
 import { OPCPanel } from './OPCPanel.tsx';
@@ -6,6 +6,7 @@ import { SelectionPanel } from './SelectionPanel.tsx';
 import { CommentIndicator } from './CommentIndicator.tsx';
 import { WorkspaceProps } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
+import { useSidePanelStore } from '../stores/sidePanelStore';
 
 // Button components for compact panel
 const DeleteRelationshipButton = React.memo(({ onClick }) => (
@@ -135,7 +136,155 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const [pingedDescriptionId, setPingedDescriptionId] = useState(null);
   const [pingedEquipmentShortSpecId, setPingedEquipmentShortSpecId] = useState(null);
   const [pingedRelationshipId, setPingedRelationshipId] = useState(null);
-  const [scrollToCenter, setScrollToCenter] = useState(null);
+  // Ref to access PdfViewer's scroll container directly
+  const pdfViewerScrollRef = useRef(null);
+  
+  // Direct scroll function to replace scrollToCenter prop pattern
+  const scrollToTag = useCallback((tagId, delay = 50) => {
+    const tag = tags.find(t => t.id === tagId);
+    if (!tag || !pdfViewerScrollRef.current) {
+      console.log('Cannot scroll: tag not found or scroll container not available');
+      return;
+    }
+    
+    setTimeout(() => {
+      console.log('Direct scrolling to tag:', { id: tag.id, text: tag.text.substring(0, 20) });
+      
+      const container = pdfViewerScrollRef.current;
+      const { x1, y1, x2, y2 } = tag.bbox;
+      const pdfCenterX = (x1 + x2) / 2;
+      const pdfCenterY = (y1 + y2) / 2;
+      
+      // For now, using simplified coordinate transformation
+      // This may need to be adjusted based on the actual PDF rendering scale and rotation
+      // Use the actual scale from props
+      const centerX = pdfCenterX * scale;
+      const centerY = pdfCenterY * scale;
+      
+      const containerRect = container.getBoundingClientRect();
+      const targetScrollLeft = centerX - containerRect.width / 2;
+      const targetScrollTop = centerY - containerRect.height / 2;
+      
+      console.log('Scrolling to coordinates:', {
+        pdfCenter: { x: pdfCenterX, y: pdfCenterY },
+        screenCenter: { x: centerX, y: centerY },
+        targetScroll: { left: Math.max(0, targetScrollLeft), top: Math.max(0, targetScrollTop) }
+      });
+      
+      container.scrollTo({
+        left: Math.max(0, targetScrollLeft),
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      });
+    }, delay);
+  }, [tags]);
+  
+  // Direct scroll function for descriptions
+  const scrollToDescription = useCallback((descriptionId, delay = 50) => {
+    const description = descriptions.find(d => d.id === descriptionId);
+    if (!description || !pdfViewerScrollRef.current) {
+      console.log('Cannot scroll: description not found or scroll container not available');
+      return;
+    }
+    
+    setTimeout(() => {
+      console.log('Direct scrolling to description:', { id: description.id, text: description.text.substring(0, 20) });
+      
+      const container = pdfViewerScrollRef.current;
+      const { x1, y1, x2, y2 } = description.bbox;
+      const pdfCenterX = (x1 + x2) / 2;
+      const pdfCenterY = (y1 + y2) / 2;
+      
+      // Using simplified coordinate transformation
+      // Use the actual scale from props
+      const centerX = pdfCenterX * scale;
+      const centerY = pdfCenterY * scale;
+      
+      const containerRect = container.getBoundingClientRect();
+      const targetScrollLeft = centerX - containerRect.width / 2;
+      const targetScrollTop = centerY - containerRect.height / 2;
+      
+      container.scrollTo({
+        left: Math.max(0, targetScrollLeft),
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      });
+    }, delay);
+  }, [descriptions]);
+  
+  // Direct scroll function for equipment short specs
+  const scrollToEquipmentShortSpec = useCallback((equipmentShortSpecId, delay = 50) => {
+    const spec = equipmentShortSpecs.find(s => s.id === equipmentShortSpecId);
+    if (!spec || !pdfViewerScrollRef.current) {
+      console.log('Cannot scroll: equipment short spec not found or scroll container not available');
+      return;
+    }
+    
+    setTimeout(() => {
+      console.log('Direct scrolling to equipment short spec:', { id: spec.id, text: spec.text.substring(0, 20) });
+      
+      const container = pdfViewerScrollRef.current;
+      const { x1, y1, x2, y2 } = spec.bbox;
+      const pdfCenterX = (x1 + x2) / 2;
+      const pdfCenterY = (y1 + y2) / 2;
+      
+      // Using simplified coordinate transformation
+      // Use the actual scale from props
+      const centerX = pdfCenterX * scale;
+      const centerY = pdfCenterY * scale;
+      
+      const containerRect = container.getBoundingClientRect();
+      const targetScrollLeft = centerX - containerRect.width / 2;
+      const targetScrollTop = centerY - containerRect.height / 2;
+      
+      container.scrollTo({
+        left: Math.max(0, targetScrollLeft),
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      });
+    }, delay);
+  }, [equipmentShortSpecs]);
+  
+  // Get store selection state for auto-scroll handling
+  const storeSelectedTagIds = useSidePanelStore(state => state.selectedTagIds);
+  const storeTagSelectionSource = useSidePanelStore(state => state.tagSelectionSource);
+  
+  // Handle auto-scroll when selection changes from panel
+  useEffect(() => {
+    console.log('Workspace auto-scroll effect:', {
+      storeTagSelectionSource,
+      selectedCount: storeSelectedTagIds.length,
+      selectedTagIds: storeSelectedTagIds
+    });
+    
+    if (storeTagSelectionSource === 'panel' && storeSelectedTagIds.length === 1) {
+      const tagId = storeSelectedTagIds[0];
+      const tag = tags.find(t => t.id === tagId);
+      
+      console.log('Auto-scroll triggered in Workspace:', {
+        tagId,
+        tag: tag ? { id: tag.id, page: tag.page, text: tag.text.substring(0, 20) } : null,
+        currentPage
+      });
+      
+      if (tag) {
+        // Change page if needed
+        if (tag.page !== currentPage) {
+          console.log(`Workspace changing page from ${currentPage} to ${tag.page}`);
+          setCurrentPage(tag.page);
+          // Wait for page change, then scroll
+          setTimeout(() => {
+            console.log('Workspace scrolling after page change');
+            scrollToTag(tagId, 100); // Extra delay for page rendering
+          }, 300);
+        } else {
+          // Same page, scroll immediately
+          console.log('Workspace scrolling on same page');
+          scrollToTag(tagId, 100); // Small delay for viewport readiness
+        }
+      }
+    }
+  }, [storeSelectedTagIds, storeTagSelectionSource, tags, currentPage, setCurrentPage]);
   
   // Compact panel editing states
   const [isEditingTag, setIsEditingTag] = useState(false);
@@ -218,9 +367,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setTimeout(() => setPingedTagId(null), 2000);
     
     // Scroll to center the tag
-    setScrollToCenter({ tagId, timestamp: Date.now() });
-    // Clear scroll request after a short delay
-    setTimeout(() => setScrollToCenter(null), 100);
+    scrollToTag(tagId, 100);
   }, []);
 
   const handlePingDescription = useCallback((descriptionId) => {
@@ -234,10 +381,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     // Clear after animation is over
     setTimeout(() => setPingedDescriptionId(null), 2000);
     
-    // Scroll to center the description using proper coordinate transformation
+    // Scroll to center the description
     if (description) {
-      setScrollToCenter({ descriptionId, timestamp: Date.now() });
-      setTimeout(() => setScrollToCenter(null), 100);
+      scrollToDescription(descriptionId, 100);
     }
   }, [descriptions, currentPage, setCurrentPage]);
 
@@ -252,10 +398,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     // Clear after animation is over
     setTimeout(() => setPingedEquipmentShortSpecId(null), 2000);
     
-    // Scroll to center the equipment short spec using proper coordinate transformation
+    // Scroll to center the equipment short spec
     if (spec) {
-      setScrollToCenter({ equipmentShortSpecId, timestamp: Date.now() });
-      setTimeout(() => setScrollToCenter(null), 100);
+      scrollToEquipmentShortSpec(equipmentShortSpecId, 100);
     }
   }, [equipmentShortSpecs, currentPage, setCurrentPage]);
 
@@ -385,8 +530,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           pingedEquipmentShortSpecId={pingedEquipmentShortSpecId}
           pingedRelationshipId={pingedRelationshipId}
           colorSettings={colorSettings}
-          scrollToCenter={scrollToCenter}
-          setScrollToCenter={setScrollToCenter}
+          scrollContainerRef={pdfViewerScrollRef}
           showAutoLinkRanges={showAutoLinkRanges}
           tolerances={tolerances}
           showAllRelationships={showAllRelationships}

@@ -86,12 +86,17 @@ const App: React.FC = () => {
   
   // Wrapper to update both state and Maps
   const setRelationships = useCallback((newRelationships: Relationship[] | ((prev: Relationship[]) => Relationship[])) => {
+    let updatedRelationships: Relationship[];
+    
     setRelationshipsState((prev) => {
-      const updated = typeof newRelationships === 'function' ? newRelationships(prev) : newRelationships;
-      // Update Maps for O(1) lookup
-      updateRelationshipMaps(updated);
-      return updated;
+      updatedRelationships = typeof newRelationships === 'function' ? newRelationships(prev) : newRelationships;
+      return updatedRelationships;
     });
+    
+    // Update Maps for O(1) lookup after state update
+    if (updatedRelationships) {
+      updateRelationshipMaps(updatedRelationships);
+    }
   }, [updateRelationshipMaps]);
   
   const [descriptions, setDescriptions] = useState<Description[]>([]);

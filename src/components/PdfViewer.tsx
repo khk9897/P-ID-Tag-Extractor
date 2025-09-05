@@ -99,7 +99,7 @@ const PdfViewerComponent = ({
   pingedEquipmentShortSpecId,
   pingedRelationshipId,
   colorSettings,
-  scrollContainerRef: externalScrollRef,
+  scrollContainerRef,
   showAutoLinkRanges,
   tolerances,
   showAllRelationships,
@@ -141,7 +141,7 @@ const PdfViewerComponent = ({
   const canvasRef = useRef(null);
   const viewerRef = useRef(null);
   // Use the ref passed from Workspace, or create a new one if not provided
-  const internalScrollRef = externalScrollRef || useRef(null);
+  const internalScrollRef = scrollContainerRef || useRef(null);
   const startPoint = useRef({ x: 0, y: 0 });
   const isClickOnItem = useRef(false); // Ref to track if mousedown was on an item
   
@@ -243,7 +243,7 @@ const PdfViewerComponent = ({
 
   // Sync highlighted tags with selected tags
   useEffect(() => {
-    if (actualSelectedTagIds.length > 0) {
+    if (Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.length > 0) {
       setHighlightedTagIds(new Set(actualSelectedTagIds));
     } else {
       setHighlightedTagIds(new Set()); // Clear highlights when no tags selected
@@ -615,7 +615,7 @@ const PdfViewerComponent = ({
       // For related notes (annotations), show for any selection
       newHighlightedNoteIds = new Set(
         relationships
-          .filter(r => r.type === RelationshipType.Annotation && actualSelectedTagIds.includes(r.from))
+          .filter(r => r.type === RelationshipType.Annotation && Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(r.from))
           .map(r => r.to)
       );
 
@@ -834,7 +834,7 @@ const PdfViewerComponent = ({
           alert("The 'M' hotkey merges multiple selected text items into one. Select at least 2 text items first.");
         }
       } else if (e.key.toLowerCase() === 'n') {
-        const selectedTags = tags.filter(tag => actualSelectedTagIds.includes(tag.id));
+        const selectedTags = tags.filter(tag => Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(tag.id));
         const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
         const allSelectedItems = [...selectedTags, ...selectedRawItems];
         
@@ -846,7 +846,7 @@ const PdfViewerComponent = ({
           alert("Select tags or text items first, then press 'N' to create a description.");
         }
       } else if (e.key.toLowerCase() === 'h') {
-        const selectedTags = tags.filter(tag => actualSelectedTagIds.includes(tag.id));
+        const selectedTags = tags.filter(tag => Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(tag.id));
         const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
         const allSelectedItems = [...selectedTags, ...selectedRawItems];
         
@@ -858,7 +858,7 @@ const PdfViewerComponent = ({
           alert("Select tags or text items first, then press 'H' to create a hold description.");
         }
       } else if (e.key.toLowerCase() === 'p') {
-        const selectedTags = tags.filter(tag => actualSelectedTagIds.includes(tag.id));
+        const selectedTags = tags.filter(tag => Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(tag.id));
         const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
         const allSelectedItems = [...selectedTags, ...selectedRawItems];
         
@@ -878,7 +878,7 @@ const PdfViewerComponent = ({
         }
       } else if (e.key.toLowerCase() === 'r' && mode === 'select' && (actualSelectedTagIds.length > 0 || selectedRawTextItemIds.length > 0)) {
         const newRelationships = [];
-        const selected = tags.filter(t => actualSelectedTagIds.includes(t.id));
+        const selected = tags.filter(t => Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(t.id));
         
         // Specifically identify Equipment, Line, or Instrument tags
         const itemTagCategories = [Category.Equipment, Category.Line, Category.Instrument];
@@ -927,7 +927,7 @@ const PdfViewerComponent = ({
             setSelectedRawTextItemIds([]);
         }
       } else if (e.key.toLowerCase() === 'i' && mode === 'select' && actualSelectedTagIds.length > 1) {
-        const selected = tags.filter(t => actualSelectedTagIds.includes(t.id));
+        const selected = tags.filter(t => Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(t.id));
         const baseTags = selected.filter(t => t.category === Category.Equipment || t.category === Category.Line);
         const instrumentTags = selected.filter(t => t.category === Category.Instrument);
 
@@ -951,7 +951,7 @@ const PdfViewerComponent = ({
         }
       } else if (e.key.toLowerCase() === 'l' && mode === 'select' && actualSelectedTagIds.length >= 2) {
         const selectedInstrumentTags = tags.filter(t => 
-          actualSelectedTagIds.includes(t.id) && t.category === Category.Instrument
+          Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(t.id) && t.category === Category.Instrument
         );
         
         if (selectedInstrumentTags.length >= 2) {
@@ -1402,8 +1402,8 @@ const PdfViewerComponent = ({
       
       // Smart filtering for selected entities only
       if (showOnlySelectedRelationships && actualSelectedTagIds.length > 0) {
-        const isFromSelected = actualSelectedTagIds.includes(fromTag.id);
-        const isToSelected = actualSelectedTagIds.includes(toTag.id);
+        const isFromSelected = Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(fromTag.id);
+        const isToSelected = Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(toTag.id);
         
         if (!isFromSelected && !isToSelected) continue;
       }
@@ -1683,7 +1683,7 @@ const PdfViewerComponent = ({
                     {currentTags.map(tag => {
                     const { x1, y1, x2, y2 } = tag.bbox;
                     const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
-                    const isSelected = actualSelectedTagIds.includes(tag.id);
+                    const isSelected = Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(tag.id);
                     const isHighlighted = highlightedTagIds.has(tag.id); // Use highlight state for visual feedback
                     const isRelStart = tag.id === relationshipStartTag;
                     const isRelated = relatedTagIds.has(tag.id);

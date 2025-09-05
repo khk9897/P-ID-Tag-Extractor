@@ -212,7 +212,7 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
       const end = Math.max(lastClickedIndex.current, tagIndex);
       const rangeIds = filteredAndSortedTags.slice(start, end + 1).map(t => t.id);
       
-      setSelectedTagIds([...new Set([...selectedTagIds, ...rangeIds])], 'panel');
+      setSelectedTagIds([...new Set([...(Array.isArray(selectedTagIds) ? selectedTagIds : []), ...rangeIds])], 'panel');
     } else if (event.ctrlKey || event.metaKey) {
       const newSelection = selectedTagIds.includes(tagId)
         ? selectedTagIds.filter(id => id !== tagId)
@@ -307,7 +307,7 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
 
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const tag = filteredAndSortedTags[index];
-    const isSelected = selectedTagIds.includes(tag.id);
+    const isSelected = Array.isArray(selectedTagIds) && selectedTagIds.includes(tag.id);
     
     return (
       <div style={style}>

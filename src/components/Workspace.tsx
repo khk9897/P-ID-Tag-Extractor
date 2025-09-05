@@ -251,40 +251,25 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   
   // Handle auto-scroll when selection changes from panel
   useEffect(() => {
-    console.log('Workspace auto-scroll effect:', {
-      storeTagSelectionSource,
-      selectedCount: storeSelectedTagIds.length,
-      selectedTagIds: storeSelectedTagIds
-    });
-    
     if (storeTagSelectionSource === 'panel' && storeSelectedTagIds.length === 1) {
       const tagId = storeSelectedTagIds[0];
       const tag = tags.find(t => t.id === tagId);
       
-      console.log('Auto-scroll triggered in Workspace:', {
-        tagId,
-        tag: tag ? { id: tag.id, page: tag.page, text: tag.text.substring(0, 20) } : null,
-        currentPage
-      });
-      
       if (tag) {
         // Change page if needed
         if (tag.page !== currentPage) {
-          console.log(`Workspace changing page from ${currentPage} to ${tag.page}`);
           setCurrentPage(tag.page);
           // Wait for page change, then scroll
           setTimeout(() => {
-            console.log('Workspace scrolling after page change');
             scrollToTag(tagId, 100); // Extra delay for page rendering
           }, 300);
         } else {
           // Same page, scroll immediately
-          console.log('Workspace scrolling on same page');
           scrollToTag(tagId, 100); // Small delay for viewport readiness
         }
       }
     }
-  }, [storeSelectedTagIds, storeTagSelectionSource, tags, currentPage, setCurrentPage]);
+  }, [storeSelectedTagIds, storeTagSelectionSource, currentPage, setCurrentPage, scrollToTag]);
   
   // Compact panel editing states
   const [isEditingTag, setIsEditingTag] = useState(false);

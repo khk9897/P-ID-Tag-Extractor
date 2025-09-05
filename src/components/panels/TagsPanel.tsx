@@ -15,6 +15,7 @@ interface TagsPanelProps {
   descriptions: Description[];
   equipmentShortSpecs: EquipmentShortSpec[];
   loops: Loop[];
+  rawTextItems: RawTextItem[];
   onDeleteTags: (ids: string[]) => void;
   onUpdateTagText: (id: string, text: string) => void;
   onToggleReviewStatus: (tagId: string) => void;
@@ -32,6 +33,7 @@ const TagListItem = React.memo(({
   descriptions,
   equipmentShortSpecs,
   loops,
+  rawTextItems,
   onSelect,
   onDelete,
   onPing,
@@ -154,19 +156,19 @@ const TagListItem = React.memo(({
             <span 
               className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold text-white border flex-shrink-0`}
               style={{
-                backgroundColor: tag.category === Category.Equipment ? '#f97316' :
-                               tag.category === Category.Line ? '#fb7185' :
+                backgroundColor: tag.category === Category.Equipment ? '#fb923c' :
+                               tag.category === Category.Line ? '#f472b6' :
                                tag.category === Category.Instrument ? '#fbbf24' :
-                               tag.category === Category.DrawingNumber ? '#6366f1' :
-                               tag.category === Category.NotesAndHolds ? '#14b8a6' :
+                               tag.category === Category.DrawingNumber ? '#818cf8' :
+                               tag.category === Category.NotesAndHolds ? '#5eead4' :
                                tag.category === Category.SpecialItem ? '#c084fc' :
-                               tag.category === Category.OffPageConnector ? '#8b5cf6' : '#94a3b8',
-                borderColor: tag.category === Category.Equipment ? '#fb923c' :
-                           tag.category === Category.Line ? '#fda4af' :
+                               tag.category === Category.OffPageConnector ? '#a78bfa' : '#94a3b8',
+                borderColor: tag.category === Category.Equipment ? '#fdba74' :
+                           tag.category === Category.Line ? '#f9a8d4' :
                            tag.category === Category.Instrument ? '#fcd34d' :
-                           tag.category === Category.DrawingNumber ? '#818cf8' :
-                           tag.category === Category.NotesAndHolds ? '#5eead4' :
-                           tag.category === Category.SpecialItem ? '#ddd6fe' :
+                           tag.category === Category.DrawingNumber ? '#a5b4fc' :
+                           tag.category === Category.NotesAndHolds ? '#99f6e4' :
+                           tag.category === Category.SpecialItem ? '#d8b4fe' :
                            tag.category === Category.OffPageConnector ? '#c4b5fd' : '#cbd5e1'
               }}
               title={tag.category}
@@ -195,46 +197,49 @@ const TagListItem = React.memo(({
           {showRelationshipDetails && relatedInfo && (
             <>
               {relatedInfo.connections.length > 0 && (
-                <div className="mt-1 ml-2">
-                  <span className="text-xs text-amber-400">Connected to:</span>
-                  <ul className="ml-2">
-                    {relatedInfo.connections.map(rel => {
-                      const targetId = rel.from === tag.id ? rel.to : rel.from;
-                      const targetText = tagMap.get(targetId) || targetId;
-                      return (
-                        <li key={rel.id} className="text-xs text-slate-400 flex items-center gap-1">
-                          • <button
-                              className="text-slate-300 hover:text-sky-400 transition-colors cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onPingTag?.(targetId);
-                              }}
-                              title="Highlight in PDF"
+                <div className="mt-3 mb-2">
+                  <div className="text-xs text-amber-400 font-mono mb-1">Connected to:</div>
+                  <div className="ml-2">
+                    <ul className="ml-2">
+                      {relatedInfo.connections.map(rel => {
+                        const targetId = rel.from === tag.id ? rel.to : rel.from;
+                        const targetText = tagMap.get(targetId) || targetId;
+                        return (
+                          <li key={rel.id} className="text-xs text-slate-400 flex items-center gap-1">
+                            • <button
+                                className="text-slate-300 hover:text-sky-400 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onPingTag?.(targetId);
+                                }}
+                                title="Highlight in PDF"
+                              >
+                                {targetText}
+                              </button>
+                            <button 
+                              onClick={(e) => handleRelatedTagClick(targetId, e)}
+                              className="p-0.5 rounded text-slate-500 hover:text-sky-400 hover:bg-sky-500/20 transition-colors"
+                              title="Go to tag in panel"
                             >
-                              {targetText}
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                              </svg>
                             </button>
-                          <button 
-                            onClick={(e) => handleRelatedTagClick(targetId, e)}
-                            className="p-0.5 rounded text-slate-500 hover:text-sky-400 hover:bg-sky-500/20 transition-colors"
-                            title="Go to tag in panel"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                            </svg>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 </div>
               )}
               
               {relatedInfo.installations.length > 0 && (
-                <div className="mt-1 ml-2">
-                  <span className="text-xs text-lime-400">
+                <div className="mt-3 mb-2">
+                  <div className="text-xs text-lime-400 font-mono mb-1">
                     {tag.category === 'Line' ? 'Installed instrument:' : 'Installed on:'}
-                  </span>
-                  <ul className="ml-2">
+                  </div>
+                  <div className="ml-2">
+                    <ul className="ml-2">
                     {relatedInfo.installations.map(rel => {
                       const targetId = rel.from === tag.id ? rel.to : rel.from;
                       const targetText = tagMap.get(targetId) || targetId;
@@ -262,7 +267,8 @@ const TagListItem = React.memo(({
                         </li>
                       );
                     })}
-                  </ul>
+                    </ul>
+                  </div>
                 </div>
               )}
               
@@ -331,44 +337,6 @@ const TagListItem = React.memo(({
                 </div>
               )}
               
-              {/* Note Relationships - Show related Note descriptions */}
-              {(() => {
-                const noteRelationships = relationships.filter(r => 
-                  (r.from === tag.id || r.to === tag.id) && r.type === 'Note'
-                );
-                
-                return noteRelationships.length > 0 && (
-                  <div className="mt-1 ml-2">
-                    <span className="text-xs text-purple-400">Notes:</span>
-                    <ul className="ml-2">
-                      {noteRelationships.map(rel => {
-                        const noteId = rel.from === tag.id ? rel.to : rel.from;
-                        const noteDescription = descriptions.find(desc => desc.id === noteId);
-                        
-                        if (!noteDescription) return null;
-                        
-                        return (
-                          <li key={rel.id} className="text-xs text-slate-400 mt-1">
-                            <div className="flex items-start gap-1">
-                              <span>•</span>
-                              <div className="flex-1">
-                                <div className="text-purple-300 font-medium">
-                                  {noteDescription.metadata?.type} {noteDescription.metadata?.number}
-                                </div>
-                                <div className="text-slate-400 text-xs mt-0.5">
-                                  {noteDescription.text.substring(0, 100)}
-                                  {noteDescription.text.length > 100 && '...'}
-                                </div>
-                              </div>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                );
-              })()}
-              
               {/* Equipment Short Spec */}
               {tag.category === Category.Equipment && (() => {
                 const equipmentSpecs = equipmentShortSpecs.filter(spec => {
@@ -423,6 +391,108 @@ const TagListItem = React.memo(({
                   </div>
                 );
               })()}
+              
+              {/* Related Text Items (via Annotation relationships) */}
+              {(() => {
+                const annotationRels = relationships.filter(r => 
+                  r.from === tag.id && r.type === RelationshipType.Annotation
+                );
+                if (annotationRels.length === 0) return null;
+                
+                return (
+                  <div className="mt-4 mb-3">
+                    <div className="text-xs text-slate-400 font-mono mb-1">
+                      Related Text: ({annotationRels.length} items)
+                    </div>
+                    <div className="ml-2">
+                      <ul className="ml-2">
+                        {annotationRels.map(rel => {
+                          const relatedItem = rawTextItems.find(item => item.id === rel.to);
+                          if (!relatedItem) return null;
+                          
+                          return (
+                            <li key={rel.id} className="text-xs text-slate-400 flex items-start gap-1 mt-1">
+                              • <div className="flex-1">
+                                <span className="text-slate-500 font-mono">P.{relatedItem.page}</span>
+                                <div className="text-slate-300 text-xs mt-0.5">
+                                  {relatedItem.text ? relatedItem.text.substring(0, 50) : ''}
+                                  {relatedItem.text && relatedItem.text.length > 50 && '...'}
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              {/* Note & Hold Descriptions - Show at the end */}
+              {(() => {
+                const noteRelsFrom = relationships.filter(r => r.from === tag.id && r.type === RelationshipType.Note);
+                const noteRelsTo = relationships.filter(r => r.to === tag.id && r.type === RelationshipType.Note);
+                const allNoteRels = [...noteRelsFrom, ...noteRelsTo];
+                
+                
+                if (allNoteRels.length === 0) return null;
+                
+                return (
+                  <div className="mt-4 mb-3">
+                    <div 
+                      className="flex items-center gap-1 cursor-pointer hover:bg-slate-700/20 rounded px-1 py-0.5 transition-colors w-fit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleExpandNotes(tag.id);
+                      }}
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className={`h-3 w-3 text-slate-400 transition-transform ${expandedNotes.has(tag.id) ? 'rotate-180' : ''}`} 
+                        viewBox="0 0 20 20" 
+                        fill="currentColor"
+                      >
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-xs text-purple-400 font-mono">
+                        Notes & Hold: ({allNoteRels.length} {allNoteRels.length === 1 ? 'item' : 'items'})
+                      </span>
+                    </div>
+                    
+                    {expandedNotes.has(tag.id) && (
+                      <div className="mt-1 ml-2">
+                        <ul className="ml-2">
+                          {allNoteRels.map(rel => {
+                            // Handle both directions of relationships
+                            const targetId = rel.from === tag.id ? rel.to : rel.from;
+                            const noteDescription = descriptions.find(desc => desc.id === targetId);
+                            
+                            
+                            if (!noteDescription) return null;
+                            
+                            return (
+                              <li key={rel.id} className="text-xs text-slate-400 mt-1">
+                                <div className="flex items-start gap-1">
+                                  <span>•</span>
+                                  <div className="flex-1">
+                                    <div className="text-purple-300 font-medium">
+                                      {noteDescription.metadata?.type} {noteDescription.metadata?.number}
+                                    </div>
+                                    <div className="text-slate-400 text-xs mt-0.5">
+                                      {noteDescription.text.substring(0, 100)}
+                                      {noteDescription.text.length > 100 && '...'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </>
           )}
         </div>
@@ -465,6 +535,7 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
   descriptions,
   equipmentShortSpecs,
   loops,
+  rawTextItems,
   onDeleteTags,
   onUpdateTagText,
   onToggleReviewStatus,
@@ -787,6 +858,16 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
       }
     }
     
+    // Related text items (via Annotation relationships)
+    const annotationRels = visibleRelationships.filter(r => 
+      r.from === tag.id && r.type === RelationshipType.Annotation
+    );
+    if (annotationRels.length > 0) {
+      extraHeight += 20; // Header height
+      extraHeight += annotationRels.length * 35; // Each annotation item
+      extraHeight += 10; // Additional padding
+    }
+    
     return baseHeight + extraHeight;
   }, [filteredAndSortedTags, visibleRelationships, showRelationshipDetails, loopsByTag, equipmentShortSpecs, panelExpandedLoops, panelExpandedNotes, panelExpandedSpecs]);
 
@@ -804,6 +885,7 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
           descriptions={descriptions}
           equipmentShortSpecs={equipmentShortSpecs}
           loops={loops}
+          rawTextItems={rawTextItems}
           onSelect={handleTagSelect}
           onDelete={() => onDeleteTags([tag.id])}
           onPing={() => onPingTag(tag.id)}

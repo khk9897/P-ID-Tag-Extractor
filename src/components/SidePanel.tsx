@@ -420,6 +420,7 @@ export const SidePanel = ({
               descriptions={descriptions}
               equipmentShortSpecs={equipmentShortSpecs}
               loops={loops}
+              rawTextItems={rawTextItems}
               onDeleteTags={onDeleteTags}
               onUpdateTagText={onUpdateTagText}
               onToggleReviewStatus={onToggleReviewStatus}

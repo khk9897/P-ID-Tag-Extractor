@@ -100,7 +100,7 @@ const App: React.FC = () => {
   const [progress, setProgress] = useState<ProcessingProgress>({ current: 0, total: 0 });
   
   // Performance mode from store
-  const { setIsLargeFile, updateRelationshipMaps, performanceMode, showAllRelationships, setShowAllRelationships } = useSidePanelStore();
+  const { setIsLargeFile, updateRelationshipMaps, performanceMode } = useSidePanelStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [confirmation, setConfirmation] = useState<{
     isOpen: boolean;

@@ -318,7 +318,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
         const target = e.target as HTMLElement;
+        console.log('🌐 App.tsx handleGlobalKeyDown:', e.key, 'target:', target.tagName);
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+            console.log('🚫 App: Ignoring key because input element is focused');
             return;
         }
 
@@ -329,6 +331,8 @@ const App: React.FC = () => {
             e.preventDefault();
             // Toggle visibility panel by dispatching a custom event
             window.dispatchEvent(new CustomEvent('toggleVisibilityPanel'));
+        } else if (e.key.toLowerCase() === 'p' || e.key.toLowerCase() === 'r') {
+            console.log('📋 App.tsx: P or R key detected, letting it pass through to PdfViewer');
         }
     };
 

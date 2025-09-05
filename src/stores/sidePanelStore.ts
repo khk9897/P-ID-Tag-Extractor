@@ -11,6 +11,7 @@ interface SidePanelState {
   
   // Selection state (moved from component props)
   selectedTagIds: string[];
+  selectedRawTextItemIds: string[];
   selectedDescriptionIds: string[];
   selectedEquipmentShortSpecIds: string[];
   tagSelectionSource: 'viewer' | 'panel' | null;
@@ -69,6 +70,7 @@ interface SidePanelState {
   
   // Selection actions
   setSelectedTagIds: (ids: string[], source?: 'viewer' | 'panel') => void;
+  setSelectedRawTextItemIds: (ids: string[]) => void;
   setSelectedDescriptionIds: (ids: string[]) => void;
   setSelectedEquipmentShortSpecIds: (ids: string[]) => void;
   clearAllSelections: () => void;
@@ -127,6 +129,7 @@ export const useSidePanelStore = create<SidePanelState>((set) => ({
   
   // Selection state
   selectedTagIds: [],
+  selectedRawTextItemIds: [],
   selectedDescriptionIds: [],
   selectedEquipmentShortSpecIds: [],
   tagSelectionSource: null,
@@ -218,6 +221,9 @@ export const useSidePanelStore = create<SidePanelState>((set) => ({
     selectedTagIds: typeof ids === 'function' ? ids(state.selectedTagIds) : ids, 
     tagSelectionSource: source 
   })),
+  setSelectedRawTextItemIds: (ids) => set((state) => ({ 
+    selectedRawTextItemIds: typeof ids === 'function' ? ids(state.selectedRawTextItemIds) : ids 
+  })),
   setSelectedDescriptionIds: (ids) => set((state) => ({ 
     selectedDescriptionIds: typeof ids === 'function' ? ids(state.selectedDescriptionIds) : ids 
   })),
@@ -226,6 +232,7 @@ export const useSidePanelStore = create<SidePanelState>((set) => ({
   })),
   clearAllSelections: () => set({
     selectedTagIds: [],
+    selectedRawTextItemIds: [],
     selectedDescriptionIds: [],
     selectedEquipmentShortSpecIds: [],
     tagSelectionSource: null

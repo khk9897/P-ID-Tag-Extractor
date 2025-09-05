@@ -122,7 +122,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   setShowOnlySelectedRelationships,
 }) => {
   const [selectedTagIds, setSelectedTagIds] = useState([]);
-  const [selectedRawTextItemIds, setSelectedRawTextItemIds] = useState([]);
+  // Use zustand store for selectedRawTextItemIds instead of local state
+  const selectedRawTextItemIds = useSidePanelStore(state => state.selectedRawTextItemIds);
+  const storeSetSelectedRawTextItemIds = useSidePanelStore(state => state.setSelectedRawTextItemIds);
+  
+  // Debug wrapper for setSelectedRawTextItemIds
+  const setSelectedRawTextItemIds = useCallback((newIds) => {
+    console.log('🏠 Workspace: setSelectedRawTextItemIds called with:', newIds);
+    storeSetSelectedRawTextItemIds(newIds);
+  }, [storeSetSelectedRawTextItemIds]);
   const [selectedDescriptionIds, setSelectedDescriptionIds] = useState([]);
   const [selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds] = useState([]);
   const [tagSelectionSource, setTagSelectionSource] = useState(null); // 'pdf' | 'panel' | null

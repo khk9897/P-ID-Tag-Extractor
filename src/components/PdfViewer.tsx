@@ -120,11 +120,13 @@ const PdfViewerComponent = ({
   // Use zustand for selection state management - same as TagsPanel
   const {
     selectedTagIds: storeSelectedTagIds,
+    actualSelectedRawTextItemIds: storeSelectedRawTextItemIds,
     selectedDescriptionIds: storeSelectedDescriptionIds,
     selectedEquipmentShortSpecIds: storeSelectedEquipmentShortSpecIds,
     tagSelectionSource: storeTagSelectionSource,
     currentPage: storeCurrentPage,
     setSelectedTagIds: storeSetSelectedTagIds,
+    actualSetSelectedRawTextItemIds: storeSetSelectedRawTextItemIds,
     setSelectedDescriptionIds: storeSetSelectedDescriptionIds,
     setSelectedEquipmentShortSpecIds: storeSetSelectedEquipmentShortSpecIds,
     setCurrentPage: storeSetCurrentPage
@@ -133,10 +135,13 @@ const PdfViewerComponent = ({
   // Use zustand state if available, otherwise fall back to props for backwards compatibility
   // If storeSelectedTagIds is a function, something went wrong - use a separate selector
   const directSelectedTagIds = useSidePanelStore((state) => state.selectedTagIds);
+  const directSelectedRawTextItemIds = useSidePanelStore((state) => state.selectedRawTextItemIds);
   const actualSelectedTagIds = Array.isArray(directSelectedTagIds) ? directSelectedTagIds : (selectedTagIds || []);
+  const actualSelectedRawTextItemIds = Array.isArray(directSelectedRawTextItemIds) ? directSelectedRawTextItemIds : (selectedRawTextItemIds || []);
   const actualSelectedDescriptionIds = Array.isArray(storeSelectedDescriptionIds) && storeSelectedDescriptionIds.length > 0 ? storeSelectedDescriptionIds : selectedDescriptionIds;
   const actualSelectedEquipmentShortSpecIds = Array.isArray(storeSelectedEquipmentShortSpecIds) && storeSelectedEquipmentShortSpecIds.length > 0 ? storeSelectedEquipmentShortSpecIds : selectedEquipmentShortSpecIds;
   const actualSetSelectedTagIds = storeSetSelectedTagIds || setSelectedTagIds;
+  const actualSetSelectedRawTextItemIds = storeSetSelectedRawTextItemIds || setSelectedRawTextItemIds;
   const actualSetSelectedDescriptionIds = storeSetSelectedDescriptionIds || setSelectedDescriptionIds;
   const actualSetSelectedEquipmentShortSpecIds = storeSetSelectedEquipmentShortSpecIds || setSelectedEquipmentShortSpecIds;
   
@@ -604,7 +609,7 @@ const PdfViewerComponent = ({
     if (prevPageRef.current !== currentPage) {
       // Page actually changed - clear selections
       actualSetSelectedTagIds([]);
-      setSelectedRawTextItemIds([]);
+      actualSetSelectedRawTextItemIds([]);
       setRelationshipStartTag(null);
       prevPageRef.current = currentPage;
     }
@@ -646,15 +651,17 @@ const PdfViewerComponent = ({
   useEffect(() => {
     const handleKeyDown = (e) => {
       const target = e.target as HTMLElement;
+      console.log('🎯 PdfViewer handleKeyDown:', e.key, 'target:', target.tagName, 'mode:', mode);
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        console.log('🚫 Ignoring key because input element is focused');
         return;
       }
       
       if (e.key === '1') {
         // Equipment hotkey - trigger manual creation mode
-        if (selectedRawTextItemIds.length > 0) {
-          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.Equipment);
-          setSelectedRawTextItemIds([]);
+        if (actualSelectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => actualSelectedRawTextItemIds.includes(item.id)), Category.Equipment);
+          actualSetSelectedRawTextItemIds([]);
         } else {
           onManualAreaSelect();
           setTimeout(() => {
@@ -665,9 +672,9 @@ const PdfViewerComponent = ({
         e.preventDefault();
       } else if (e.key === '2') {
         // Line hotkey
-        if (selectedRawTextItemIds.length > 0) {
-          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.Line);
-          setSelectedRawTextItemIds([]);
+        if (actualSelectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => actualSelectedRawTextItemIds.includes(item.id)), Category.Line);
+          actualSetSelectedRawTextItemIds([]);
         } else {
           onManualAreaSelect();
           setTimeout(() => {
@@ -678,9 +685,9 @@ const PdfViewerComponent = ({
         e.preventDefault();
       } else if (e.key === '3') {
         // Special Item hotkey
-        if (selectedRawTextItemIds.length > 0) {
-          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.SpecialItem);
-          setSelectedRawTextItemIds([]);
+        if (actualSelectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => actualSelectedRawTextItemIds.includes(item.id)), Category.SpecialItem);
+          actualSetSelectedRawTextItemIds([]);
         } else {
           onManualAreaSelect();
           setTimeout(() => {
@@ -691,9 +698,9 @@ const PdfViewerComponent = ({
         e.preventDefault();
       } else if (e.key === '4') {
         // Instrument hotkey
-        if (selectedRawTextItemIds.length > 0) {
-          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.Instrument);
-          setSelectedRawTextItemIds([]);
+        if (actualSelectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => actualSelectedRawTextItemIds.includes(item.id)), Category.Instrument);
+          actualSetSelectedRawTextItemIds([]);
         } else {
           onManualAreaSelect();
           setTimeout(() => {
@@ -704,9 +711,9 @@ const PdfViewerComponent = ({
         e.preventDefault();
       } else if (e.key === '5') {
         // Note/Hold hotkey
-        if (selectedRawTextItemIds.length > 0) {
-          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.NotesAndHolds);
-          setSelectedRawTextItemIds([]);
+        if (actualSelectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => actualSelectedRawTextItemIds.includes(item.id)), Category.NotesAndHolds);
+          actualSetSelectedRawTextItemIds([]);
         } else {
           onManualAreaSelect();
           setTimeout(() => {
@@ -717,9 +724,9 @@ const PdfViewerComponent = ({
         e.preventDefault();
       } else if (e.key === '6') {
         // OPC hotkey
-        if (selectedRawTextItemIds.length > 0) {
-          onCreateTag(rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id)), Category.OffPageConnector);
-          setSelectedRawTextItemIds([]);
+        if (actualSelectedRawTextItemIds.length > 0) {
+          onCreateTag(rawTextItems.filter(item => actualSelectedRawTextItemIds.includes(item.id)), Category.OffPageConnector);
+          actualSetSelectedRawTextItemIds([]);
         } else {
           onManualAreaSelect();
           setTimeout(() => {
@@ -744,8 +751,8 @@ const PdfViewerComponent = ({
             setEditingRawTextId(null);
             setEditingText(tag.text);
           }
-        } else if (selectedRawTextItemIds.length === 1) {
-          const rawId = selectedRawTextItemIds[0];
+        } else if (actualSelectedRawTextItemIds.length === 1) {
+          const rawId = actualSelectedRawTextItemIds[0];
           const rawItem = rawTextItems.find(r => r.id === rawId);
           if (rawItem) {
             setEditingRawTextId(rawId);
@@ -796,7 +803,8 @@ const PdfViewerComponent = ({
           
           // Clear selection after creating relationships
           actualSetSelectedTagIds([]);
-          setSelectedRawTextItemIds([]);
+          console.log('🔴 R key: Clearing actualSelectedRawTextItemIds after relationship creation');
+          actualSetSelectedRawTextItemIds([]);
         } else {
           // Original behavior for 0-1 selected tags: toggle connect mode
           if (mode === 'connect') {
@@ -813,7 +821,7 @@ const PdfViewerComponent = ({
               setRelationshipStartTag(null);
               actualSetSelectedTagIds([]);
             }
-            setSelectedRawTextItemIds([]);
+            actualSetSelectedRawTextItemIds([]);
           }
         }
       } else if (e.key.toLowerCase() === 'k') {
@@ -823,47 +831,51 @@ const PdfViewerComponent = ({
           setMode('manualCreate');
           setRelationshipStartTag(null);
           actualSetSelectedTagIds([]);
-          setSelectedRawTextItemIds([]);
+          actualSetSelectedRawTextItemIds([]);
         }
       } else if (e.key === 'Escape') {
         setMode('select');
         setRelationshipStartTag(null);
         actualSetSelectedTagIds([]);
-        setSelectedRawTextItemIds([]);
+        actualSetSelectedRawTextItemIds([]);
       } else if (e.key.toLowerCase() === 'm') {
-        if (selectedRawTextItemIds.length >= 2) {
-          onMergeRawTextItems(selectedRawTextItemIds);
-          setSelectedRawTextItemIds([]);
+        if (actualSelectedRawTextItemIds.length >= 2) {
+          onMergeRawTextItems(actualSelectedRawTextItemIds);
+          actualSetSelectedRawTextItemIds([]);
         } else {
           alert("The 'M' hotkey merges multiple selected text items into one. Select at least 2 text items first.");
         }
       } else if (e.key.toLowerCase() === 'n') {
         const selectedTags = tags.filter(tag => Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(tag.id));
-        const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
+        const selectedRawItems = rawTextItems.filter(item => actualSelectedRawTextItemIds.includes(item.id));
         const allSelectedItems = [...selectedTags, ...selectedRawItems];
         
         if (allSelectedItems.length > 0) {
           onCreateDescription(allSelectedItems);
           actualSetSelectedTagIds([]);
-          setSelectedRawTextItemIds([]);
+          actualSetSelectedRawTextItemIds([]);
         } else {
           alert("Select tags or text items first, then press 'N' to create a description.");
         }
       } else if (e.key.toLowerCase() === 'h') {
         const selectedTags = tags.filter(tag => Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(tag.id));
-        const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
+        const selectedRawItems = rawTextItems.filter(item => actualSelectedRawTextItemIds.includes(item.id));
         const allSelectedItems = [...selectedTags, ...selectedRawItems];
         
         if (allSelectedItems.length > 0) {
           onCreateHoldDescription(allSelectedItems);
           actualSetSelectedTagIds([]);
-          setSelectedRawTextItemIds([]);
+          actualSetSelectedRawTextItemIds([]);
         } else {
           alert("Select tags or text items first, then press 'H' to create a hold description.");
         }
       } else if (e.key.toLowerCase() === 'p') {
+        console.log('🅿️ P key pressed - Creating Equipment Short Spec');
+        console.log('actualSelectedTagIds:', actualSelectedTagIds);
+        console.log('actualSelectedRawTextItemIds:', actualSelectedRawTextItemIds);
+        console.log('onCreateEquipmentShortSpec:', typeof onCreateEquipmentShortSpec);
         const selectedTags = tags.filter(tag => Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(tag.id));
-        const selectedRawItems = rawTextItems.filter(item => selectedRawTextItemIds.includes(item.id));
+        const selectedRawItems = rawTextItems.filter(item => actualSelectedRawTextItemIds.includes(item.id));
         const allSelectedItems = [...selectedTags, ...selectedRawItems];
         
         // Check if exactly one Equipment tag is selected
@@ -872,7 +884,7 @@ const PdfViewerComponent = ({
         if (equipmentTags.length === 1 && allSelectedItems.length > 1) {
           onCreateEquipmentShortSpec(allSelectedItems);
           actualSetSelectedTagIds([]);
-          setSelectedRawTextItemIds([]);
+          actualSetSelectedRawTextItemIds([]);
         } else if (equipmentTags.length === 0) {
           alert("Select exactly one Equipment tag and some text items, then press 'P' to create an Equipment Short Spec.");
         } else if (equipmentTags.length > 1) {
@@ -880,7 +892,11 @@ const PdfViewerComponent = ({
         } else {
           alert("Select an Equipment tag and some text items, then press 'P' to create an Equipment Short Spec.");
         }
-      } else if (e.key.toLowerCase() === 'r' && mode === 'select' && (actualSelectedTagIds.length > 0 || selectedRawTextItemIds.length > 0)) {
+      } else if (e.key.toLowerCase() === 'r' && mode === 'select' && (actualSelectedTagIds.length > 0 || actualSelectedRawTextItemIds.length > 0)) {
+        console.log('🔴 R key pressed - Creating relationships');
+        console.log('mode:', mode);
+        console.log('actualSelectedTagIds:', actualSelectedTagIds);
+        console.log('actualSelectedRawTextItemIds:', actualSelectedRawTextItemIds);
         const newRelationships = [];
         const selected = tags.filter(t => Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(t.id));
         
@@ -910,7 +926,7 @@ const PdfViewerComponent = ({
             }
             
             // Create Annotation relationships (item -> raw text)
-            for (const rawId of selectedRawTextItemIds) {
+            for (const rawId of actualSelectedRawTextItemIds) {
                 newRelationships.push({
                     id: uuidv4(),
                     from: itemTag.id,
@@ -928,7 +944,7 @@ const PdfViewerComponent = ({
                 setRelationships(prev => [...prev, ...uniqueNewRels]);
             }
             actualSetSelectedTagIds([]);
-            setSelectedRawTextItemIds([]);
+            actualSetSelectedRawTextItemIds([]);
         }
       } else if (e.key.toLowerCase() === 'i' && mode === 'select' && actualSelectedTagIds.length > 1) {
         const selected = tags.filter(t => Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(t.id));
@@ -987,7 +1003,7 @@ const PdfViewerComponent = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, actualSelectedTagIds, tags, relationships, setRelationships, actualSetSelectedTagIds, rawTextItems, selectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, setSelectedRawTextItemIds, onDeleteTags, onMergeRawTextItems, onManualCreateLoop, setMode, setRelationshipStartTag, scale, pdfDoc, setCurrentPage]);
+  }, [mode, actualSelectedTagIds, tags, relationships, setRelationships, actualSetSelectedTagIds, rawTextItems, actualSelectedRawTextItemIds, onCreateTag, onCreateDescription, onCreateHoldDescription, onCreateEquipmentShortSpec, actualSetSelectedRawTextItemIds, onDeleteTags, onMergeRawTextItems, onManualCreateLoop, setMode, setRelationshipStartTag, scale, pdfDoc, setCurrentPage]);
   
   // Add wheel and scroll event listeners
   useEffect(() => {
@@ -1093,7 +1109,7 @@ const PdfViewerComponent = ({
       } else {
         // A single click replaces the entire selection with just this one tag.
         actualSetSelectedTagIds([tagId], 'viewer');
-        setSelectedRawTextItemIds([]);
+        actualSetSelectedRawTextItemIds([]);
       }
     } else if (mode === 'connect') {
       if (!relationshipStartTag) {
@@ -1141,12 +1157,12 @@ const PdfViewerComponent = ({
 
     if (isMultiSelect) {
         // Add to or remove from raw text selection without affecting tag selection
-        setSelectedRawTextItemIds(prev =>
+        actualSetSelectedRawTextItemIds(prev =>
             prev.includes(rawTextItemId) ? prev.filter(id => id !== rawTextItemId) : [...prev, rawTextItemId]
         );
     } else {
         // A single click replaces the entire selection with just this one raw text item.
-        setSelectedRawTextItemIds([rawTextItemId]);
+        actualSetSelectedRawTextItemIds([rawTextItemId]);
         actualSetSelectedTagIds([]);
     }
   };
@@ -1264,7 +1280,7 @@ const PdfViewerComponent = ({
     // A simple click on the background without movement clears selection
     if (!isMoved.current && !isDragging) {
         actualSetSelectedTagIds([]);
-        setSelectedRawTextItemIds([]);
+        actualSetSelectedRawTextItemIds([]);
     }
 
     if (!isDragging || !selectionRect || !viewport) {
@@ -1334,7 +1350,7 @@ const PdfViewerComponent = ({
         }
     }
     if (intersectingRawItems.size > 0) {
-        setSelectedRawTextItemIds(prev => Array.from(new Set([...prev, ...intersectingRawItems])));
+        actualSetSelectedRawTextItemIds(prev => Array.from(new Set([...prev, ...intersectingRawItems])));
     }
 
     setSelectionRect(null);
@@ -1595,7 +1611,7 @@ const PdfViewerComponent = ({
                     {currentRawTextItems.map(item => {
                          const { x1, y1, x2, y2 } = item.bbox;
                          const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
-                         const isSelected = selectedRawTextItemIds.includes(item.id);
+                         const isSelected = actualSelectedRawTextItemIds.includes(item.id);
                          const isHighlighted = highlightedRawTextItemIds.has(item.id);
                          const isLinked = linkedRawTextItemIds.has(item.id);
                          

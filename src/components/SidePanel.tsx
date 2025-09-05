@@ -225,7 +225,7 @@ export const SidePanel = ({
 
   // Tab counts
   const tabCounts = useMemo(() => ({
-    tags: tags.filter(t => t.category !== Category.OffPageConnector).length,
+    tags: tags.length,
     descriptions: descriptions.length,
     relationships: relationships.length,
     specs: equipmentShortSpecs.length,
@@ -309,7 +309,7 @@ export const SidePanel = ({
                 className="flex-1 px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-slate-300"
               >
                 <option value="All">All Categories</option>
-                {Object.values(Category).filter(c => c !== Category.OffPageConnector).map(cat => (
+                {Object.values(Category).map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
@@ -459,6 +459,7 @@ export const SidePanel = ({
               setRelationships={setRelationships}
               tags={tags}
               onPingRelationship={onPingRelationship}
+              onPingTag={onPingTag}
             />
           )}
           

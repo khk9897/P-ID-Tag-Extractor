@@ -156,6 +156,11 @@ export interface Relationship {
   from: string;
   to: string;
   type: RelationshipTypeValue;
+  metadata?: {
+    opcStatus?: 'connected' | 'invalid' | 'single';
+    opcGroup?: string;
+    opcCount?: number;
+  };
 }
 
 // Component prop interfaces
@@ -179,7 +184,6 @@ export interface HeaderProps {
   setScale: (scale: number) => void;
   mode: ViewMode;
   onToggleSidePanel: () => void;
-  onToggleOPCPanel: () => void;
   onAutoLinkDescriptions: () => void;
   onAutoLinkNotesAndHolds: () => void;
   onAutoLinkEquipmentShortSpecs: () => void;
@@ -236,7 +240,6 @@ export interface WorkspaceProps {
   showRelationships: boolean;
   setShowRelationships: (show: boolean) => void;
   isSidePanelVisible: boolean;
-  isOPCPanelVisible: boolean;
   visibilitySettings: VisibilitySettings;
   updateVisibilitySettings: (settings: VisibilitySettings) => void;
   showAutoLinkRanges: boolean;

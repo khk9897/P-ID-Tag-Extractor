@@ -142,9 +142,7 @@ const App: React.FC = () => {
   // Keep backward compatibility - derive showRelationships from relationships settings
   const showRelationships = Object.values(visibilitySettings.relationships).some(Boolean);
   const [isSidePanelVisible, setIsSidePanelVisible] = useState<boolean>(true);
-  const [isOPCPanelVisible, setIsOPCPanelVisible] = useState<boolean>(false);
   const [showAutoLinkRanges, setShowAutoLinkRanges] = useState<boolean>(false);
-  const [focusOPCConnection, setFocusOPCConnection] = useState<string | null>(null);
   
   // Performance optimization settings
   const [showAllRelationships, setShowAllRelationships] = useState<boolean>(() => {
@@ -327,9 +325,6 @@ const App: React.FC = () => {
         if (e.key.toLowerCase() === 's') {
             e.preventDefault();
             setIsSidePanelVisible(prev => !prev);
-        } else if (e.key.toLowerCase() === 'o') {
-            e.preventDefault();
-            setIsOPCPanelVisible(prev => !prev);
         } else if (e.key.toLowerCase() === 'v') {
             e.preventDefault();
             // Toggle visibility panel by dispatching a custom event
@@ -359,11 +354,6 @@ const App: React.FC = () => {
     }
   }, [tags]); // Run when tags change
 
-  const handleOPCTagClick = useCallback((tagText: string): void => {
-    setFocusOPCConnection(tagText);
-    // Clear focus after a short delay to allow for re-focusing
-    setTimeout(() => setFocusOPCConnection(null), 100);
-  }, []);
 
   const showConfirmation = (message: string, onConfirm: () => void): void => {
     setConfirmation({ isOpen: true, message, onConfirm });
@@ -2213,10 +2203,7 @@ Do you want to continue?`,
             onDeleteComment={handleDeleteComment}
             getCommentsForTarget={getCommentsForTarget}
             isSidePanelVisible={isSidePanelVisible}
-            isOPCPanelVisible={isOPCPanelVisible}
             colorSettings={colorSettings}
-            focusOPCConnection={focusOPCConnection}
-            onOPCTagClick={handleOPCTagClick}
           />
         </ErrorBoundary>
       );
@@ -2265,7 +2252,6 @@ Do you want to continue?`,
           setScale={setScale}
           mode={mode}
           onToggleSidePanel={() => setIsSidePanelVisible(p => !p)}
-          onToggleOPCPanel={() => setIsOPCPanelVisible(p => !p)}
           onAutoLinkDescriptions={handleAutoLinkDescriptions}
           onAutoLinkNotesAndHolds={handleAutoLinkNotesAndHolds}
           onAutoLinkEquipmentShortSpecs={handleAutoLinkEquipmentShortSpecs}

@@ -521,32 +521,35 @@ export const createOPCRelationships = (tags, relationshipType) => {
     const opcTags = tags.filter(tag => tag.category === Category.OffPageConnector);
     const relationships = [];
     
-    
-    // Group OPC tags by their reference text
+    // Group OPC tags by their normalized reference text
     const opcGroups = {};
     opcTags.forEach(tag => {
-        const refText = tag.text;
+        // Normalize text: trim whitespace and convert to uppercase
+        const refText = tag.text.trim().toUpperCase();
         if (!opcGroups[refText]) {
             opcGroups[refText] = [];
         }
         opcGroups[refText].push(tag);
     });
     
-    // Create relationships for groups that have exactly 2 tags on different pages
+    // Create relationships only for groups that have exactly 2 tags on different pages
     Object.entries(opcGroups).forEach(([refText, tagGroup]) => {
-        
         if (tagGroup.length === 2) {
             const [tag1, tag2] = tagGroup;
             
             // Only connect if they are on different pages
             if (tag1.page !== tag2.page) {
-                
-                // Create bidirectional relationship
+                // Create bidirectional relationship with metadata
                 relationships.push({
                     id: uuidv4(),
                     from: tag1.id,
                     to: tag2.id,
                     type: relationshipType.OffPageConnection,
+                    metadata: {
+                        opcStatus: 'connected',
+                        opcGroup: refText,
+                        opcCount: 2
+                    }
                 });
                 
                 relationships.push({
@@ -554,13 +557,42 @@ export const createOPCRelationships = (tags, relationshipType) => {
                     from: tag2.id,
                     to: tag1.id,
                     type: relationshipType.OffPageConnection,
+                    metadata: {
+                        opcStatus: 'connected',
+                        opcGroup: refText,
+                        opcCount: 2
+                    }
                 });
-            } else {
             }
-        } else if (tagGroup.length > 2) {
-        } else {
         }
     });
     
     return relationships;
+};
+
+// Function to get OPC status for display purposes
+export const getOPCStatus = (tag, allTags) => {
+    if (tag.category !== Category.OffPageConnector) {
+        return null;
+    }
+    
+    const normalizedText = tag.text.trim().toUpperCase();
+    const sameTextTags = allTags.filter(t => 
+        t.category === Category.OffPageConnector && 
+        t.text.trim().toUpperCase() === normalizedText
+    );
+    
+    if (sameTextTags.length === 1) {
+        return { status: 'single', count: 1, relatedTags: [] };
+    } else if (sameTextTags.length === 2) {
+        const otherPageTags = sameTextTags.filter(t => t.page !== tag.page);
+        if (otherPageTags.length > 0) {
+            return { status: 'connected', count: 2, relatedTags: otherPageTags };
+        } else {
+            return { status: 'invalid', count: 2, relatedTags: sameTextTags.filter(t => t.id !== tag.id) };
+        }
+    } else {
+        const otherTags = sameTextTags.filter(t => t.id !== tag.id);
+        return { status: 'invalid', count: sameTextTags.length, relatedTags: otherTags };
+    }
 };

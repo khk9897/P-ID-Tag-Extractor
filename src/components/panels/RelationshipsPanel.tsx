@@ -1,15 +1,17 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
-import { Relationship, Tag, RelationshipTypeValue } from '../../types';
+import { Relationship, Tag, RelationshipTypeValue, Category } from '../../types';
 import { useSidePanelStore } from '../../stores/sidePanelStore';
 import { filterRelationships } from '../../utils/filterUtils';
 import { IconButton } from '../common/IconButton';
+import { getOPCStatus } from '../../services/taggingService';
 
 interface RelationshipsPanelProps {
   relationships: Relationship[];
   setRelationships: (relationships: Relationship[]) => void;
   tags: Tag[];
   onPingRelationship: (id: string) => void;
+  onPingTag?: (tagId: string) => void;
 }
 
 const RELATIONSHIP_COLORS: Record<RelationshipTypeValue, string> = {
@@ -18,7 +20,14 @@ const RELATIONSHIP_COLORS: Record<RelationshipTypeValue, string> = {
   Annotation: '#06b6d4',
   Note: '#a855f7',
   Description: '#8b5cf6',
-  EquipmentShortSpec: '#ec4899'
+  EquipmentShortSpec: '#ec4899',
+  OffPageConnection: '#8b5cf6'
+};
+
+const OPC_STATUS_COLORS = {
+  connected: '#10b981', // Green
+  invalid: '#ef4444',   // Red
+  single: '#f59e0b'     // Orange
 };
 
 const RelationshipListItem = React.memo(({
@@ -93,7 +102,8 @@ export const RelationshipsPanel: React.FC<RelationshipsPanelProps> = ({
   relationships,
   setRelationships,
   tags,
-  onPingRelationship
+  onPingRelationship,
+  onPingTag
 }) => {
   const { 
     showCurrentPageOnly, 
@@ -169,8 +179,74 @@ export const RelationshipsPanel: React.FC<RelationshipsPanelProps> = ({
     );
   }, [filteredRelationships, tagMap, handleDeleteRelationship, onPingRelationship]);
   
+  // Calculate OPC status for all OPC tags
+  const opcTagsWithStatus = useMemo(() => {
+    const opcTags = tags.filter(tag => tag.category === Category.OffPageConnector);
+    return opcTags.map(tag => ({
+      tag,
+      status: getOPCStatus(tag, tags)
+    }));
+  }, [tags]);
+  
+  const opcGroupedByStatus = useMemo(() => {
+    const grouped = {
+      connected: [],
+      invalid: [],
+      single: []
+    };
+    
+    opcTagsWithStatus.forEach(({ tag, status }) => {
+      if (status) {
+        grouped[status.status].push({ tag, status });
+      }
+    });
+    
+    return grouped;
+  }, [opcTagsWithStatus]);
+  
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+      {/* OPC Status Section */}
+      {opcTagsWithStatus.length > 0 && (
+        <div className="mb-4 px-3 flex-shrink-0">
+          <div className="text-sm font-medium text-slate-300 mb-2">OPC Status</div>
+          
+          {Object.entries(opcGroupedByStatus).map(([status, items]) => (
+            items.length > 0 && (
+              <div key={status} className="mb-2">
+                <div 
+                  className="text-xs font-medium px-2 py-1 rounded inline-block mb-1"
+                  style={{
+                    backgroundColor: `${OPC_STATUS_COLORS[status]}20`,
+                    color: OPC_STATUS_COLORS[status]
+                  }}
+                >
+                  {status.toUpperCase()} ({items.length})
+                </div>
+                <div className="ml-2 space-y-1">
+                  {items.map(({ tag, status: opcStatus }) => (
+                    <div 
+                      key={tag.id} 
+                      className="flex items-center justify-between text-xs bg-slate-700/30 px-2 py-1 rounded hover:bg-slate-700/50 cursor-pointer"
+                      onClick={() => onPingTag?.(tag.id)}
+                    >
+                      <span className="text-slate-300">
+                        {tag.text} (page {tag.page})
+                        {opcStatus.relatedTags.length > 0 && (
+                          <span className="ml-1 text-slate-500">
+                            → {opcStatus.relatedTags.map(t => `page ${t.page}`).join(', ')}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          ))}
+        </div>
+      )}
+      
       <div className="mb-2 px-3 text-sm text-slate-400 flex-shrink-0">
         {filteredRelationships.length} relationships
       </div>

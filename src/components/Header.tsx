@@ -312,6 +312,8 @@ export const Header = ({
   const importInputRef = useRef(null);
   const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
   const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
+  const [showPageDropdown, setShowPageDropdown] = useState(false);
+  const pageDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleToggleVisibilityPanel = () => {
@@ -329,15 +331,26 @@ export const Header = ({
         setShowHotkeyHelp(prev => !prev);
       }
     };
+    
+    // Close page dropdown when clicking outside
+    const handleClickOutside = (event) => {
+      if (pageDropdownRef.current && !pageDropdownRef.current.contains(event.target)) {
+        setShowPageDropdown(false);
+      }
+    };
 
     window.addEventListener('toggleVisibilityPanel', handleToggleVisibilityPanel);
     window.addEventListener('keydown', handleGlobalKeyDown);
+    if (showPageDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
     
     return () => {
       window.removeEventListener('toggleVisibilityPanel', handleToggleVisibilityPanel);
       window.removeEventListener('keydown', handleGlobalKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [showPageDropdown]);
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -399,7 +412,7 @@ export const Header = ({
         {hasData && (
           <div className="flex items-center gap-2">
             {pdfDoc && (
-              <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-2">
+              <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-2 relative">
                 <button onClick={() => {
                   const completeClick = trackClickEvent('page_prev', `page_${currentPage - 1}`);
                   const newPage = Math.max(1, currentPage - 1);
@@ -409,7 +422,47 @@ export const Header = ({
                   }
                   setTimeout(completeClick, 0); // Complete after state update
                 }} disabled={currentPage === 1} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">←</button>
-                <span className="text-sm whitespace-nowrap">Page {currentPage}/{pdfDoc.numPages}</span>
+                
+                {/* Page number - clickable to show dropdown */}
+                <button
+                  onClick={() => setShowPageDropdown(!showPageDropdown)}
+                  className="text-sm whitespace-nowrap hover:bg-slate-700 px-2 py-1 rounded transition-colors cursor-pointer"
+                  title="Click to select page"
+                >
+                  Page {currentPage}/{pdfDoc.numPages}
+                </button>
+                
+                {/* Page dropdown */}
+                {showPageDropdown && (
+                  <div
+                    ref={pageDropdownRef}
+                    className="absolute top-full mt-1 left-0 right-0 max-h-96 overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50"
+                  >
+                    <div className="p-2">
+                      <div className="text-xs text-slate-400 mb-2 px-2">Select Page:</div>
+                      <div className="grid grid-cols-4 gap-1">
+                        {Array.from({ length: pdfDoc.numPages }, (_, i) => i + 1).map(page => (
+                          <button
+                            key={page}
+                            onClick={() => {
+                              setCurrentPage(page);
+                              setShowPageDropdown(false);
+                              debugLog('EVENT', `📄 Page navigation: ${currentPage} → ${page}`);
+                            }}
+                            className={`px-2 py-1 text-sm rounded transition-colors ${
+                              page === currentPage
+                                ? 'bg-sky-600 text-white'
+                                : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <button onClick={() => {
                   const completeClick = trackClickEvent('page_next', `page_${currentPage + 1}`);
                   const newPage = Math.min(pdfDoc.numPages, currentPage + 1);

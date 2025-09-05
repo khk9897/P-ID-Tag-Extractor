@@ -74,6 +74,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   onCreateEquipmentShortSpec,
   onDeleteTags,
   onUpdateTagText,
+  onToggleReviewStatus,
   onDeleteDescriptions,
   onUpdateDescription,
   onDeleteEquipmentShortSpecs,
@@ -463,6 +464,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         setRelationships={setRelationships}
         onDeleteTags={onDeleteTags}
         onUpdateTagText={onUpdateTagText}
+        onToggleReviewStatus={onToggleReviewStatus}
         onDeleteDescriptions={onDeleteDescriptions}
         onUpdateDescription={onUpdateDescription}
         onDeleteEquipmentShortSpecs={onDeleteEquipmentShortSpecs}
@@ -589,13 +591,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     className="w-4 h-4 text-sky-600 bg-slate-700 border-slate-500 rounded focus:ring-sky-500 focus:ring-2"
                     title="Mark as reviewed"
                   />
-                  <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold text-white ${CATEGORY_COLORS[selectedTag.category]?.bg || 'bg-slate-600'} ${CATEGORY_COLORS[selectedTag.category]?.border || 'border-slate-600'} border flex-shrink-0`}>
-                    {selectedTag.category === 'Equipment' ? 'E' :
-                     selectedTag.category === 'Line' ? 'L' :
-                     selectedTag.category === 'Instrument' ? 'I' :
-                     selectedTag.category === 'DrawingNumber' ? 'D' :
-                     selectedTag.category === 'NotesAndHolds' ? 'N' : 'U'}
-                  </span>
                   {isEditingTag ? (
                     <div className="flex items-center space-x-1 flex-grow">
                       <input

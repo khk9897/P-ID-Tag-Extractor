@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { VariableSizeList as List } from 'react-window';
-import { Tag, Relationship, Comment, Category } from '../../types';
+import { Tag, Relationship, Comment, Category, Description, EquipmentShortSpec, Loop, RelationshipType } from '../../types';
 import { CATEGORY_COLORS } from '../../constants';
 import { useSidePanelStore } from '../../stores/sidePanelStore';
 import { filterTags, filterRelationships } from '../../utils/filterUtils';
@@ -12,8 +12,12 @@ interface TagsPanelProps {
   tags: Tag[];
   setTags: (tags: Tag[]) => void;
   relationships: Relationship[];
+  descriptions: Description[];
+  equipmentShortSpecs: EquipmentShortSpec[];
+  loops: Loop[];
   onDeleteTags: (ids: string[]) => void;
   onUpdateTagText: (id: string, text: string) => void;
+  onToggleReviewStatus: (tagId: string) => void;
   onPingTag: (id: string) => void;
   comments: Comment[];
   onCreateComment: (comment: Partial<Comment>) => void;
@@ -25,27 +29,47 @@ const TagListItem = React.memo(({
   isSelected, 
   relationships,
   allTags,
+  descriptions,
+  equipmentShortSpecs,
+  loops,
   onSelect,
   onDelete,
   onPing,
   onEdit,
   onOpenCommentModal,
+  onToggleReviewStatus,
   getCommentsForTarget,
   onPingTag,
-  onSelectRelatedTag
+  onSelectRelatedTag,
+  expandedLoops,
+  expandedNotes,
+  expandedSpecs,
+  onToggleExpandLoops,
+  onToggleExpandNotes,
+  onToggleExpandSpecs
 }: {
   tag: Tag;
   isSelected: boolean;
   relationships: Relationship[];
   allTags: Tag[];
+  descriptions: Description[];
+  equipmentShortSpecs: EquipmentShortSpec[];
+  loops: Loop[];
   onSelect: (tagId: string, event: React.MouseEvent) => void;
   onDelete: () => void;
   onPing: () => void;
   onEdit: () => void;
   onOpenCommentModal: () => void;
+  onToggleReviewStatus: (tagId: string) => void;
   getCommentsForTarget: (targetId: string, targetType: string) => Comment[];
   onPingTag?: (tagId: string) => void;
   onSelectRelatedTag?: (tagId: string) => void;
+  expandedLoops: Set<string>;
+  expandedNotes: Set<string>;
+  expandedSpecs: Set<string>;
+  onToggleExpandLoops: (tagId: string) => void;
+  onToggleExpandNotes: (tagId: string) => void;
+  onToggleExpandSpecs: (tagId: string) => void;
 }) => {
   const showRelationshipDetails = useSidePanelStore(state => state.showRelationshipDetails);
   const tagComments = getCommentsForTarget(tag.id, 'tag');
@@ -56,10 +80,29 @@ const TagListItem = React.memo(({
     [allTags]
   );
   
-  const tagCategoryMap = useMemo(() => 
-    new Map(allTags.map(t => [t.id, t.category])),
-    [allTags]
-  );
+  // Category badge colors and letters
+  const colors = CATEGORY_COLORS[tag.category];
+  const categoryLetters = {
+    [Category.Equipment]: 'E',
+    [Category.Line]: 'L',
+    [Category.Instrument]: 'I',
+    [Category.DrawingNumber]: 'D',
+    [Category.NotesAndHolds]: 'N',
+    [Category.SpecialItem]: 'S',
+    [Category.OffPageConnector]: 'O',
+    [Category.Uncategorized]: 'U'
+  };
+
+  // Drawing number for current page
+  const drawingNumberTag = useMemo(() => {
+    const pageDrawingNumbers = allTags.filter(t => t.page === tag.page && t.category === Category.DrawingNumber);
+    return pageDrawingNumbers.length > 0 ? pageDrawingNumbers[0] : null;
+  }, [allTags, tag.page]);
+  
+  // Loop information for this tag
+  const tagLoops = useMemo(() => {
+    return loops.filter(loop => loop.tagIds.includes(tag.id));
+  }, [loops, tag.id]);
   
   // Handle related tag click
   const handleRelatedTagClick = useCallback((targetId: string, event: React.MouseEvent) => {
@@ -89,37 +132,65 @@ const TagListItem = React.memo(({
 
   return (
     <li
-      className={`group px-2 py-1.5 border-b border-slate-700 cursor-pointer transition-all duration-150 hover:bg-slate-700/30 ${
+      className={`list-none group px-2 border-b border-slate-700 cursor-pointer transition-all duration-150 hover:bg-slate-700/30 ${
         isSelected ? 'bg-sky-500/20 hover:bg-sky-500/30' : ''
       }`}
       onClick={(e) => onSelect(tag.id, e)}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span
-              className="px-1.5 py-0.5 text-xs font-medium rounded-full whitespace-nowrap"
-              style={{
-                backgroundColor: `${CATEGORY_COLORS[tag.category]}20`,
-                color: CATEGORY_COLORS[tag.category]
+      <div className="flex items-start justify-between gap-2" style={{ margin: 0, padding: 0 }}>
+        <div className="flex-1 min-w-0" style={{ margin: 0, padding: 0 }}>
+          <div className="flex items-center gap-2" style={{ margin: 0, padding: 0 }}>
+            <input
+              type="checkbox"
+              checked={tag.isReviewed || false}
+              onChange={(e) => {
+                e.stopPropagation();
+                onToggleReviewStatus(tag.id);
               }}
+              className="w-4 h-4 text-sky-600 bg-slate-700 border-slate-500 rounded focus:ring-sky-500 focus:ring-2 flex-shrink-0"
+              style={{ margin: 0, minWidth: '16px', minHeight: '16px' }}
+              title="Mark as reviewed"
+            />
+            <span 
+              className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold text-white border flex-shrink-0`}
+              style={{
+                backgroundColor: tag.category === Category.Equipment ? '#f97316' :
+                               tag.category === Category.Line ? '#fb7185' :
+                               tag.category === Category.Instrument ? '#fbbf24' :
+                               tag.category === Category.DrawingNumber ? '#6366f1' :
+                               tag.category === Category.NotesAndHolds ? '#14b8a6' :
+                               tag.category === Category.SpecialItem ? '#c084fc' :
+                               tag.category === Category.OffPageConnector ? '#8b5cf6' : '#94a3b8',
+                borderColor: tag.category === Category.Equipment ? '#fb923c' :
+                           tag.category === Category.Line ? '#fda4af' :
+                           tag.category === Category.Instrument ? '#fcd34d' :
+                           tag.category === Category.DrawingNumber ? '#818cf8' :
+                           tag.category === Category.NotesAndHolds ? '#5eead4' :
+                           tag.category === Category.SpecialItem ? '#ddd6fe' :
+                           tag.category === Category.OffPageConnector ? '#c4b5fd' : '#cbd5e1'
+              }}
+              title={tag.category}
             >
-              {tag.category}
+              {categoryLetters[tag.category]}
             </span>
             <button
-              className="text-sm text-slate-300 break-all hover:text-sky-400 transition-colors cursor-pointer text-left"
+              className="text-sm text-slate-300 truncate hover:text-sky-400 transition-colors cursor-pointer text-left flex-1 min-w-0"
               onClick={(e) => {
                 e.stopPropagation();
                 onPingTag?.(tag.id);
               }}
-              title="Highlight in PDF"
+              title={tag.text}
             >
               {tag.text}
             </button>
-            {tag.isReviewed && (
-              <span className="text-xs text-green-400" title="Reviewed">✓</span>
-            )}
           </div>
+          
+          {/* Drawing Number Display */}
+          {tag.category !== Category.DrawingNumber && drawingNumberTag && (
+            <div className="text-xs text-slate-500 mt-0.5 font-mono">
+              DWG: {drawingNumberTag.text}
+            </div>
+          )}
           
           {showRelationshipDetails && relatedInfo && (
             <>
@@ -194,6 +265,164 @@ const TagListItem = React.memo(({
                   </ul>
                 </div>
               )}
+              
+              {/* Loop Information for Instrument tags */}
+              {tag.category === Category.Instrument && tagLoops.length > 0 && (
+                <div className="mt-1">
+                  {tagLoops.map(loop => {
+                    const isExpanded = expandedLoops.has(tag.id);
+                    const loopTags = loop.tagIds.map(id => allTags.find(t => t.id === id)).filter(Boolean);
+                    
+                    return (
+                      <div key={loop.id} className="mb-1">
+                        <div 
+                          className="flex items-center gap-1 cursor-pointer hover:bg-slate-700/20 rounded px-1 py-0.5 transition-colors w-fit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleExpandLoops(tag.id);
+                          }}
+                        >
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            className={`h-3 w-3 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                            viewBox="0 0 20 20" 
+                            fill="currentColor"
+                          >
+                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-xs text-blue-400 font-mono">
+                            Loop: {loop.name || loop.id} ({loopTags.length} tags) P.{loopTags.map(t => t.page).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).join(', ')}
+                          </span>
+                        </div>
+                        
+                        {isExpanded && (
+                          <div className="mt-1 ml-2">
+                            <ul className="ml-2">
+                              {loopTags.map(loopTag => (
+                                <li key={loopTag.id} className="text-xs text-slate-400 flex items-center gap-1">
+                                  • <span className="text-slate-500 font-mono">P.{loopTag.page}</span>
+                                  <button
+                                    className="text-slate-300 hover:text-sky-400 transition-colors cursor-pointer"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onPingTag?.(loopTag.id);
+                                    }}
+                                    title="Highlight in PDF"
+                                  >
+                                    {loopTag.text}
+                                  </button>
+                                  <button 
+                                    onClick={(e) => handleRelatedTagClick(loopTag.id, e)}
+                                    className="p-0.5 rounded text-slate-500 hover:text-sky-400 hover:bg-sky-500/20 transition-colors"
+                                    title="Go to tag in panel"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                    </svg>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {/* Note Relationships - Show related Note descriptions */}
+              {(() => {
+                const noteRelationships = relationships.filter(r => 
+                  (r.from === tag.id || r.to === tag.id) && r.type === 'Note'
+                );
+                
+                return noteRelationships.length > 0 && (
+                  <div className="mt-1 ml-2">
+                    <span className="text-xs text-purple-400">Notes:</span>
+                    <ul className="ml-2">
+                      {noteRelationships.map(rel => {
+                        const noteId = rel.from === tag.id ? rel.to : rel.from;
+                        const noteDescription = descriptions.find(desc => desc.id === noteId);
+                        
+                        if (!noteDescription) return null;
+                        
+                        return (
+                          <li key={rel.id} className="text-xs text-slate-400 mt-1">
+                            <div className="flex items-start gap-1">
+                              <span>•</span>
+                              <div className="flex-1">
+                                <div className="text-purple-300 font-medium">
+                                  {noteDescription.metadata?.type} {noteDescription.metadata?.number}
+                                </div>
+                                <div className="text-slate-400 text-xs mt-0.5">
+                                  {noteDescription.text.substring(0, 100)}
+                                  {noteDescription.text.length > 100 && '...'}
+                                </div>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                );
+              })()}
+              
+              {/* Equipment Short Spec */}
+              {tag.category === Category.Equipment && (() => {
+                const equipmentSpecs = equipmentShortSpecs.filter(spec => {
+                  const specRelationships = relationships.filter(r => 
+                    (r.from === tag.id && r.to === spec.id) || 
+                    (r.from === spec.id && r.to === tag.id)
+                  );
+                  return specRelationships.length > 0;
+                });
+                
+                return equipmentSpecs.length > 0 && (
+                  <div className="mt-4 mb-3">
+                    <div 
+                      className="flex items-center gap-1 cursor-pointer hover:bg-slate-700/20 rounded px-1 py-0.5 transition-colors w-fit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleExpandSpecs(tag.id);
+                      }}
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className={`h-3 w-3 text-slate-400 transition-transform ${expandedSpecs.has(tag.id) ? 'rotate-180' : ''}`} 
+                        viewBox="0 0 20 20" 
+                        fill="currentColor"
+                      >
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-xs text-orange-400 font-mono">
+                        Equipment Spec
+                      </span>
+                    </div>
+                    
+                    {expandedSpecs.has(tag.id) && (
+                      <div className="mt-1 ml-2">
+                        <ul className="ml-2">
+                          {equipmentSpecs.map(spec => (
+                            <li key={spec.id} className="text-xs text-slate-400 flex items-start gap-1 mt-1">
+                              • <div className="flex-1">
+                                <div className="text-orange-300 font-medium">
+                                  {spec.metadata?.service}
+                                </div>
+                                <div className="text-slate-400 text-xs mt-0.5">
+                                  {spec.text.substring(0, 100)}
+                                  {spec.text.length > 100 && '...'}
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </>
           )}
         </div>
@@ -202,8 +431,7 @@ const TagListItem = React.memo(({
           {tagComments.length > 0 && (
             <CommentIndicator
               comments={tagComments}
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={() => {
                 onOpenCommentModal();
               }}
             />
@@ -234,8 +462,12 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
   tags,
   setTags,
   relationships,
+  descriptions,
+  equipmentShortSpecs,
+  loops,
   onDeleteTags,
   onUpdateTagText,
+  onToggleReviewStatus,
   onPingTag,
   comments,
   onCreateComment,
@@ -261,6 +493,25 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
   const lastClickedIndex = useRef<number>(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  
+  // Manage expansion states at panel level for dynamic height calculation
+  const [panelExpandedLoops, setPanelExpandedLoops] = useState(new Set<string>());
+  const [panelExpandedNotes, setPanelExpandedNotes] = useState(new Set<string>());
+  const [panelExpandedSpecs, setPanelExpandedSpecs] = useState(new Set<string>());
+
+  // Create loops by tag map for performance
+  const loopsByTag = useMemo(() => {
+    const map = new Map<string, any[]>();
+    loops.forEach(loop => {
+      loop.tagIds.forEach(tagId => {
+        if (!map.has(tagId)) {
+          map.set(tagId, []);
+        }
+        map.get(tagId)!.push(loop);
+      });
+    });
+    return map;
+  }, [loops]);
   
   // Filter and sort tags
   const filteredAndSortedTags = useMemo(() => {
@@ -337,6 +588,43 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
       }
     }
   }, [filteredAndSortedTags, setSelectedTagIds, tags]);
+
+  // Expansion toggle handlers
+  const handleToggleExpandLoops = useCallback((tagId: string) => {
+    setPanelExpandedLoops(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tagId)) {
+        newSet.delete(tagId);
+      } else {
+        newSet.add(tagId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleToggleExpandNotes = useCallback((tagId: string) => {
+    setPanelExpandedNotes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tagId)) {
+        newSet.delete(tagId);
+      } else {
+        newSet.add(tagId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleToggleExpandSpecs = useCallback((tagId: string) => {
+    setPanelExpandedSpecs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tagId)) {
+        newSet.delete(tagId);
+      } else {
+        newSet.add(tagId);
+      }
+      return newSet;
+    });
+  }, []);
   
   // Calculate screen-aware dynamic height
   const [listHeight, setListHeight] = useState(400);
@@ -400,7 +688,7 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
     if (listRef.current) {
       listRef.current.resetAfterIndex(0);
     }
-  }, [visibleRelationships, showRelationshipDetails]);
+  }, [visibleRelationships, showRelationshipDetails, loopsByTag, equipmentShortSpecs, descriptions, panelExpandedLoops, panelExpandedNotes, panelExpandedSpecs]);
 
   // Auto-scroll to selected tag (only when selection source is viewer)
   useEffect(() => {
@@ -418,11 +706,24 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
   }, [selectedTagIds, tagSelectionSource]); // Remove filteredAndSortedTags dependency
 
 
-  // Calculate dynamic item size based on relationship details
+  // Calculate dynamic item size based on expanded sections
   const getItemSize = useCallback((index: number) => {
     const tag = filteredAndSortedTags[index];
-    if (!showRelationshipDetails) return 60; // Base height
+    let baseHeight = 32; // Minimal base height for review checkbox and tag text
     
+    // Add height for drawing number if present
+    if (tag.category !== Category.DrawingNumber) {
+      const drawingNumberTag = tags.find(t => 
+        t.category === Category.DrawingNumber && t.page === tag.page
+      );
+      if (drawingNumberTag) {
+        baseHeight += 18; // Height for drawing number line
+      }
+    }
+    
+    if (!showRelationshipDetails) return baseHeight;
+    
+    // Count relationships for traditional sections
     const connections = visibleRelationships.filter(r => 
       (r.from === tag.id || r.to === tag.id) && r.type === 'Connection'
     );
@@ -430,21 +731,64 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
       (r.from === tag.id || r.to === tag.id) && r.type === 'Installation'
     );
     
-    const baseHeight = 60;
-    const connectionLines = connections.length;
-    const installationLines = installations.length;
-    
-    // Add extra height for relationship sections
     let extraHeight = 0;
-    if (connectionLines > 0) {
-      extraHeight += 20 + (connectionLines * 16); // Header + lines
+    
+    // Traditional relationship sections
+    if (connections.length > 0) {
+      extraHeight += 20 + (connections.length * 16); // Header + lines
     }
-    if (installationLines > 0) {
-      extraHeight += 20 + (installationLines * 16); // Header + lines
+    if (installations.length > 0) {
+      extraHeight += 20 + (installations.length * 16); // Header + lines
+    }
+    
+    // New expandable sections - check if they have content and are expanded
+    
+    // Loop information for Instrument tags
+    if (tag.category === Category.Instrument) {
+      const tagLoops = loopsByTag.get(tag.id) || [];
+      if (tagLoops.length > 0) {
+        extraHeight += 40; // Header height with bottom margin
+        if (panelExpandedLoops.has(tag.id)) {
+          // Calculate total tags in all loops for this tag
+          const totalLoopTags = tagLoops.reduce((acc, loop) => acc + loop.tagIds.length, 0);
+          extraHeight += totalLoopTags * 24; // Each tag item
+          extraHeight += 10; // Additional padding for expanded content
+        }
+      }
+    }
+    
+    // Note descriptions for related Note tags
+    const noteRelationships = visibleRelationships.filter(r => 
+      r.from === tag.id && r.type === RelationshipType.Note
+    );
+    if (noteRelationships.length > 0) {
+      extraHeight += 40; // Header height with bottom margin
+      if (panelExpandedNotes.has(tag.id)) {
+        extraHeight += noteRelationships.length * 60; // Each note description
+        extraHeight += 10; // Additional padding for expanded content
+      }
+    }
+    
+    // Equipment short specs for Equipment tags (now with toggle)
+    if (tag.category === Category.Equipment) {
+      const equipmentSpecs = equipmentShortSpecs.filter(spec => {
+        const specRelationships = visibleRelationships.filter(r => 
+          (r.from === tag.id && r.to === spec.id) || 
+          (r.from === spec.id && r.to === tag.id)
+        );
+        return specRelationships.length > 0;
+      });
+      if (equipmentSpecs.length > 0) {
+        extraHeight += 40; // Header height with bottom margin (increased)
+        if (panelExpandedSpecs.has(tag.id)) {
+          extraHeight += equipmentSpecs.length * 80; // Each spec when expanded (further increased)
+          extraHeight += 10; // Additional padding for expanded content (reduced)
+        }
+      }
     }
     
     return baseHeight + extraHeight;
-  }, [filteredAndSortedTags, visibleRelationships, showRelationshipDetails]);
+  }, [filteredAndSortedTags, visibleRelationships, showRelationshipDetails, loopsByTag, equipmentShortSpecs, panelExpandedLoops, panelExpandedNotes, panelExpandedSpecs]);
 
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const tag = filteredAndSortedTags[index];
@@ -457,18 +801,28 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
           isSelected={isSelected}
           relationships={visibleRelationships}
           allTags={tags}
+          descriptions={descriptions}
+          equipmentShortSpecs={equipmentShortSpecs}
+          loops={loops}
           onSelect={handleTagSelect}
           onDelete={() => onDeleteTags([tag.id])}
           onPing={() => onPingTag(tag.id)}
           onEdit={() => handleEditTag(tag)}
           onOpenCommentModal={() => openCommentModal(tag.id, tag.text, 'tag')}
+          onToggleReviewStatus={onToggleReviewStatus}
           getCommentsForTarget={getCommentsForTarget}
           onPingTag={onPingTag}
           onSelectRelatedTag={handleSelectRelatedTag}
+          expandedLoops={panelExpandedLoops}
+          expandedNotes={panelExpandedNotes}
+          expandedSpecs={panelExpandedSpecs}
+          onToggleExpandLoops={handleToggleExpandLoops}
+          onToggleExpandNotes={handleToggleExpandNotes}
+          onToggleExpandSpecs={handleToggleExpandSpecs}
         />
       </div>
     );
-  }, [filteredAndSortedTags, selectedTagIds, visibleRelationships, tags, handleTagSelect, onDeleteTags, onPingTag, handleEditTag, openCommentModal, getCommentsForTarget, handleSelectRelatedTag]);
+  }, [filteredAndSortedTags, selectedTagIds, visibleRelationships, tags, handleTagSelect, onDeleteTags, onPingTag, handleEditTag, openCommentModal, getCommentsForTarget, handleSelectRelatedTag, panelExpandedLoops, panelExpandedNotes, panelExpandedSpecs, handleToggleExpandLoops, handleToggleExpandNotes, handleToggleExpandSpecs]);
   
   return (
     <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden">

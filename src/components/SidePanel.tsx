@@ -1,7 +1,6 @@
 import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { Category } from '../types';
 import { CATEGORY_COLORS } from '../constants';
-import { exportToExcel } from '../services/excelExporter';
 import { CommentModal } from './CommentModal';
 import { useSidePanelStore } from '../stores/sidePanelStore';
 import { TagsPanel } from './panels/TagsPanel';
@@ -32,7 +31,7 @@ export const SidePanel = ({
   selectedEquipmentShortSpecIds: propSelectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds: propSetSelectedEquipmentShortSpecIds,
   tagSelectionSource: propTagSelectionSource,
   // Action props
-  onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, 
+  onDeleteTags, onUpdateTagText, onToggleReviewStatus, onDeleteDescriptions, onUpdateDescription, 
   onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText,
   onAutoLinkDescriptions, onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, 
   onAutoGenerateLoops, onManualCreateLoop, onDeleteLoops, onUpdateLoop, showConfirmation,
@@ -203,11 +202,6 @@ export const SidePanel = ({
     };
   }, [isResizing, setSidebarWidth, setIsResizing]);
 
-  // Export to Excel
-  const handleExportToExcel = useCallback(() => {
-    exportToExcel(tags, relationships, descriptions, comments);
-  }, [tags, relationships, descriptions, comments]);
-
   // Comment modal handlers
   const handleCommentSave = useCallback((text: string, priority: string) => {
     if (commentTargetId && commentTargetType) {
@@ -245,9 +239,18 @@ export const SidePanel = ({
           onMouseDown={handleMouseDown}
         />
 
-        {/* Header */}
+
+        {/* Global Filters */}
         <div className="p-3 border-b border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-200">Panel</h2>
+          <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showCurrentPageOnly}
+              onChange={(e) => setShowCurrentPageOnly(e.target.checked)}
+              className="w-3.5 h-3.5 bg-slate-700 border-slate-600 text-sky-500 rounded focus:ring-1 focus:ring-sky-500"
+            />
+            Current page only
+          </label>
         </div>
 
         {/* Tabs */}
@@ -355,17 +358,7 @@ export const SidePanel = ({
             </div>
 
             {/* View Options */}
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showCurrentPageOnly}
-                  onChange={(e) => setShowCurrentPageOnly(e.target.checked)}
-                  className="w-3.5 h-3.5 bg-slate-700 border-slate-600 text-sky-500 rounded focus:ring-1 focus:ring-sky-500"
-                />
-                Current page
-              </label>
-              
+            <div className="flex items-center justify-between">
               <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
                 <input
                   type="checkbox"
@@ -375,21 +368,12 @@ export const SidePanel = ({
                 />
                 Show details
               </label>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2">
+              
               <button
                 onClick={resetFilters}
-                className="flex-1 px-2 py-1 text-xs bg-slate-700 text-slate-400 rounded hover:bg-slate-600 transition-colors"
+                className="px-2 py-1 text-xs bg-slate-700 text-slate-400 rounded hover:bg-slate-600 transition-colors"
               >
                 Reset Filters
-              </button>
-              <button
-                onClick={handleExportToExcel}
-                className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-500 transition-colors"
-              >
-                Export Excel
               </button>
             </div>
           </div>
@@ -433,8 +417,12 @@ export const SidePanel = ({
               tags={tags}
               setTags={setTags}
               relationships={relationships}
+              descriptions={descriptions}
+              equipmentShortSpecs={equipmentShortSpecs}
+              loops={loops}
               onDeleteTags={onDeleteTags}
               onUpdateTagText={onUpdateTagText}
+              onToggleReviewStatus={onToggleReviewStatus}
               onPingTag={onPingTag}
               comments={comments}
               onCreateComment={onCreateComment}

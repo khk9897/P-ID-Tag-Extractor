@@ -7,6 +7,7 @@ import { Header } from './components/Header.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import { extractTags, createOPCRelationships } from './services/taggingService.ts';
+import { exportToExcel } from './services/excelExporter.ts';
 import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES, DEFAULT_SETTINGS, DEFAULT_COLORS } from './constants.ts';
 import { useSidePanelStore } from './stores/sidePanelStore.ts';
 import { 
@@ -791,6 +792,12 @@ Do you want to continue?`,
     ));
   }, []);
 
+  const handleToggleReviewStatus = useCallback((tagId: string): void => {
+    setTags(prevTags => prevTags.map(tag => 
+      tag.id === tagId ? { ...tag, isReviewed: !tag.isReviewed } : tag
+    ));
+  }, []);
+
   const handleUpdateRawTextItemText = useCallback((itemId: string, newText: string): void => {
     setRawTextItems(prevItems => prevItems.map(item =>
         item.id === itemId ? { ...item, text: newText } : item
@@ -1419,6 +1426,10 @@ Do you want to continue?`,
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, [pdfFile, tags, relationships, rawTextItems, patterns, tolerances]);
+
+  const handleExportExcel = useCallback(() => {
+    exportToExcel(tags, relationships, descriptions, comments);
+  }, [tags, relationships, descriptions, comments]);
   
   // Helper function to calculate minimum distance from point to bbox corners and center
   const calculateMinDistanceToCorners = (centerX: number, centerY: number, bbox: { x1: number; y1: number; x2: number; y2: number }) => {
@@ -2165,6 +2176,7 @@ Do you want to continue?`,
             onCreateEquipmentShortSpec={handleCreateEquipmentShortSpec}
             onDeleteTags={handleDeleteTags}
             onUpdateTagText={handleUpdateTagText}
+            onToggleReviewStatus={handleToggleReviewStatus}
             onDeleteDescriptions={handleDeleteDescriptions}
             onUpdateDescription={handleUpdateDescription}
             onDeleteEquipmentShortSpecs={handleDeleteEquipmentShortSpecs}
@@ -2249,6 +2261,7 @@ Do you want to continue?`,
           onOpenSettings={() => setIsSettingsOpen(true)}
           onImportProject={handleImportProject}
           onExportProject={handleExportProject}
+          onExportExcel={handleExportExcel}
           pdfDoc={pdfDoc}
           currentPage={currentPage}
           setCurrentPage={setCurrentPage}

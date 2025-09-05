@@ -218,6 +218,7 @@ export interface WorkspaceProps {
   onCreateEquipmentShortSpec: (selectedItems: (Tag | RawTextItem)[]) => void;
   onDeleteTags: (tagIds: string[]) => void;
   onUpdateTagText: (tagId: string, newText: string) => void;
+  onToggleReviewStatus: (tagId: string) => void;
   onDeleteDescriptions: (descriptionIds: string[]) => void;
   onUpdateDescription: (id: string, text: string, metadata: Description['metadata']) => void;
   onDeleteEquipmentShortSpecs: (equipmentShortSpecIds: string[]) => void;

@@ -104,7 +104,12 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
   onDeleteComment,
   onCreateComment
 }) => {
-  const { commentsTabFilter, openCommentModal } = useSidePanelStore();
+  const { 
+    commentsTabFilter, 
+    openCommentModal,
+    showCurrentPageOnly,
+    currentPage 
+  } = useSidePanelStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [listHeight, setListHeight] = useState(600);
@@ -141,9 +146,29 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
   
   // Filter and sort comments
   const filteredComments = useMemo(() => {
-    const filtered = filterComments(comments, commentsTabFilter);
+    let filtered = filterComments(comments, commentsTabFilter);
+    
+    // Apply current page filter
+    if (showCurrentPageOnly && currentPage !== undefined) {
+      filtered = filtered.filter(comment => {
+        // Find the target entity (tag or description) for this comment
+        const targetTag = tags.find(tag => tag.id === comment.targetId);
+        const targetDescription = descriptions.find(desc => desc.id === comment.targetId);
+        
+        // Check if the target entity is on the current page
+        if (targetTag) {
+          return targetTag.page === currentPage;
+        } else if (targetDescription) {
+          return targetDescription.page === currentPage;
+        }
+        
+        // If no target found, don't show the comment
+        return false;
+      });
+    }
+    
     return sortComments(filtered);
-  }, [comments, commentsTabFilter]);
+  }, [comments, commentsTabFilter, showCurrentPageOnly, currentPage, tags, descriptions]);
   
   const handleToggleResolved = useCallback((comment: Comment) => {
     onUpdateComment(comment.id, { isResolved: !comment.isResolved });

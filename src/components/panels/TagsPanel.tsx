@@ -12,10 +12,6 @@ interface TagsPanelProps {
   tags: Tag[];
   setTags: (tags: Tag[]) => void;
   relationships: Relationship[];
-  currentPage?: number;
-  selectedTagIds: string[];
-  setSelectedTagIds: (ids: string[]) => void;
-  tagSelectionSource?: string;
   onDeleteTags: (ids: string[]) => void;
   onUpdateTagText: (id: string, text: string) => void;
   onPingTag: (id: string) => void;
@@ -157,10 +153,6 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
   tags,
   setTags,
   relationships,
-  currentPage,
-  selectedTagIds,
-  setSelectedTagIds,
-  tagSelectionSource,
   onDeleteTags,
   onUpdateTagText,
   onPingTag,
@@ -175,7 +167,12 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
     reviewFilter,
     commentFilter,
     sortOrder,
-    openCommentModal
+    openCommentModal,
+    // Get selection state from zustand
+    currentPage,
+    selectedTagIds,
+    setSelectedTagIds,
+    tagSelectionSource
   } = useSidePanelStore();
   
   const listRef = useRef<List>(null);
@@ -212,15 +209,14 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
       const end = Math.max(lastClickedIndex.current, tagIndex);
       const rangeIds = filteredAndSortedTags.slice(start, end + 1).map(t => t.id);
       
-      setSelectedTagIds([...new Set([...selectedTagIds, ...rangeIds])]);
+      setSelectedTagIds([...new Set([...selectedTagIds, ...rangeIds])], 'panel');
     } else if (event.ctrlKey || event.metaKey) {
-      setSelectedTagIds(
-        selectedTagIds.includes(tagId)
-          ? selectedTagIds.filter(id => id !== tagId)
-          : [...selectedTagIds, tagId]
-      );
+      const newSelection = selectedTagIds.includes(tagId)
+        ? selectedTagIds.filter(id => id !== tagId)
+        : [...selectedTagIds, tagId];
+      setSelectedTagIds(newSelection, 'panel');
     } else {
-      setSelectedTagIds([tagId]);
+      setSelectedTagIds([tagId], 'panel');
     }
     
     lastClickedIndex.current = tagIndex;
@@ -233,15 +229,20 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
     }
   }, [onUpdateTagText]);
   
-  // Auto-scroll to selected tag
+  // Auto-scroll to selected tag (only when selection source is viewer)
   useEffect(() => {
-    if (tagSelectionSource === 'viewer' && selectedTagIds.length > 0 && listRef.current) {
-      const selectedIndex = filteredAndSortedTags.findIndex(t => selectedTagIds.includes(t.id));
-      if (selectedIndex !== -1) {
-        listRef.current.scrollToItem(selectedIndex, 'smart');
-      }
+    if (tagSelectionSource === 'viewer' && selectedTagIds.length === 1 && listRef.current) {
+      // Use a timeout to prevent excessive scrolling during rapid updates
+      const timeoutId = setTimeout(() => {
+        const selectedIndex = filteredAndSortedTags.findIndex(t => t.id === selectedTagIds[0]);
+        if (selectedIndex !== -1) {
+          listRef.current.scrollToItem(selectedIndex, 'smart');
+        }
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [selectedTagIds, tagSelectionSource, filteredAndSortedTags]);
+  }, [selectedTagIds, tagSelectionSource]); // Remove filteredAndSortedTags dependency
   
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const tag = filteredAndSortedTags[index];

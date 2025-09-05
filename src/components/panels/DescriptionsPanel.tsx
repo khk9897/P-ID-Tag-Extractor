@@ -7,9 +7,6 @@ import { EditButton, SaveButton, CancelButton, IconButton } from '../common/Icon
 
 interface DescriptionsPanelProps {
   descriptions: Description[];
-  currentPage?: number;
-  selectedDescriptionIds: string[];
-  setSelectedDescriptionIds: (ids: string[]) => void;
   onDeleteDescriptions: (ids: string[]) => void;
   onUpdateDescription: (id: string, updates: Partial<Description>) => void;
   onAutoLinkDescriptions: () => void;
@@ -151,9 +148,6 @@ DescriptionListItem.displayName = 'DescriptionListItem';
 
 export const DescriptionsPanel: React.FC<DescriptionsPanelProps> = ({
   descriptions,
-  currentPage,
-  selectedDescriptionIds,
-  setSelectedDescriptionIds,
   onDeleteDescriptions,
   onUpdateDescription,
   onAutoLinkDescriptions,
@@ -168,7 +162,11 @@ export const DescriptionsPanel: React.FC<DescriptionsPanelProps> = ({
     tempDescriptionText,
     setTempDescriptionText,
     tempDescriptionMetadata,
-    setTempDescriptionMetadata
+    setTempDescriptionMetadata,
+    // Get selection state from zustand
+    currentPage,
+    selectedDescriptionIds,
+    setSelectedDescriptionIds
   } = useSidePanelStore();
   
   const listRef = useRef<List>(null);

@@ -9,7 +9,6 @@ interface RelationshipsPanelProps {
   relationships: Relationship[];
   setRelationships: (relationships: Relationship[]) => void;
   tags: Tag[];
-  currentPage?: number;
   onPingRelationship: (id: string) => void;
 }
 
@@ -94,10 +93,13 @@ export const RelationshipsPanel: React.FC<RelationshipsPanelProps> = ({
   relationships,
   setRelationships,
   tags,
-  currentPage,
   onPingRelationship
 }) => {
-  const { showCurrentPageOnly, debouncedSearchQuery } = useSidePanelStore();
+  const { 
+    showCurrentPageOnly, 
+    debouncedSearchQuery,
+    currentPage 
+  } = useSidePanelStore();
   
   // Create tag map for quick lookups
   const tagMap = useMemo(() => 

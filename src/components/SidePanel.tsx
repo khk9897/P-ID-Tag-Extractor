@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { Category } from '../types';
 import { CATEGORY_COLORS } from '../constants';
 import { exportToExcel } from '../services/excelExporter';
@@ -25,10 +25,12 @@ export const SidePanel = ({
   // Data props
   tags, setTags, rawTextItems, descriptions, equipmentShortSpecs, setEquipmentShortSpecs, 
   loops, setLoops, relationships, setRelationships,
-  // View props
-  currentPage, setCurrentPage, selectedTagIds, setSelectedTagIds, selectedDescriptionIds, 
-  setSelectedDescriptionIds, selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds,
-  tagSelectionSource,
+  // View props (currentPage now managed by zustand, keeping props for compatibility)
+  currentPage: propCurrentPage, setCurrentPage: propSetCurrentPage, 
+  selectedTagIds: propSelectedTagIds, setSelectedTagIds: propSetSelectedTagIds, 
+  selectedDescriptionIds: propSelectedDescriptionIds, setSelectedDescriptionIds: propSetSelectedDescriptionIds,
+  selectedEquipmentShortSpecIds: propSelectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds: propSetSelectedEquipmentShortSpecIds,
+  tagSelectionSource: propTagSelectionSource,
   // Action props
   onDeleteTags, onUpdateTagText, onDeleteDescriptions, onUpdateDescription, 
   onDeleteEquipmentShortSpecs, onUpdateEquipmentShortSpec, onDeleteRawTextItems, onUpdateRawTextItemText,
@@ -75,8 +77,87 @@ export const SidePanel = ({
     commentTargetName,
     commentTargetType,
     closeCommentModal,
-    resetFilters
+    resetFilters,
+    // Selection state from zustand
+    selectedTagIds,
+    selectedDescriptionIds,
+    selectedEquipmentShortSpecIds,
+    tagSelectionSource,
+    currentPage,
+    setSelectedTagIds,
+    setSelectedDescriptionIds,
+    setSelectedEquipmentShortSpecIds,
+    setCurrentPage
   } = useSidePanelStore();
+
+  // Use refs to prevent infinite loops in synchronization
+  const propsSyncRef = useRef({ 
+    lastPropUpdate: 0, 
+    lastStoreUpdate: 0,
+    syncing: false 
+  });
+
+  // One-way sync: Props to Zustand (only when props change externally)
+  useEffect(() => {
+    if (propsSyncRef.current.syncing) return;
+    
+    propsSyncRef.current.syncing = true;
+    const now = Date.now();
+    
+    if (propCurrentPage !== undefined && propCurrentPage !== currentPage) {
+      setCurrentPage(propCurrentPage);
+    }
+    
+    // Only sync if props actually changed (not from our own updates)
+    if (propSelectedTagIds && 
+        JSON.stringify(propSelectedTagIds) !== JSON.stringify(selectedTagIds) &&
+        now - propsSyncRef.current.lastStoreUpdate > 100) {
+      setSelectedTagIds(propSelectedTagIds, propTagSelectionSource || 'panel');
+    }
+    
+    if (propSelectedDescriptionIds && 
+        JSON.stringify(propSelectedDescriptionIds) !== JSON.stringify(selectedDescriptionIds) &&
+        now - propsSyncRef.current.lastStoreUpdate > 100) {
+      setSelectedDescriptionIds(propSelectedDescriptionIds);
+    }
+    
+    if (propSelectedEquipmentShortSpecIds && 
+        JSON.stringify(propSelectedEquipmentShortSpecIds) !== JSON.stringify(selectedEquipmentShortSpecIds) &&
+        now - propsSyncRef.current.lastStoreUpdate > 100) {
+      setSelectedEquipmentShortSpecIds(propSelectedEquipmentShortSpecIds);
+    }
+    
+    propsSyncRef.current.lastPropUpdate = now;
+    setTimeout(() => { propsSyncRef.current.syncing = false; }, 50);
+  }, [propCurrentPage, propSelectedTagIds, propSelectedDescriptionIds, propSelectedEquipmentShortSpecIds, propTagSelectionSource]);
+
+  // One-way sync: Zustand to Props (only when store changes internally)
+  useEffect(() => {
+    if (propsSyncRef.current.syncing) return;
+    
+    const now = Date.now();
+    
+    // Only sync back if store changed internally (not from props)
+    if (now - propsSyncRef.current.lastPropUpdate > 100) {
+      propsSyncRef.current.lastStoreUpdate = now;
+      
+      if (propSetCurrentPage && currentPage !== propCurrentPage) {
+        propSetCurrentPage(currentPage);
+      }
+      
+      if (propSetSelectedTagIds && JSON.stringify(selectedTagIds) !== JSON.stringify(propSelectedTagIds)) {
+        propSetSelectedTagIds(selectedTagIds);
+      }
+      
+      if (propSetSelectedDescriptionIds && JSON.stringify(selectedDescriptionIds) !== JSON.stringify(propSelectedDescriptionIds)) {
+        propSetSelectedDescriptionIds(selectedDescriptionIds);
+      }
+      
+      if (propSetSelectedEquipmentShortSpecIds && JSON.stringify(selectedEquipmentShortSpecIds) !== JSON.stringify(propSelectedEquipmentShortSpecIds)) {
+        propSetSelectedEquipmentShortSpecIds(selectedEquipmentShortSpecIds);
+      }
+    }
+  }, [selectedTagIds, selectedDescriptionIds, selectedEquipmentShortSpecIds, currentPage]);
 
   // Debounce search query
   useEffect(() => {
@@ -352,10 +433,6 @@ export const SidePanel = ({
               tags={tags}
               setTags={setTags}
               relationships={relationships}
-              currentPage={currentPage}
-              selectedTagIds={selectedTagIds}
-              setSelectedTagIds={setSelectedTagIds}
-              tagSelectionSource={tagSelectionSource}
               onDeleteTags={onDeleteTags}
               onUpdateTagText={onUpdateTagText}
               onPingTag={onPingTag}
@@ -368,9 +445,6 @@ export const SidePanel = ({
           {activeTab === 'descriptions' && (
             <DescriptionsPanel
               descriptions={descriptions}
-              currentPage={currentPage}
-              selectedDescriptionIds={selectedDescriptionIds}
-              setSelectedDescriptionIds={setSelectedDescriptionIds}
               onDeleteDescriptions={onDeleteDescriptions}
               onUpdateDescription={onUpdateDescription}
               onAutoLinkDescriptions={onAutoLinkDescriptions}
@@ -384,7 +458,6 @@ export const SidePanel = ({
               relationships={relationships}
               setRelationships={setRelationships}
               tags={tags}
-              currentPage={currentPage}
               onPingRelationship={onPingRelationship}
             />
           )}
@@ -393,9 +466,6 @@ export const SidePanel = ({
             <EquipmentShortSpecsPanel
               equipmentShortSpecs={equipmentShortSpecs}
               setEquipmentShortSpecs={setEquipmentShortSpecs}
-              currentPage={currentPage}
-              selectedEquipmentShortSpecIds={selectedEquipmentShortSpecIds}
-              setSelectedEquipmentShortSpecIds={setSelectedEquipmentShortSpecIds}
               onDeleteEquipmentShortSpecs={onDeleteEquipmentShortSpecs}
               onUpdateEquipmentShortSpec={onUpdateEquipmentShortSpec}
               onAutoLinkEquipmentShortSpecs={onAutoLinkEquipmentShortSpecs}
@@ -408,7 +478,6 @@ export const SidePanel = ({
               loops={loops}
               setLoops={setLoops}
               tags={tags}
-              currentPage={currentPage}
               onAutoGenerateLoops={onAutoGenerateLoops}
               onManualCreateLoop={onManualCreateLoop}
               onDeleteLoops={onDeleteLoops}

@@ -8,9 +8,6 @@ import { EditButton, SaveButton, CancelButton, IconButton } from '../common/Icon
 interface EquipmentShortSpecsPanelProps {
   equipmentShortSpecs: EquipmentShortSpec[];
   setEquipmentShortSpecs: (specs: EquipmentShortSpec[]) => void;
-  currentPage?: number;
-  selectedEquipmentShortSpecIds: string[];
-  setSelectedEquipmentShortSpecIds: (ids: string[]) => void;
   onDeleteEquipmentShortSpecs: (ids: string[]) => void;
   onUpdateEquipmentShortSpec: (id: string, updates: Partial<EquipmentShortSpec>) => void;
   onAutoLinkEquipmentShortSpecs: () => void;
@@ -139,9 +136,6 @@ EquipmentShortSpecListItem.displayName = 'EquipmentShortSpecListItem';
 export const EquipmentShortSpecsPanel: React.FC<EquipmentShortSpecsPanelProps> = ({
   equipmentShortSpecs,
   setEquipmentShortSpecs,
-  currentPage,
-  selectedEquipmentShortSpecIds,
-  setSelectedEquipmentShortSpecIds,
   onDeleteEquipmentShortSpecs,
   onUpdateEquipmentShortSpec,
   onAutoLinkEquipmentShortSpecs,
@@ -155,7 +149,11 @@ export const EquipmentShortSpecsPanel: React.FC<EquipmentShortSpecsPanelProps> =
     tempEquipmentShortSpecText,
     setTempEquipmentShortSpecText,
     tempEquipmentShortSpecMetadata,
-    setTempEquipmentShortSpecMetadata
+    setTempEquipmentShortSpecMetadata,
+    // Get selection state from zustand
+    currentPage,
+    selectedEquipmentShortSpecIds,
+    setSelectedEquipmentShortSpecIds
   } = useSidePanelStore();
   
   // Filter and sort specs

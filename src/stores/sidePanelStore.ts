@@ -9,6 +9,15 @@ interface SidePanelState {
   sidebarWidth: number;
   isResizing: boolean;
   
+  // Selection state (moved from component props)
+  selectedTagIds: string[];
+  selectedDescriptionIds: string[];
+  selectedEquipmentShortSpecIds: string[];
+  tagSelectionSource: 'viewer' | 'panel' | null;
+  
+  // Page state
+  currentPage: number;
+  
   // Filter state
   searchQuery: string;
   debouncedSearchQuery: string;
@@ -45,6 +54,15 @@ interface SidePanelState {
   setShowRelationshipDetails: (show: boolean) => void;
   setSidebarWidth: (width: number) => void;
   setIsResizing: (resizing: boolean) => void;
+  
+  // Selection actions
+  setSelectedTagIds: (ids: string[], source?: 'viewer' | 'panel') => void;
+  setSelectedDescriptionIds: (ids: string[]) => void;
+  setSelectedEquipmentShortSpecIds: (ids: string[]) => void;
+  clearAllSelections: () => void;
+  
+  // Page actions
+  setCurrentPage: (page: number) => void;
   
   setSearchQuery: (query: string) => void;
   setDebouncedSearchQuery: (query: string) => void;
@@ -91,6 +109,15 @@ export const useSidePanelStore = create<SidePanelState>((set) => ({
   sidebarWidth: loadFromLocalStorage('sidebarWidth', 320),
   isResizing: false,
   
+  // Selection state
+  selectedTagIds: [],
+  selectedDescriptionIds: [],
+  selectedEquipmentShortSpecIds: [],
+  tagSelectionSource: null,
+  
+  // Page state
+  currentPage: 1,
+  
   searchQuery: '',
   debouncedSearchQuery: '',
   loopSearchQuery: '',
@@ -126,6 +153,23 @@ export const useSidePanelStore = create<SidePanelState>((set) => ({
     set({ sidebarWidth: width });
   },
   setIsResizing: (resizing) => set({ isResizing: resizing }),
+  
+  // Selection actions
+  setSelectedTagIds: (ids, source = 'panel') => set({ 
+    selectedTagIds: ids, 
+    tagSelectionSource: source 
+  }),
+  setSelectedDescriptionIds: (ids) => set({ selectedDescriptionIds: ids }),
+  setSelectedEquipmentShortSpecIds: (ids) => set({ selectedEquipmentShortSpecIds: ids }),
+  clearAllSelections: () => set({
+    selectedTagIds: [],
+    selectedDescriptionIds: [],
+    selectedEquipmentShortSpecIds: [],
+    tagSelectionSource: null
+  }),
+  
+  // Page actions
+  setCurrentPage: (page) => set({ currentPage: page }),
   
   setSearchQuery: (query) => set({ searchQuery: query }),
   setDebouncedSearchQuery: (query) => set({ debouncedSearchQuery: query }),

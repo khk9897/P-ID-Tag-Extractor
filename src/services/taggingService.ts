@@ -1,6 +1,5 @@
 import { Category } from '../types.ts';
 import { v4 as uuidv4 } from 'uuid';
-import { debugLog, perfTimer, trackMemoryUsage } from '../utils/debugLogger.ts';
 
 // Helper function to remove whitespace from tag text (except for NotesAndHolds)
 const removeWhitespace = (text, category, shouldRemoveWhitespace) => {
@@ -123,16 +122,11 @@ const getRightBottomCorner = (viewport, rotation) => {
 export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSettings = { autoRemoveWhitespace: true }) => {
     // Only log for first page to avoid spam
     if (pageNum === 1) {
-        debugLog('EXTRACT', `Starting tag extraction process`);
     }
     
-    perfTimer.start(`getPage_${pageNum}`);
     const page = await pdfDoc.getPage(pageNum);
-    perfTimer.end(`getPage_${pageNum}`);
     
-    perfTimer.start(`getTextContent_${pageNum}`);
     const textContent = await page.getTextContent();
-    perfTimer.end(`getTextContent_${pageNum}`);
     const viewport = page.getViewport({ scale: 1.0 });
     const rotation = viewport.rotation || 0;
     
@@ -517,7 +511,6 @@ export const extractTags = async (pdfDoc, pageNum, patterns, tolerances, appSett
 
     // Only log memory usage for last page to avoid spam
     if (pageNum === 1) {
-        trackMemoryUsage(`After extracting first page`);
     }
     
     return { tags: foundTags, rawTextItems };

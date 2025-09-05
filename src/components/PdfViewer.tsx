@@ -3,7 +3,6 @@ import { RelationshipType, Category } from '../types.ts';
 import { CATEGORY_COLORS, DEFAULT_COLORS } from '../constants.ts';
 import { TagHighlight, getHighlightTypeFromEntity, getHighlightEffect } from './TagHighlight.tsx';
 import { v4 as uuidv4 } from 'uuid';
-import { debugLog, perfTimer, trackRender, trackMemoRecalculation, trackFunctionCall } from '../utils/debugLogger.ts';
 import { useSidePanelStore } from '../stores/sidePanelStore';
 
 // Throttle function for performance
@@ -116,7 +115,6 @@ const PdfViewerComponent = ({
   
   // Only track every few renders to reduce overhead
   if (renderCountRef.current % 5 === 0) {
-    trackRender('PdfViewer', { currentPage, scale, mode, tagCount: tags.length });
   }
   
   // Use zustand for selection state management
@@ -445,7 +443,6 @@ const PdfViewerComponent = ({
             // CRITICAL: Update lastRenderedRef to ensure SVG overlay synchronization
             lastRenderedRef.current = currentRenderKey;
             
-            debugLog('RENDER', `Using cached page ${pageNumber} at scale ${scale} (${cachedImageData.width}x${cachedImageData.height})`);
             return;
           }
         }
@@ -454,12 +451,9 @@ const PdfViewerComponent = ({
     
     // Skip render if we're already showing this page at this scale (non-background)
     if (!isBackground && lastRenderedRef.current === currentRenderKey) {
-      debugLog('RENDER', `Skipping render - page ${pageNumber} at scale ${scale} already rendered`);
       return;
     }
     
-    perfTimer.start(`renderPage_${pageNumber}`);
-    debugLog('RENDER', `Starting render for page ${pageNumber} at scale ${scale}`);
 
     // Generate unique render ID for this operation
     const currentRenderId = ++renderIdRef.current;
@@ -543,10 +537,8 @@ const PdfViewerComponent = ({
               height: canvas.height
             });
             
-            debugLog('RENDER', `Cached page ${pageNumber} at scale ${scale}`);
           } catch (cacheError) {
             // Cache storage failed, continue without caching
-            debugLog('RENDER', `Failed to cache page ${pageNumber}: ${cacheError.message}`);
           }
         }
         
@@ -567,8 +559,6 @@ const PdfViewerComponent = ({
         if (!isBackground) {
           lastRenderedRef.current = currentRenderKey;
         }
-        perfTimer.end(`renderPage_${pageNumber}`);
-        debugLog('RENDER', `Page ${pageNumber} render completed at scale ${scale}${isBackground ? ' (background)' : ''}`);
       }
     });
 
@@ -602,7 +592,6 @@ const PdfViewerComponent = ({
   // Clear cache when scale changes to free memory
   useEffect(() => {
     canvasCacheRef.current.clear();
-    debugLog('RENDER', `Cleared canvas cache due to scale change: ${scale}`);
   }, [scale]);
 
   // Clear selections ONLY when page actually changes
@@ -613,7 +602,6 @@ const PdfViewerComponent = ({
       actualSetSelectedTagIds([]);
       setSelectedRawTextItemIds([]);
       setRelationshipStartTag(null);
-      debugLog('EVENT', `Page changed from ${prevPageRef.current} to ${currentPage}, cleared selections`);
       prevPageRef.current = currentPage;
     }
     
@@ -1510,13 +1498,11 @@ const PdfViewerComponent = ({
     
     if (!(window as any).globalCoordinatesCache) {
       (window as any).globalCoordinatesCache = new Map();
-      debugLog('PERF', 'Global coordinate cache initialized');
     }
     
     const globalCache = (window as any).globalCoordinatesCache;
     if (!globalCache.has(cacheKey)) {
       globalCache.set(cacheKey, new Map());
-      debugLog('PERF', `New cache created for transformation: ${cacheKey} (scale-independent)`);
     }
     
     return globalCache.get(cacheKey);

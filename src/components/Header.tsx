@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { EXTERNAL_LINKS } from '../constants.ts';
-import { trackClickEvent, debugLog } from '../utils/debugLogger.ts';
 
 // --- Components moved from App.tsx for colocation ---
 
@@ -414,13 +413,10 @@ export const Header = ({
             {pdfDoc && (
               <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-2 relative">
                 <button onClick={() => {
-                  const completeClick = trackClickEvent('page_prev', `page_${currentPage - 1}`);
                   const newPage = Math.max(1, currentPage - 1);
                   if (newPage !== currentPage) {
-                    debugLog('EVENT', `📄 Page navigation: ${currentPage} → ${newPage}`);
                     setCurrentPage(newPage);
                   }
-                  setTimeout(completeClick, 0); // Complete after state update
                 }} disabled={currentPage === 1} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">←</button>
                 
                 {/* Page number - clickable to show dropdown */}
@@ -447,7 +443,6 @@ export const Header = ({
                             onClick={() => {
                               setCurrentPage(page);
                               setShowPageDropdown(false);
-                              debugLog('EVENT', `📄 Page navigation: ${currentPage} → ${page}`);
                             }}
                             className={`px-1 py-1.5 text-xs rounded transition-colors min-w-[28px] ${
                               page === currentPage
@@ -464,13 +459,10 @@ export const Header = ({
                 )}
                 
                 <button onClick={() => {
-                  const completeClick = trackClickEvent('page_next', `page_${currentPage + 1}`);
                   const newPage = Math.min(pdfDoc.numPages, currentPage + 1);
                   if (newPage !== currentPage) {
-                    debugLog('EVENT', `📄 Page navigation: ${currentPage} → ${newPage}`);
                     setCurrentPage(newPage);
                   }
-                  setTimeout(completeClick, 0); // Complete after state update
                 }} disabled={currentPage === pdfDoc.numPages} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">→</button>
               </div>
             )}

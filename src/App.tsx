@@ -6,10 +6,8 @@ import { Workspace } from './components/Workspace.tsx';
 import { Header } from './components/Header.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
-import PerformanceMonitor from './components/PerformanceMonitor.tsx';
 import { extractTags, createOPCRelationships } from './services/taggingService.ts';
 import { DEFAULT_PATTERNS, DEFAULT_TOLERANCES, DEFAULT_SETTINGS, DEFAULT_COLORS } from './constants.ts';
-import { debugLog, perfTimer, trackStateChange, trackMemoryUsage } from './utils/debugLogger.ts';
 import { useSidePanelStore } from './stores/sidePanelStore.ts';
 import { 
   Category, 
@@ -342,18 +340,14 @@ const App: React.FC = () => {
   useEffect(() => {
     const opcTags = tags.filter(tag => tag.category === Category.OffPageConnector);
     if (opcTags.length > 0) {
-      perfTimer.start('autoCreateOPCRelationships');
       const opcRelationships = createOPCRelationships(tags, RelationshipType);
-      perfTimer.end('autoCreateOPCRelationships');
       
       // Only update if there are new relationships to add
       if (opcRelationships.length > 0) {
-        debugLog('RELATION', `Auto-creating ${opcRelationships.length} OPC relationships`);
         setRelationships(prevRel => {
           // Remove existing OPC relationships to avoid duplicates
           const nonOpcRel = prevRel.filter(rel => rel.type !== RelationshipType.OffPageConnection);
           const newRels = [...nonOpcRel, ...opcRelationships];
-          trackStateChange('relationships (auto-OPC)', prevRel, newRels);
           return newRels;
         });
       }
@@ -379,9 +373,6 @@ const App: React.FC = () => {
   };
 
   const processPdf = useCallback(async (doc: any, patternsToUse: PatternConfig, tolerancesToUse: ToleranceConfig, appSettingsToUse?: AppSettings): Promise<void> => {
-    perfTimer.start('processPdf');
-    debugLog('EXTRACT', `Starting PDF processing for ${doc.numPages} pages`);
-    trackMemoryUsage('Before PDF processing');
     
     setIsLoading(true);
     setTags([]);
@@ -397,7 +388,6 @@ const App: React.FC = () => {
     try {
       let allTags = [];
       let allRawTextItems = [];
-      perfTimer.start('extractAllPages');
       
       for (let i = 1; i <= doc.numPages; i++) {
         const { tags: pageTags, rawTextItems: pageRawTextItems } = await extractTags(doc, i, patternsToUse, tolerancesToUse, appSettings);
@@ -407,24 +397,15 @@ const App: React.FC = () => {
         setProgress(p => ({ ...p, current: i }));
       }
       
-      perfTimer.end('extractAllPages');
-      const extractDuration = perfTimer.end('extractAllPages');
-      debugLog('EXTRACT', `✅ PDF processing complete: ${allTags.length} tags, ${allRawTextItems.length} raw text items from ${doc.numPages} pages - ${extractDuration ? extractDuration.toFixed(2) + 'ms' : ''}`);
       
       setTags(allTags);
-      trackStateChange('tags', [], allTags);
       
       setRawTextItems(allRawTextItems);
-      trackStateChange('rawTextItems', [], allRawTextItems);
       
       // Create OPC relationships after all tags are processed
-      perfTimer.start('createOPCRelationships');
       const opcRelationships = createOPCRelationships(allTags, RelationshipType);
-      perfTimer.end('createOPCRelationships');
       
       setRelationships(opcRelationships);
-      trackStateChange('relationships', [], opcRelationships);
-      debugLog('RELATION', `Created ${opcRelationships.length} OPC relationships`);
       
       // Auto-generate loops if enabled
       if (appSettingsToUse?.autoGenerateLoops || appSettings.autoGenerateLoops) {
@@ -433,18 +414,12 @@ const App: React.FC = () => {
         }, 100); // Small delay to ensure tags are set
       }
     } catch (error) {
-      debugLog('EXTRACT', 'PDF processing error', error);
     } finally {
       setIsLoading(false);
-      trackMemoryUsage('After PDF processing');
-      const totalDuration = perfTimer.end('processPdf');
-      debugLog('EXTRACT', `🏁 Total PDF processing time: ${totalDuration ? totalDuration.toFixed(2) + 'ms' : 'N/A'}`);
     }
   }, [appSettings]);
 
   const handleFileSelect = useCallback(async (file: File): Promise<void> => {
-    perfTimer.start('handleFileSelect');
-    debugLog('STATE', `File selected: ${file.name} (${(file.size / 1048576).toFixed(2)} MB)`);
     
     setPdfFile(file);
     setIsLoading(true);
@@ -456,29 +431,21 @@ const App: React.FC = () => {
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      perfTimer.start('loadPDF');
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const doc = await loadingTask.promise;
-      perfTimer.end('loadPDF');
       setPdfDoc(doc);
       
       // Check if it's a large file and enable performance mode
       const isLarge = doc.numPages > 100;
       setIsLargeFile(isLarge);
-      if (isLarge) {
-        debugLog('PERF', `Large file detected (${doc.numPages} pages), enabling performance mode`);
-        // Auto-disable relationship lines for large files
-        if (showAllRelationships) {
-          setShowAllRelationships(false);
-        }
+      // Auto-disable relationship lines for large files
+      if (isLarge && showAllRelationships) {
+        setShowAllRelationships(false);
       }
       
       await processPdf(doc, patterns, tolerances, appSettings);
-      perfTimer.end('handleFileSelect');
     } catch (error) {
-      debugLog('STATE', 'Error loading PDF', error);
       setIsLoading(false);
-      perfTimer.end('handleFileSelect');
     }
   }, [patterns, tolerances, appSettings, processPdf]);
 
@@ -2348,7 +2315,6 @@ Do you want to continue?`,
         onConfirm={handleConfirm}
         onCancel={handleCloseConfirmation}
       />
-      <PerformanceMonitor />
     </div>
   );
 };

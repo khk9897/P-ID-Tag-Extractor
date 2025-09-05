@@ -77,6 +77,9 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm,
 
 
 const App: React.FC = () => {
+  // Performance mode from store - declare first to avoid initialization errors
+  const { setIsLargeFile, updateRelationshipMaps, performanceMode } = useSidePanelStore();
+  
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null); // TODO: Add proper PDF.js type
   const [tags, setTags] = useState<Tag[]>([]);
@@ -92,15 +95,13 @@ const App: React.FC = () => {
       return updated;
     });
   }, [updateRelationshipMaps]);
+  
   const [descriptions, setDescriptions] = useState<Description[]>([]);
   const [equipmentShortSpecs, setEquipmentShortSpecs] = useState<EquipmentShortSpec[]>([]);
   const [loops, setLoops] = useState<Loop[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [progress, setProgress] = useState<ProcessingProgress>({ current: 0, total: 0 });
-  
-  // Performance mode from store
-  const { setIsLargeFile, updateRelationshipMaps, performanceMode } = useSidePanelStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [confirmation, setConfirmation] = useState<{
     isOpen: boolean;

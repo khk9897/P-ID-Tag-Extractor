@@ -177,7 +177,7 @@ const TagListItem = React.memo(({
               className="text-sm text-slate-300 truncate hover:text-sky-400 transition-colors cursor-pointer text-left flex-1 min-w-0"
               onClick={(e) => {
                 e.stopPropagation();
-                onPingTag?.(tag.id);
+                onSelect(tag.id, e);
               }}
               title={tag.text}
             >

@@ -117,10 +117,10 @@ const PdfViewerComponent = ({
   if (renderCountRef.current % 5 === 0) {
   }
   
-  // Use zustand for selection state management
+  // Use zustand for selection state management - same as TagsPanel
   const {
     selectedTagIds: storeSelectedTagIds,
-    selectedDescriptionIds: storeSelectedDescriptionIds, 
+    selectedDescriptionIds: storeSelectedDescriptionIds,
     selectedEquipmentShortSpecIds: storeSelectedEquipmentShortSpecIds,
     tagSelectionSource: storeTagSelectionSource,
     currentPage: storeCurrentPage,
@@ -131,9 +131,11 @@ const PdfViewerComponent = ({
   } = useSidePanelStore();
   
   // Use zustand state if available, otherwise fall back to props for backwards compatibility
-  const actualSelectedTagIds = storeSelectedTagIds.length > 0 ? storeSelectedTagIds : selectedTagIds;
-  const actualSelectedDescriptionIds = storeSelectedDescriptionIds.length > 0 ? storeSelectedDescriptionIds : selectedDescriptionIds;
-  const actualSelectedEquipmentShortSpecIds = storeSelectedEquipmentShortSpecIds.length > 0 ? storeSelectedEquipmentShortSpecIds : selectedEquipmentShortSpecIds;
+  // If storeSelectedTagIds is a function, something went wrong - use a separate selector
+  const directSelectedTagIds = useSidePanelStore((state) => state.selectedTagIds);
+  const actualSelectedTagIds = Array.isArray(directSelectedTagIds) ? directSelectedTagIds : (selectedTagIds || []);
+  const actualSelectedDescriptionIds = Array.isArray(storeSelectedDescriptionIds) && storeSelectedDescriptionIds.length > 0 ? storeSelectedDescriptionIds : selectedDescriptionIds;
+  const actualSelectedEquipmentShortSpecIds = Array.isArray(storeSelectedEquipmentShortSpecIds) && storeSelectedEquipmentShortSpecIds.length > 0 ? storeSelectedEquipmentShortSpecIds : selectedEquipmentShortSpecIds;
   const actualSetSelectedTagIds = storeSetSelectedTagIds || setSelectedTagIds;
   const actualSetSelectedDescriptionIds = storeSetSelectedDescriptionIds || setSelectedDescriptionIds;
   const actualSetSelectedEquipmentShortSpecIds = storeSetSelectedEquipmentShortSpecIds || setSelectedEquipmentShortSpecIds;
@@ -243,8 +245,10 @@ const PdfViewerComponent = ({
 
   // Sync highlighted tags with selected tags
   useEffect(() => {
+    // Sync highlighted tags with selected tags
     if (Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.length > 0) {
-      setHighlightedTagIds(new Set(actualSelectedTagIds));
+      const newHighlightedIds = new Set(actualSelectedTagIds);
+      setHighlightedTagIds(newHighlightedIds);
     } else {
       setHighlightedTagIds(new Set()); // Clear highlights when no tags selected
     }
@@ -1739,7 +1743,7 @@ const PdfViewerComponent = ({
                                 <TagHighlight
                                   bbox={{ x1: rectX, y1: rectY, x2: rectX + rectWidth, y2: rectY + rectHeight }}
                                   type={isRelated && !isHighlighted ? "related" : "primary"}
-                                  effect={getHighlightEffect(isSelected, false, isRelated)}
+                                  effect={getHighlightEffect(isSelected || isHighlighted, false, isRelated)}
                                   isSelected={isSelected && isVisible}
                                   isHighlighted={isHighlighted && isVisible}
                                   isMultiSelection={actualSelectedTagIds.length > 1}
@@ -1773,7 +1777,7 @@ const PdfViewerComponent = ({
                             <TagHighlight
                               bbox={{ x1: rectX, y1: rectY, x2: rectX + rectWidth, y2: rectY + rectHeight }}
                               type={isRelated && !isHighlighted ? "related" : "primary"}
-                              effect={getHighlightEffect(isSelected, false, isRelated)}
+                              effect={getHighlightEffect(isSelected || isHighlighted, false, isRelated)}
                               isSelected={isSelected && isVisible}
                               isHighlighted={isHighlighted && isVisible}
                               isMultiSelection={actualSelectedTagIds.length > 1}

@@ -214,12 +214,16 @@ export const useSidePanelStore = create<SidePanelState>((set) => ({
   setIsResizing: (resizing) => set({ isResizing: resizing }),
   
   // Selection actions
-  setSelectedTagIds: (ids, source = 'panel') => set({ 
-    selectedTagIds: ids, 
+  setSelectedTagIds: (ids, source = 'panel') => set((state) => ({ 
+    selectedTagIds: typeof ids === 'function' ? ids(state.selectedTagIds) : ids, 
     tagSelectionSource: source 
-  }),
-  setSelectedDescriptionIds: (ids) => set({ selectedDescriptionIds: ids }),
-  setSelectedEquipmentShortSpecIds: (ids) => set({ selectedEquipmentShortSpecIds: ids }),
+  })),
+  setSelectedDescriptionIds: (ids) => set((state) => ({ 
+    selectedDescriptionIds: typeof ids === 'function' ? ids(state.selectedDescriptionIds) : ids 
+  })),
+  setSelectedEquipmentShortSpecIds: (ids) => set((state) => ({ 
+    selectedEquipmentShortSpecIds: typeof ids === 'function' ? ids(state.selectedEquipmentShortSpecIds) : ids 
+  })),
   clearAllSelections: () => set({
     selectedTagIds: [],
     selectedDescriptionIds: [],

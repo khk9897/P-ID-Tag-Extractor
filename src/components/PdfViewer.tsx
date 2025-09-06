@@ -171,6 +171,8 @@ const PdfViewerComponent = ({
   const editingText = pdfViewerStore.editingText;
   const isDragging = pdfViewerStore.isDragging;
   const selectionRect = pdfViewerStore.selectionRect;
+  const isPanning = pdfViewerStore.isPanning;
+  const panStart = pdfViewerStore.panStart;
   
   // Refs for legacy compatibility
   const scrollTimeoutRef = useRef(null);
@@ -975,7 +977,7 @@ const PdfViewerComponent = ({
         const rect = viewerRef.current.getBoundingClientRect();
         startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
         pdfViewerStore.setIsDragging(true); // this is for selectionRect
-        setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
+        pdfViewerStore.setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
         return; // Prevent other logic from running
     }
     
@@ -986,16 +988,16 @@ const PdfViewerComponent = ({
         const rect = viewerRef.current.getBoundingClientRect();
         startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
         pdfViewerStore.setIsDragging(true);
-        setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
+        pdfViewerStore.setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
     } else if (!isSelectionModifier && mode === 'select' && internalScrollRef.current) {
         // Panning Logic
-        setIsPanning(true);
-        panStart.current = {
+        pdfViewerStore.setIsPanning(true);
+        pdfViewerStore.setPanStart({
             scrollX: internalScrollRef.current.scrollLeft,
             scrollY: internalScrollRef.current.scrollTop,
             clientX: e.clientX,
             clientY: e.clientY,
-        };
+        });
         e.preventDefault();
     }
   };
@@ -1008,10 +1010,10 @@ const PdfViewerComponent = ({
     }
 
     if (isPanning && internalScrollRef.current) {
-      const dx = e.clientX - panStart.current.clientX;
-      const dy = e.clientY - panStart.current.clientY;
-      internalScrollRef.current.scrollLeft = panStart.current.scrollX - dx;
-      internalScrollRef.current.scrollTop = panStart.current.scrollY - dy;
+      const dx = e.clientX - panStart.clientX;
+      const dy = e.clientY - panStart.clientY;
+      internalScrollRef.current.scrollLeft = panStart.scrollX - dx;
+      internalScrollRef.current.scrollTop = panStart.scrollY - dy;
       return;
     }
 
@@ -1024,7 +1026,7 @@ const PdfViewerComponent = ({
       const y = Math.min(startPoint.current.y, currentY);
       const width = Math.abs(startPoint.current.x - currentX);
       const height = Math.abs(startPoint.current.y - currentY);
-      setSelectionRect({ x, y, width, height });
+      pdfViewerStore.setSelectionRect({ x, y, width, height });
     }
   };
 
@@ -1034,7 +1036,7 @@ const PdfViewerComponent = ({
     if (isClickOnItem.current) {
       if (isDragging) { // This can happen if user clicks item and drags off
         pdfViewerStore.setIsDragging(false);
-        setSelectionRect(null);
+        pdfViewerStore.setSelectionRect(null);
       }
       return;
     }
@@ -1067,7 +1069,7 @@ const PdfViewerComponent = ({
             };
             onManualAreaSelect(bbox, currentPage);
         }
-        setSelectionRect(null);
+        pdfViewerStore.setSelectionRect(null);
         setMode('select');
         return;
     }
@@ -1119,7 +1121,7 @@ const PdfViewerComponent = ({
         actualSetSelectedRawTextItemIds(prev => Array.from(new Set([...prev, ...intersectingRawItems])));
     }
 
-    setSelectionRect(null);
+    pdfViewerStore.setSelectionRect(null);
   };
   
   // getTagCenter now handled by PdfViewerStore

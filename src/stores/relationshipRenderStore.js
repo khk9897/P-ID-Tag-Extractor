@@ -1,8 +1,11 @@
 // RelationshipRenderStore - 관계선 렌더링 및 OPC 네비게이션 전담
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { produce } from 'immer';
+import { produce, enableMapSet } from 'immer';
 import { RelationshipType, Category } from '../types.ts';
+
+// Enable MapSet support for Immer (needed for Set objects)
+enableMapSet();
 
 const useRelationshipRenderStore = create(
   immer((set, get) => ({

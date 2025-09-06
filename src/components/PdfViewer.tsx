@@ -334,6 +334,7 @@ const PdfViewerComponent = ({
   const renderTaskRef = useRef(null);
   const renderIdRef = useRef(0);
   const lastRenderedRef = useRef(null);
+  const renderQueueRef = useRef(Promise.resolve());
   
   // Canvas caching now managed by PdfViewerStore
 

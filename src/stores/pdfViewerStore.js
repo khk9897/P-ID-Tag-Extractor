@@ -1,7 +1,10 @@
 // PdfViewerStore - PDF 뷰어 고급 상태 관리 및 편집 로직
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { produce } from 'immer';
+import { produce, enableMapSet } from 'immer';
+
+// Enable MapSet support for Immer (needed for Set objects)
+enableMapSet();
 
 const usePdfViewerStore = create(
   immer((set, get) => ({

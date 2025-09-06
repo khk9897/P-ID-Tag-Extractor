@@ -283,6 +283,45 @@ const useProjectStore = create((set, get) => ({
     }
   },
 
+  // 🟢 Reset All Project Data
+  resetAll: () => {
+    // Import all stores dynamically to avoid circular dependencies
+    const resetStores = async () => {
+      const [
+        { default: useTagStore },
+        { default: useRawTextStore },
+        { default: useRelationshipStore },
+        { default: useDescriptionStore },
+        { default: useEquipmentShortSpecStore },
+        { default: useCommentStore },
+        { default: useViewerStore },
+        { default: usePDFStore }
+      ] = await Promise.all([
+        import('./tagStore.js'),
+        import('./rawTextStore.js'),
+        import('./relationshipStore.js'),
+        import('./descriptionStore.js'),
+        import('./equipmentShortSpecStore.js'),
+        import('./commentStore.js'),
+        import('./viewerStore.js'),
+        import('./pdfStore.js')
+      ]);
+
+      // Reset all stores
+      useTagStore.getState().setTags([]);
+      useRawTextStore.getState().setRawTextItems([]);
+      useRelationshipStore.getState().setRelationships([]);
+      useDescriptionStore.getState().setDescriptions([]);
+      useEquipmentShortSpecStore.getState().setEquipmentShortSpecs([]);
+      useCommentStore.getState().setComments([]);
+      useViewerStore.getState().setMode('select');
+      usePDFStore.getState().clearDocument();
+    };
+
+    // Reset stores
+    resetStores();
+  },
+
   // 🟢 Get Project Statistics
   getProjectStats: (tags, relationships, rawTextItems, descriptions, equipmentShortSpecs, comments, loops) => {
     return {
@@ -296,6 +335,66 @@ const useProjectStore = create((set, get) => ({
       total: (tags?.length || 0) + (relationships?.length || 0) + (rawTextItems?.length || 0) + 
              (descriptions?.length || 0) + (equipmentShortSpecs?.length || 0) + (comments?.length || 0) + (loops?.length || 0)
     };
+  },
+
+  // 🟢 Header File Handling Actions
+  handleFileImport: async (file, pdfFile, stores, uiStore) => {
+    if (!file || !pdfFile) {
+      alert("Please open a PDF file before importing a project file.");
+      return;
+    }
+
+    try {
+      const projectData = await get().importProject(
+        file,
+        pdfFile,
+        (data) => {
+          get().loadProjectData(
+            data,
+            stores.tagStore.setTags,
+            stores.relationshipStore.setRelationships,
+            null, // rawTextItems setter not needed
+            stores.descriptionStore.setDescriptions,
+            null, // equipmentShortSpecs setter not needed
+            null, // loops setter not needed
+            stores.commentStore.setComments,
+            stores.settingsStore.setPatterns,
+            stores.settingsStore.setTolerances,
+            stores.settingsStore.setAppSettings
+          );
+        },
+        (message) => alert(message),
+        uiStore.showConfirmation
+      );
+    } catch (error) {
+      console.error('Failed to import project:', error);
+      alert(`Failed to import project: ${error.message}`);
+    }
+  },
+
+  handleProjectExport: (pdfStore, stores) => {
+    get().exportProject(
+      pdfStore.pdfFile,
+      stores.tagStore.tags,
+      stores.relationshipStore.relationships,
+      [], // rawTextItems
+      stores.descriptionStore.descriptions,
+      [], // equipmentShortSpecs
+      stores.commentStore.comments,
+      [], // loops
+      stores.settingsStore.patterns,
+      stores.settingsStore.tolerances,
+      stores.settingsStore.appSettings
+    );
+  },
+
+  handleExcelExport: (stores) => {
+    get().exportToExcel(
+      stores.tagStore.tags,
+      stores.relationshipStore.relationships,
+      stores.descriptionStore.descriptions,
+      stores.commentStore.comments
+    );
   }
 }));
 

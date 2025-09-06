@@ -1,22 +1,34 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { EXTERNAL_LINKS } from '../constants.ts';
 
-// --- Components moved from App.tsx for colocation ---
+// Store imports
+import useTagStore from '../stores/tagStore.js';
+import usePDFStore from '../stores/pdfStore.js';
+import useViewerStore from '../stores/viewerStore.js';
+import useUIStore from '../stores/uiStore.js';
+import useProjectStore from '../stores/projectStore.js';
+import useAutoLinkingStore from '../stores/autoLinkingStore.js';
+import useRelationshipStore from '../stores/relationshipStore.js';
+import useDescriptionStore from '../stores/descriptionStore.js';
+import useCommentStore from '../stores/commentStore.js';
+import useSettingsStore from '../stores/settingsStore.js';
 
-type KeyProps = {
-  text: React.ReactNode;
-};
-const Key = ({ text }: KeyProps) => (
+// Types
+interface HeaderProps {
+  onReset: () => void;
+  onToggleSidePanel: () => void;
+}
+
+// --- Helper Components ---
+
+const Key = ({ text }: { text: React.ReactNode }) => (
   <kbd className="px-2 py-1 text-xs font-semibold text-sky-300 bg-slate-700 rounded-md border-b-2 border-slate-600">
     {text}
   </kbd>
 );
 
-const HotkeyHelp = ({ onClose }) => {
-  const ref = useRef(null);
-
+const HotkeyHelp = ({ onClose }: { onClose: () => void }) => {
   useEffect(() => {
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
         onClose();
@@ -24,627 +36,496 @@ const HotkeyHelp = ({ onClose }) => {
     };
     
     document.addEventListener('keydown', handleKeyDown);
-    
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const modes = [
+  const shortcuts = [
     { key: 'S', desc: <>Toggle <span className="text-sky-300 font-bold">S</span>ide Panel</> },
     { key: 'O', desc: <>Toggle <span className="text-sky-300 font-bold">O</span>PC Panel</> },
     { key: 'C', desc: <>Toggle <span className="text-sky-300 font-bold">C</span>onnect Mode</> },
     { key: 'K', desc: <>Toggle Manual Ma<span className="text-sky-300 font-bold">k</span>e Mode</> },
-    { key: 'V', desc: <>Toggle <span className="text-sky-300 font-bold">V</span>isibility Panel</> },
-    { key: '/', desc: <>Show Hotkey Help <span className="text-sky-300 font-bold">/</span></> },
-    { key: 'Esc', desc: <><span className="text-sky-300 font-bold">Esc</span> Mode / Clear Selection</> },
-  ];
-  const actions = [
-    { key: 'F2', desc: <>Edit selected tag or text item (<span className="text-sky-300 font-bold">F2</span>)</> },
-    { key: 'M', desc: <><span className="text-sky-300 font-bold">M</span>erge multiple text items into one</> },
-    { key: 'N', desc: <>Make <span className="text-sky-300 font-bold">N</span>ote Description from selected items</> },
-    { key: 'H', desc: <>Make <span className="text-sky-300 font-bold">H</span>old Description from selected items</> },
-    { key: 'P', desc: <>Make Equipment Short S<span className="text-sky-300 font-bold">p</span>ec</> },
-    { key: 'L', desc: <>Make <span className="text-sky-300 font-bold">L</span>oop from selected instruments</> },
-    { key: 'I', desc: <>Make "<span className="text-sky-300 font-bold">I</span>nstall" relationship</> },
-    { key: 'R', desc: <>Make <span className="text-sky-300 font-bold">R</span>elationships (Note/Annotation)</> },
-    { key: 'Delete', desc: <><span className="text-sky-300 font-bold">Delete</span> selected tag(s)</> },
+    { key: '←/→', desc: 'Navigate pages' },
+    { key: '+/-', desc: 'Zoom in/out' },
+    { key: '?', desc: 'Show this help' },
   ];
 
   return (
-    <div ref={ref} className="absolute top-16 right-4 z-20 w-96 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl p-4 text-white animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
-      <div className="flex justify-between items-center mb-3 border-b border-slate-600 pb-2">
-        <h3 className="text-md font-bold">Hotkeys & Controls</h3>
-        <button
-          onClick={onClose}
-          className="p-1 rounded-full hover:bg-slate-700 transition-colors"
-          title="Close (Esc)"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
-      </div>
-      <div className="space-y-4">
-        <div>
-            <h4 className="font-semibold text-sm text-slate-400 mb-2">Navigation & Selection</h4>
-            <dl className="space-y-2 text-sm text-slate-300">
-                <div className="flex justify-between items-center"><dt>Pan View</dt><dd><Key text="Drag" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Previous Page</dt><dd><Key text="Q" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Next Page</dt><dd><Key text="W" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Area Select</dt><dd><Key text="Ctrl" /> + <Key text="Drag" /></dd></div>
-            </dl>
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+      <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 border border-slate-600">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-white">Keyboard Shortcuts</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
         </div>
-        <div>
-            <h4 className="font-semibold text-sm text-slate-400 mb-2">Modes</h4>
-            <dl className="space-y-2 text-sm text-slate-300">
-                {modes.map(m => <div key={m.key} className="flex justify-between items-center"><dt>{m.desc}</dt><dd><Key text={m.key} /></dd></div>)}
-            </dl>
+        <div className="space-y-2">
+          {shortcuts.map((shortcut, index) => (
+            <div key={index} className="flex justify-between items-center">
+              <span className="text-slate-300">{shortcut.desc}</span>
+              <Key text={shortcut.key} />
+            </div>
+          ))}
         </div>
-        <div>
-            <h4 className="font-semibold text-sm text-slate-400 mb-2">Tag Creation</h4>
-            <dl className="space-y-2 text-sm text-slate-300">
-                <div className="flex justify-between items-center"><dt>Create <span className="text-orange-400 font-semibold">Equipment</span> Tag</dt><dd><Key text="1" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Create <span className="text-rose-400 font-semibold">Line</span> Tag</dt><dd><Key text="2" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Create <span className="text-purple-400 font-semibold">Special Item</span> Tag</dt><dd><Key text="3" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Create <span className="text-amber-400 font-semibold">Instrument</span> Tag</dt><dd><Key text="4" /></dd></div>
-                <div className="flex justify-between items-center"><dt>Create <span className="text-teal-400 font-semibold">Note/Hold</span> Tag</dt><dd><Key text="5" /></dd></div>
-            </dl>
-        </div>
-        <div>
-            <h4 className="font-semibold text-sm text-slate-400 mb-2">Actions</h4>
-            <dl className="space-y-2 text-sm text-slate-300">
-                {actions.map(a => <div key={a.key} className="flex justify-between items-center"><dt>{a.desc}</dt><dd><Key text={a.key} /></dd></div>)}
-            </dl>
+        <div className="mt-4 pt-4 border-t border-slate-600">
+          <p className="text-xs text-slate-400">Press <Key text="Esc" /> to close</p>
         </div>
       </div>
     </div>
   );
 };
 
-const VisibilityPanel = ({ onClose, visibilitySettings, toggleTagVisibility, toggleRelationshipVisibility, toggleAllTags, toggleAllRelationships, updateVisibilitySettings, showAllRelationships, setShowAllRelationships, showOnlySelectedRelationships, setShowOnlySelectedRelationships }) => {
-  const ref = useRef(null);
+const ToggleSwitch = ({ checked, onChange, label }: { 
+  checked: boolean; 
+  onChange: () => void; 
+  label: string; 
+}) => (
+  <div className="flex items-center justify-between">
+    <span className="text-sm text-slate-300">{label}</span>
+    <button
+      onClick={onChange}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+        checked ? 'bg-sky-500' : 'bg-slate-600'
+      }`}
+    >
+      <span
+        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+          checked ? 'translate-x-5' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  </div>
+);
+
+interface VisibilityPanelProps {
+  onClose: () => void;
+  visibilitySettings: any;
+  toggleTagVisibility: (category: string) => void;
+  toggleRelationshipVisibility: (type: string) => void;
+  toggleAllTags: () => void;
+  toggleAllRelationships: () => void;
+  showAllRelationships: boolean;
+  setShowAllRelationships: (show: boolean) => void;
+  showOnlySelectedRelationships: boolean;
+  setShowOnlySelectedRelationships: (show: boolean) => void;
+}
+
+const VisibilityPanel = ({
+  onClose,
+  visibilitySettings,
+  toggleTagVisibility,
+  toggleRelationshipVisibility,
+  toggleAllTags,
+  toggleAllRelationships,
+  showAllRelationships,
+  setShowAllRelationships,
+  showOnlySelectedRelationships,
+  setShowOnlySelectedRelationships,
+}: VisibilityPanelProps) => {
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (ref.current && !ref.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
         onClose();
       }
     };
-    setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 0);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
   const allTagsVisible = Object.values(visibilitySettings.tags).every(Boolean);
   const allRelationshipsVisible = Object.values(visibilitySettings.relationships).every(Boolean);
 
-  const ToggleSwitch = ({ checked, onChange, label }) => (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-slate-300">{label}</span>
-      <button
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${
-          checked ? 'bg-sky-600' : 'bg-slate-600'
-        }`}
-      >
-        <span
-          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-            checked ? 'translate-x-4' : 'translate-x-0.5'
-          }`}
-        />
-      </button>
-    </div>
-  );
-
   return (
-    <div ref={ref} className="absolute top-16 right-4 z-20 w-80 bg-slate-800/90 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl p-4 text-white animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
-      <h3 className="text-md font-bold mb-3 border-b border-slate-600 pb-2">Visibility Controls</h3>
-      
-      <div className="space-y-4">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+      <div
+        ref={ref}
+        className="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 border border-slate-600 max-h-96 overflow-y-auto"
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-white">Visibility Settings</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
+        </div>
+
         {/* Tags Section */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-sm text-slate-400">Tags</h4>
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-3">
+            <h4 className="font-medium text-slate-200">Tags</h4>
             <button
               onClick={toggleAllTags}
-              className="text-xs text-sky-400 hover:text-sky-300"
+              className="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded"
             >
               {allTagsVisible ? 'Hide All' : 'Show All'}
             </button>
           </div>
-          <div className="space-y-2 text-sm">
-            <ToggleSwitch
-              checked={visibilitySettings.tags.equipment}
-              onChange={() => toggleTagVisibility('equipment')}
-              label="Equipment"
-            />
-            <ToggleSwitch
-              checked={visibilitySettings.tags.line}
-              onChange={() => toggleTagVisibility('line')}
-              label="Line"
-            />
-            <ToggleSwitch
-              checked={visibilitySettings.tags.specialItem}
-              onChange={() => toggleTagVisibility('specialItem')}
-              label="Special Item"
-            />
-            <ToggleSwitch
-              checked={visibilitySettings.tags.instrument}
-              onChange={() => toggleTagVisibility('instrument')}
-              label="Instrument"
-            />
-            <ToggleSwitch
-              checked={visibilitySettings.tags.drawingNumber}
-              onChange={() => toggleTagVisibility('drawingNumber')}
-              label="Drawing Number"
-            />
-            <ToggleSwitch
-              checked={visibilitySettings.tags.notesAndHolds}
-              onChange={() => toggleTagVisibility('notesAndHolds')}
-              label="Notes & Holds"
-            />
-          </div>
-        </div>
-
-        {/* Annotations & Specs Section */}
-        <div>
-          <h4 className="font-semibold text-sm text-slate-400 mb-2 flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Annotations & Specs
-          </h4>
-          <div className="space-y-2 text-sm">
-            <ToggleSwitch
-              checked={visibilitySettings.descriptions}
-              onChange={() => updateVisibilitySettings({ descriptions: !visibilitySettings.descriptions })}
-              label="Descriptions (Notes & Holds)"
-            />
-            <ToggleSwitch
-              checked={visibilitySettings.equipmentShortSpecs}
-              onChange={() => updateVisibilitySettings({ equipmentShortSpecs: !visibilitySettings.equipmentShortSpecs })}
-              label="Equipment Short Specs"
-            />
+          <div className="space-y-2">
+            {Object.entries(visibilitySettings.tags).map(([category, visible]) => (
+              <ToggleSwitch
+                key={category}
+                checked={visible as boolean}
+                onChange={() => toggleTagVisibility(category)}
+                label={category}
+              />
+            ))}
           </div>
         </div>
 
         {/* Relationships Section */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-sm text-slate-400">Relationships</h4>
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-3">
+            <h4 className="font-medium text-slate-200">Relationships</h4>
             <button
               onClick={toggleAllRelationships}
-              className="text-xs text-sky-400 hover:text-sky-300"
+              className="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded"
             >
               {allRelationshipsVisible ? 'Hide All' : 'Show All'}
             </button>
           </div>
-          <div className="space-y-2 text-sm">
-            <ToggleSwitch
-              checked={visibilitySettings.relationships.connection}
-              onChange={() => toggleRelationshipVisibility('connection')}
-              label="Connection"
-            />
-            <ToggleSwitch
-              checked={visibilitySettings.relationships.installation}
-              onChange={() => toggleRelationshipVisibility('installation')}
-              label="Installation"
-            />
-            <ToggleSwitch
-              checked={visibilitySettings.relationships.annotation}
-              onChange={() => toggleRelationshipVisibility('annotation')}
-              label="Annotation"
-            />
-            <ToggleSwitch
-              checked={visibilitySettings.relationships.note}
-              onChange={() => toggleRelationshipVisibility('note')}
-              label="Note"
-            />
+          <div className="space-y-2">
+            {Object.entries(visibilitySettings.relationships).map(([type, visible]) => (
+              <ToggleSwitch
+                key={type}
+                checked={visible as boolean}
+                onChange={() => toggleRelationshipVisibility(type)}
+                label={type}
+              />
+            ))}
           </div>
         </div>
 
-        {/* Performance Section */}
-        <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-600">
-          <h4 className="font-semibold text-sm text-amber-400 mb-2 flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            Performance
-          </h4>
-          <div className="space-y-2 text-sm">
-            <ToggleSwitch
-              checked={showAllRelationships}
-              onChange={setShowAllRelationships}
-              label="Show Relationship Lines"
-            />
-            {showAllRelationships && (
-              <div className="ml-4 border-l border-slate-600 pl-3">
-                <ToggleSwitch
-                  checked={showOnlySelectedRelationships}
-                  onChange={setShowOnlySelectedRelationships}
-                  label="Smart Mode (Selected Tags Only)"
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  Shows only relationships connected to selected tags for better performance
-                </p>
-              </div>
-            )}
-          </div>
+        {/* Relationship Display Options */}
+        <div className="mb-4 space-y-2">
+          <ToggleSwitch
+            checked={showAllRelationships}
+            onChange={() => setShowAllRelationships(!showAllRelationships)}
+            label="Show All Relationships"
+          />
+          <ToggleSwitch
+            checked={showOnlySelectedRelationships}
+            onChange={() => setShowOnlySelectedRelationships(!showOnlySelectedRelationships)}
+            label="Show Only Selected"
+          />
         </div>
       </div>
     </div>
   );
 };
 
+// --- Main Header Component ---
 
-export const Header = ({
-  onReset,
-  hasData,
-  onOpenSettings,
-  onImportProject,
-  onExportProject,
-  onExportExcel,
-  pdfDoc,
-  currentPage,
-  setCurrentPage,
-  scale,
-  setScale,
-  mode,
-  onToggleSidePanel,
-  onAutoLinkDescriptions,
-  onAutoLinkNotesAndHolds,
-  onAutoLinkEquipmentShortSpecs,
-  onAutoLinkAll,
-  onRemoveWhitespace,
-  visibilitySettings,
-  updateVisibilitySettings,
-  toggleTagVisibility,
-  toggleRelationshipVisibility,
-  toggleAllTags,
-  toggleAllRelationships,
-  showConfirmation,
-  showAllRelationships,
-  setShowAllRelationships,
-  showOnlySelectedRelationships,
-  setShowOnlySelectedRelationships,
-}) => {
-  const importInputRef = useRef(null);
+export const Header: React.FC<HeaderProps> = ({ onReset, onToggleSidePanel }) => {
+  // Local State
   const [showHotkeyHelp, setShowHotkeyHelp] = useState(false);
   const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
   const [showPageDropdown, setShowPageDropdown] = useState(false);
-  const pageDropdownRef = useRef(null);
+  
+  // Refs
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const pageDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Store hooks
+  const tagStore = useTagStore();
+  const pdfStore = usePDFStore();
+  const viewerStore = useViewerStore();
+  const uiStore = useUIStore();
+  const projectStore = useProjectStore();
+  const autoLinkingStore = useAutoLinkingStore();
+  const relationshipStore = useRelationshipStore();
+  const descriptionStore = useDescriptionStore();
+  const commentStore = useCommentStore();
+  const settingsStore = useSettingsStore();
+
+  // Derived state
+  const hasData = !!(pdfStore.pdfFile && pdfStore.pdfDoc);
+  const currentPage = viewerStore.currentPage;
+  const totalPages = pdfStore.totalPages;
+  const scale = viewerStore.scale;
+  const mode = viewerStore.mode;
+  const visibilitySettings = uiStore.visibilitySettings;
+
+  // --- Event Handlers (Now using store functions) ---
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const stores = {
+        tagStore,
+        relationshipStore,
+        descriptionStore,
+        commentStore,
+        settingsStore
+      };
+      
+      projectStore.handleFileImport(file, pdfStore.pdfFile, stores, uiStore);
+      
+      // Reset input
+      if (importInputRef.current) {
+        importInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Keyboard event handlers
+  const keyboardCallbacks = {
+    onToggleSidePanel,
+    onToggleVisibilityPanel: () => setShowVisibilityPanel(!showVisibilityPanel),
+    onToggleConnectMode: () => viewerStore.toggleMode('connect'),
+    onToggleMakeMode: () => viewerStore.toggleMode('make'),
+    onPreviousPage: () => viewerStore.goToPreviousPage(),
+    onNextPage: () => viewerStore.goToNextPage(totalPages),
+    onZoomIn: () => viewerStore.zoomIn(),
+    onZoomOut: () => viewerStore.zoomOut(),
+    onShowHelp: () => setShowHotkeyHelp(true),
+  };
+
+  // Effects
+  useEffect(() => {
+    const cleanup = uiStore.initializeHeaderKeyboardListener(keyboardCallbacks);
+    return cleanup;
+  }, [totalPages]);
 
   useEffect(() => {
-    const handleToggleVisibilityPanel = () => {
-      setShowVisibilityPanel(prev => !prev);
-    };
-
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
-        return;
-      }
-
-      if (e.key === '/') {
-        e.preventDefault();
-        setShowHotkeyHelp(prev => !prev);
-      }
-    };
-    
-    // Close page dropdown when clicking outside
-    const handleClickOutside = (event) => {
-      if (pageDropdownRef.current && !pageDropdownRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (pageDropdownRef.current && !pageDropdownRef.current.contains(event.target as Node)) {
         setShowPageDropdown(false);
       }
     };
 
-    window.addEventListener('toggleVisibilityPanel', handleToggleVisibilityPanel);
-    window.addEventListener('keydown', handleGlobalKeyDown);
     if (showPageDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-    
-    return () => {
-      window.removeEventListener('toggleVisibilityPanel', handleToggleVisibilityPanel);
-      window.removeEventListener('keydown', handleGlobalKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showPageDropdown]);
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      onImportProject(e.target.files[0]);
-      // Reset input value to allow selecting the same file again
-      e.target.value = null;
-    }
-  };
+  // --- Render Methods ---
 
-  return (
-    <header className="relative flex-shrink-0 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 p-2 z-50">
-      {/* Single-line layout with flex-wrap */}
-      <div className="flex flex-wrap items-center gap-2 justify-between">
-        {/* Logo and title */}
-        <div className="flex items-center space-x-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 lg:h-8 lg:w-8 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <path d="M14 2v6h6"></path>
-            <circle cx="12" cy="15" r="2"></circle>
-            <path d="M12 10v3"></path>
-            <path d="m15 12-1.5 2.6"></path>
-            <path d="m9 12 1.5 2.6"></path>
-          </svg>
-          <h1 className="text-lg lg:text-xl font-bold text-white tracking-tight hidden sm:inline">P&ID Smart Digitizer</h1>
-          <h1 className="text-lg font-bold text-white tracking-tight sm:hidden">P&ID</h1>
+  const renderLogo = () => (
+    <div className="flex items-center space-x-2">
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        className="h-6 w-6 lg:h-8 lg:w-8 text-sky-400" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2"
+      >
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <path d="M14 2v6h6"></path>
+        <path d="M16 13H8"></path>
+        <path d="M16 17H8"></path>
+        <path d="M10 9H8"></path>
+      </svg>
+      <div>
+        <div className="text-sm lg:text-base font-bold text-sky-400">P&ID Smart Digitizer</div>
+        <div className="text-xs text-slate-400 hidden lg:block">AI-Powered P&ID Analysis</div>
+      </div>
+    </div>
+  );
+
+  const renderFileActions = () => (
+    <div className="flex items-center gap-2">
+      <input
+        type="file"
+        ref={importInputRef}
+        className="hidden"
+        accept=".json,application/json"
+        onChange={handleFileChange}
+      />
+      <button
+        onClick={() => importInputRef.current?.click()}
+        disabled={!hasData}
+        className="flex items-center bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
+      >
+        📥 Import
+      </button>
+      <button
+        onClick={() => {
+          const stores = { tagStore, relationshipStore, descriptionStore, commentStore, settingsStore };
+          projectStore.handleProjectExport(pdfStore, stores);
+        }}
+        disabled={!hasData}
+        className="flex items-center bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
+      >
+        📤 <span className="hidden md:inline ml-1">Export</span>
+      </button>
+      <button
+        onClick={() => {
+          const stores = { tagStore, relationshipStore, descriptionStore, commentStore };
+          projectStore.handleExcelExport(stores);
+        }}
+        disabled={!hasData}
+        className="flex items-center bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
+      >
+        📊 <span className="hidden md:inline ml-1">Excel</span>
+      </button>
+    </div>
+  );
+
+  const renderNavigationControls = () => {
+    if (!hasData) return null;
+
+    return (
+      <div className="flex items-center gap-2">
+        {/* Page Navigation */}
+        <div className="relative" ref={pageDropdownRef}>
+          <button
+            onClick={() => setShowPageDropdown(!showPageDropdown)}
+            className="flex items-center bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded-md text-xs border border-slate-600"
+          >
+            Page {currentPage}/{totalPages} ▼
+          </button>
           
-          {/* Side Panel Toggle - next to title */}
-          {hasData && (
-            <button
-              onClick={onToggleSidePanel}
-              className="p-1.5 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
-              title="Toggle Side Panel (S)"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 lg:h-5 lg:w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="9" y1="3" x2="9" y2="21"></line>
-              </svg>
-            </button>
+          {showPageDropdown && (
+            <div className="absolute top-full mt-1 left-0 bg-slate-800 border border-slate-600 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => {
+                    viewerStore.handlePageNavigation(page, totalPages);
+                    setShowPageDropdown(false);
+                  }}
+                  className={`block w-full text-left px-3 py-2 text-xs hover:bg-slate-700 ${
+                    page === currentPage ? 'bg-slate-700 text-sky-400' : 'text-white'
+                  }`}
+                >
+                  Page {page}
+                </button>
+              ))}
+            </div>
           )}
-
         </div>
 
-        {/* PDF Navigation & Mode - when data is loaded */}
-        {hasData && (
-          <div className="flex items-center gap-2">
-            {pdfDoc && (
-              <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-2 relative">
-                <button onClick={() => {
-                  const newPage = Math.max(1, currentPage - 1);
-                  if (newPage !== currentPage) {
-                    setCurrentPage(newPage);
-                  }
-                }} disabled={currentPage === 1} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">←</button>
-                
-                {/* Page number - clickable to show dropdown */}
-                <button
-                  onClick={() => setShowPageDropdown(!showPageDropdown)}
-                  className="text-sm whitespace-nowrap hover:bg-slate-700 px-2 py-1 rounded transition-colors cursor-pointer"
-                  title="Click to select page"
-                >
-                  Page {currentPage}/{pdfDoc.numPages}
-                </button>
-                
-                {/* Page dropdown */}
-                {showPageDropdown && (
-                  <div
-                    ref={pageDropdownRef}
-                    className="absolute top-full mt-1 left-0 w-96 max-h-96 overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50"
-                  >
-                    <div className="p-3">
-                      <div className="text-xs text-slate-400 mb-2 px-2">Select Page:</div>
-                      <div className="grid grid-cols-10 gap-1">
-                        {Array.from({ length: pdfDoc.numPages }, (_, i) => i + 1).map(page => (
-                          <button
-                            key={page}
-                            onClick={() => {
-                              setCurrentPage(page);
-                              setShowPageDropdown(false);
-                            }}
-                            className={`px-1 py-1.5 text-xs rounded transition-colors min-w-[28px] ${
-                              page === currentPage
-                                ? 'bg-sky-600 text-white font-bold'
-                                : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <button onClick={() => {
-                  const newPage = Math.min(pdfDoc.numPages, currentPage + 1);
-                  if (newPage !== currentPage) {
-                    setCurrentPage(newPage);
-                  }
-                }} disabled={currentPage === pdfDoc.numPages} className="px-2 py-1 bg-slate-700 rounded disabled:opacity-50 hover:bg-slate-600 transition-colors text-sm">→</button>
-              </div>
-            )}
-            
-            {/* Mode indicator */}
-            <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-1">
-              <span className="text-xs text-slate-300 hidden sm:inline">Mode:</span>
-              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${mode === 'select' ? 'bg-slate-600' : mode === 'connect' ? 'bg-blue-500' : 'bg-green-500'}`}>{mode}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Zoom & View Controls - when data is loaded */}
-        {hasData && (
-          <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-slate-300 hidden sm:inline">Zoom:</span>
-              <button onClick={() => setScale(s => Math.max(0.25, s - 0.25))} className="px-2 py-0.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors text-sm">-</button>
-              <span className="w-12 text-center text-xs font-semibold text-white">{(scale * 100).toFixed(0)}%</span>
-              <button onClick={() => setScale(s => s + 0.25)} className="px-2 py-0.5 bg-slate-700 rounded hover:bg-slate-600 transition-colors text-sm">+</button>
-            </div>
-            
-            <div className="h-6 w-px bg-slate-600"></div>
-            
-            {/* Enhanced Visibility Controls */}
-            <button
-              onClick={() => setShowVisibilityPanel(prev => !prev)}
-              className={`px-2 py-0.5 rounded transition-colors ${
-                showVisibilityPanel 
-                  ? 'bg-sky-600 text-white hover:bg-sky-500' 
-                  : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-300'
-              }`}
-              title="Toggle visibility controls (V)"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </button>
-          </div>
-        )}
-
-        {/* Auto-link buttons - when data is loaded */}
-        {hasData && (
-          <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-1">
-            <button
-              onClick={onAutoLinkAll}
-              className="flex items-center justify-center space-x-1 bg-green-700 hover:bg-green-600 text-green-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
-              title="Run all auto-linking functions"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-              <span className="hidden md:inline">Auto</span>
-            </button>
-            <button
-              onClick={onAutoLinkDescriptions}
-              className="flex items-center justify-center bg-sky-700 hover:bg-sky-600 text-sky-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
-              title="Auto-link nearby text as descriptions to Instrument tags"
-            >
-              <span>Inst</span>
-            </button>
-            <button
-              onClick={onAutoLinkNotesAndHolds}
-              className="flex items-center justify-center bg-purple-700 hover:bg-purple-600 text-purple-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
-              title="Auto-link Note & Hold tags to corresponding descriptions"
-            >
-              <span>N&H</span>
-            </button>
-            <button
-              onClick={onAutoLinkEquipmentShortSpecs}
-              className="flex items-center justify-center bg-orange-700 hover:bg-orange-600 text-orange-100 font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
-              title="Auto-link Equipment tags to Equipment Short Specs"
-            >
-              <span>Equip</span>
-            </button>
-          </div>
-        )}
-
-        {/* Tools & Essential buttons */}
+        {/* Zoom Controls */}
         <div className="flex items-center gap-1">
-          {hasData && (
-            <div className="bg-slate-800/80 p-1 rounded-xl shadow-lg flex items-center gap-1">
-              <button
-                onClick={onRemoveWhitespace}
-                className="flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
-                title="Remove all whitespace from tags"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" />
-                </svg>
-                <span className="hidden md:inline ml-1">Strip</span>
-              </button>
-              <button
-                onClick={() => importInputRef.current?.click()}
-                className="flex items-center bg-slate-600 hover:bg-slate-700 text-white font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
-                title="Import project data"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-                <span className="hidden md:inline ml-1">Import</span>
-              </button>
-              <input
-                type="file"
-                ref={importInputRef}
-                className="hidden"
-                accept=".json,application/json"
-                onChange={handleFileChange}
-              />
-              <button
-                onClick={onExportProject}
-                className="flex items-center bg-slate-600 hover:bg-slate-700 text-white font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
-                title="Export project data"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                <span className="hidden md:inline ml-1">Export</span>
-              </button>
-              <button
-                onClick={onExportExcel}
-                className="flex items-center bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-2 rounded-md transition-colors text-xs whitespace-nowrap"
-                title="Export to Excel"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span className="hidden md:inline ml-1">Excel</span>
-              </button>
-            </div>
-          )}
-          
-          {/* Always visible essential buttons */}
           <button
-            onClick={onOpenSettings}
-            className="p-2 text-sm font-semibold text-white bg-slate-600 rounded-md hover:bg-slate-700 transition-colors"
-            title="Settings"
+            onClick={() => viewerStore.zoomOut()}
+            className="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded text-xs"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-            </svg>
+            −
+          </button>
+          <span className="text-xs text-slate-300 w-12 text-center">
+            {Math.round(scale * 100)}%
+          </span>
+          <button
+            onClick={() => viewerStore.zoomIn()}
+            className="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded text-xs"
+          >
+            +
+          </button>
+        </div>
+
+        {/* Mode Controls */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => viewerStore.setMode('select')}
+            className={`px-2 py-1 rounded text-xs transition-colors ${
+              mode === 'select'
+                ? 'bg-sky-600 text-white'
+                : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+            }`}
+          >
+            Select
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); setShowHotkeyHelp(prev => !prev); }}
-            className="p-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-            title="Help & Hotkeys (/)"
+            onClick={() => viewerStore.toggleMode('connect')}
+            className={`px-2 py-1 rounded text-xs transition-colors ${
+              mode === 'connect'
+                ? 'bg-sky-600 text-white'
+                : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+            }`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            Connect
           </button>
-          <a
-            href={EXTERNAL_LINKS.NOTION_GUIDE}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
-            title="User Guide & Feedback"
+          <button
+            onClick={() => viewerStore.toggleMode('make')}
+            className={`px-2 py-1 rounded text-xs transition-colors ${
+              mode === 'make'
+                ? 'bg-sky-600 text-white'
+                : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+            }`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </a>
-          {hasData && (
-            <button
-              onClick={() => {
-                showConfirmation(
-                  'Are you sure you want to reset everything? This will remove all extracted tags, relationships, comments, and project data. This action cannot be undone.',
-                  onReset
-                );
-              }}
-              className="p-2 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
-              title="Reset All Data"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-          )}
+            Make
+          </button>
         </div>
       </div>
+    );
+  };
 
+  const renderActionButtons = () => (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => autoLinkingStore.handleAutoLinkAll()}
+        disabled={!hasData || autoLinkingStore.isAutoLinking}
+        className="bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-2 py-1 rounded-md text-xs transition-colors whitespace-nowrap"
+      >
+        {autoLinkingStore.isAutoLinking ? '⏳' : '🔗'} Auto-link
+      </button>
+      
+      <button
+        onClick={() => setShowVisibilityPanel(true)}
+        disabled={!hasData}
+        className="bg-amber-600 hover:bg-amber-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-2 py-1 rounded-md text-xs transition-colors"
+      >
+        👁️
+      </button>
+
+      <button
+        onClick={() => uiStore.setIsSettingsOpen(true)}
+        className="bg-slate-600 hover:bg-slate-500 text-white px-2 py-1 rounded-md text-xs transition-colors"
+      >
+        ⚙️
+      </button>
+
+      <button
+        onClick={() => setShowHotkeyHelp(true)}
+        className="bg-slate-600 hover:bg-slate-500 text-white px-2 py-1 rounded-md text-xs transition-colors"
+      >
+        ?
+      </button>
+
+      <button
+        onClick={onReset}
+        className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-md text-xs transition-colors"
+      >
+        🔄
+      </button>
+    </div>
+  );
+
+  // --- Main Render ---
+
+  return (
+    <>
+      <header className="relative flex-shrink-0 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 p-2 z-50">
+        <div className="flex flex-wrap items-center gap-2 justify-between">
+          {renderLogo()}
+          
+          <div className="flex items-center gap-4">
+            {renderFileActions()}
+            {renderNavigationControls()}
+            {renderActionButtons()}
+          </div>
+        </div>
+      </header>
+
+      {/* Modals */}
       {showHotkeyHelp && <HotkeyHelp onClose={() => setShowHotkeyHelp(false)} />}
+      
       {showVisibilityPanel && (
         <VisibilityPanel
           onClose={() => setShowVisibilityPanel(false)}
           visibilitySettings={visibilitySettings}
-          toggleTagVisibility={toggleTagVisibility}
-          toggleRelationshipVisibility={toggleRelationshipVisibility}
-          toggleAllTags={toggleAllTags}
-          toggleAllRelationships={toggleAllRelationships}
-          updateVisibilitySettings={updateVisibilitySettings}
-          showAllRelationships={showAllRelationships}
-          setShowAllRelationships={setShowAllRelationships}
-          showOnlySelectedRelationships={showOnlySelectedRelationships}
-          setShowOnlySelectedRelationships={setShowOnlySelectedRelationships}
+          toggleTagVisibility={uiStore.toggleTagVisibility}
+          toggleRelationshipVisibility={uiStore.toggleRelationshipVisibility}
+          toggleAllTags={uiStore.toggleAllTags}
+          toggleAllRelationships={uiStore.toggleAllRelationships}
+          showAllRelationships={uiStore.showAllRelationships}
+          setShowAllRelationships={uiStore.setShowAllRelationships}
+          showOnlySelectedRelationships={uiStore.showOnlySelectedRelationships}
+          setShowOnlySelectedRelationships={uiStore.setShowOnlySelectedRelationships}
         />
       )}
-    </header>
+    </>
   );
 };
+
+export default Header;

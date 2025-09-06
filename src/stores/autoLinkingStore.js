@@ -304,6 +304,81 @@ const useAutoLinkingStore = create((set, get) => ({
         }
       }
     );
+  },
+
+  // 🟢 Header Auto-link All Action
+  handleAutoLinkAll: async () => {
+    try {
+      // Import required stores dynamically
+      const { default: useTagStore } = await import('./tagStore.js');
+      const { default: useRawTextStore } = await import('./rawTextStore.js');
+      const { default: useRelationshipStore } = await import('./relationshipStore.js');
+      const { default: useDescriptionStore } = await import('./descriptionStore.js');
+      const { default: useEquipmentShortSpecStore } = await import('./equipmentShortSpecStore.js');
+      const { default: useSettingsStore } = await import('./settingsStore.js');
+
+      const tagStore = useTagStore.getState();
+      const rawTextStore = useRawTextStore.getState();
+      const relationshipStore = useRelationshipStore.getState();
+      const descriptionStore = useDescriptionStore.getState();
+      const equipmentShortSpecStore = useEquipmentShortSpecStore.getState();
+      const settingsStore = useSettingsStore.getState();
+
+      set({ isAutoLinking: true });
+
+      // Run all auto-linking operations
+      await Promise.all([
+        new Promise((resolve) => {
+          get().autoLinkDescriptions(
+            tagStore.tags,
+            rawTextStore.rawTextItems,
+            relationshipStore.relationships,
+            settingsStore.tolerances,
+            // Add required dependencies here
+            null, // uuidv4
+            null, // calculateMinDistanceToCorners
+            null, // onCreateRelationships
+            () => {}, // onShowAutoLinkRanges
+            console.log, // onAlert
+            () => resolve() // showConfirmation
+          );
+        }),
+        new Promise((resolve) => {
+          get().autoLinkNotesAndHolds(
+            tagStore.tags,
+            descriptionStore.descriptions,
+            relationshipStore.relationships,
+            settingsStore.tolerances,
+            null, // uuidv4
+            null, // calculateMinDistanceToCorners
+            null, // onCreateRelationships
+            () => {}, // onShowAutoLinkRanges
+            console.log, // onAlert
+            () => resolve() // showConfirmation
+          );
+        }),
+        new Promise((resolve) => {
+          get().autoLinkEquipmentShortSpecs(
+            tagStore.tags,
+            equipmentShortSpecStore.equipmentShortSpecs,
+            relationshipStore.relationships,
+            settingsStore.tolerances,
+            null, // uuidv4
+            null, // calculateMinDistanceToCorners
+            null, // onCreateRelationships
+            () => {}, // onShowAutoLinkRanges
+            console.log, // onAlert
+            () => resolve() // showConfirmation
+          );
+        })
+      ]);
+
+      set({ isAutoLinking: false });
+      console.log('All auto-linking completed successfully!');
+    } catch (error) {
+      set({ isAutoLinking: false });
+      console.error('Auto-linking failed:', error);
+    }
   }
 }));
 

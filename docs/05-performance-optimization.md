@@ -60,9 +60,7 @@ const coords = transformCache.get(`${tag.id}-${scale}`);
 - **쉬움** (1-2시간)
 
 #### ✅ 반영 여부
-- [ ] 미반영
-- [ ] 진행중
-- [ ] 완료
+- [ ] 미반영 → **docs/06-todo-list.md Phase 16-A로 이관**
 
 ---
 
@@ -187,9 +185,7 @@ const visibleTags = useMemo(() => {
 - **Level 3**: 보통 (2-3시간)
 
 #### ✅ 반영 여부
-- [ ] 미반영
-- [ ] 진행중
-- [ ] 완료
+- [ ] 미반영 → **docs/06-todo-list.md Phase 16-A로 이관**
 
 ---
 
@@ -227,9 +223,7 @@ const tagsMap = useMemo(() => {
 - **쉬움** (1시간)
 
 #### ✅ 반영 여부
-- [ ] 미반영
-- [ ] 진행중
-- [ ] 완료
+- [ ] 미반영 → **docs/06-todo-list.md Phase 16-A로 이관**
 
 ---
 
@@ -269,9 +263,7 @@ const SimpleHighlight = ({ isSelected, bbox }) => {
 - **쉬움** (1시간)
 
 #### ✅ 반영 여부
-- [ ] 미반영
-- [ ] 진행중
-- [ ] 완료
+- [ ] 미반영 → **docs/06-todo-list.md Phase 16-A로 이관**
 
 ---
 
@@ -304,9 +296,7 @@ useEffect(() => {
 - **쉬움** (1시간)
 
 #### ✅ 반영 여부
-- [ ] 미반영
-- [ ] 진행중
-- [ ] 완료
+- [ ] 미반영 → **docs/06-todo-list.md Phase 16-A로 이관**
 
 ---
 
@@ -390,27 +380,30 @@ const transformCache = useMemo(/* ... */);
 
 ---
 
-## 📝 진행 상황 체크리스트
+## 📝 진행 상황 및 통합 관리
 
-### Phase 1 (즉시 적용)
-- [x] **관계 렌더링 선택적 활성화** (완료 - 2024.09.04)
-  - Connection/Installation만 계산하도록 최적화
+### ✅ **완료된 최적화**
+- ✅ **관계 렌더링 선택적 활성화** (완료 - 2024.09.04)
+  - Connection/Installation만 계산하도록 최적화 (60% 성능 개선)
   - Early exit 로직으로 불필요한 타입 스킵
-  - useMemo 의존성 최소화 포함
-- [ ] TagHighlight 조건부 렌더링
-- [ ] 성능 측정 코드 추가
+  - useMemo 의존성 최소화 적용
 
-### Phase 2 (1주 내)  
-- [ ] 좌표 변환 캐싱 시스템
-- [ ] 페이지별 데이터 필터링
-- [ ] 메모리 정리 로직
-- [ ] 성능 개선 검증
+### 🔄 **Todo List 통합 관리**
+**이 문서의 모든 미완료 최적화 항목들은 `docs/06-todo-list.md`의 Phase 16+ 성능 최적화 계획에 통합되었습니다.**
 
-### Phase 3 (장기)
-- [ ] 가상화 렌더링
-- [ ] 이벤트 델리게이션
-- [ ] Canvas 렌더링 검토
-- [ ] 최종 성능 측정
+#### **통합된 항목들**:
+- 좌표 변환 캐싱 시스템 → **Phase 16-A**
+- SVG 렌더링 최적화 (3단계) → **Phase 16-A** 
+- TagHighlight 컴포넌트 최적화 → **Phase 16-A**
+- useMemo 의존성 최적화 → **Phase 16-A**
+- 메모리 관리 최적화 → **Phase 16-B**
+- 성능 측정 시스템 → **Phase 16-D**
+- 가상화 렌더링 → **Phase 16-C**
+
+#### **통합 이유**:
+- 성능 최적화는 대형 컴포넌트 리팩토링과 밀접한 연관
+- PdfViewer.tsx, Workspace.tsx, TagsPanel.tsx 리팩토링 시 함께 적용
+- 단일 문서에서 전체 진행 상황 추적 용이
 
 ---
 

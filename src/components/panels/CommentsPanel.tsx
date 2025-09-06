@@ -4,14 +4,12 @@ import { Comment, Tag, Description } from '../../types';
 import { useSidePanelStore } from '../../stores/sidePanelStore';
 import { filterComments, sortComments } from '../../utils/filterUtils';
 import { IconButton } from '../common/IconButton';
+import useCommentStore from '../../stores/commentStore.js';
+import { v4 as uuidv4 } from 'uuid';
 
 interface CommentsPanelProps {
-  comments: Comment[];
   tags: Tag[];
   descriptions: Description[];
-  onUpdateComment: (id: string, updates: Partial<Comment>) => void;
-  onDeleteComment: (id: string) => void;
-  onCreateComment: (comment: Partial<Comment>) => void;
 }
 
 const PRIORITY_COLORS = {
@@ -97,13 +95,12 @@ const CommentListItem = React.memo(({
 CommentListItem.displayName = 'CommentListItem';
 
 export const CommentsPanel: React.FC<CommentsPanelProps> = ({
-  comments,
   tags,
-  descriptions,
-  onUpdateComment,
-  onDeleteComment,
-  onCreateComment
+  descriptions
 }) => {
+  // Comment store
+  const commentStore = useCommentStore();
+  const comments = commentStore.comments;
   const { 
     commentsTabFilter, 
     openCommentModal,
@@ -171,17 +168,17 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
   }, [comments, commentsTabFilter, showCurrentPageOnly, currentPage, tags, descriptions]);
   
   const handleToggleResolved = useCallback((comment: Comment) => {
-    onUpdateComment(comment.id, { isResolved: !comment.isResolved });
-  }, [onUpdateComment]);
+    commentStore.updateComment(comment.id, { isResolved: !comment.isResolved });
+  }, [commentStore]);
   
   const handleEditComment = useCallback((comment: Comment) => {
     const newText = prompt('Edit comment:', comment.content);
     if (newText && newText !== comment.content) {
-      onUpdateComment(comment.id, { 
+      commentStore.updateComment(comment.id, { 
         content: newText
       });
     }
-  }, [onUpdateComment]);
+  }, [commentStore]);
   
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const comment = filteredComments[index];
@@ -194,11 +191,11 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = ({
           targetName={targetName}
           onToggleResolved={() => handleToggleResolved(comment)}
           onEdit={() => handleEditComment(comment)}
-          onDelete={() => onDeleteComment(comment.id)}
+          onDelete={() => commentStore.deleteComment(comment.id)}
         />
       </div>
     );
-  }, [filteredComments, targetNameMap, handleToggleResolved, handleEditComment, onDeleteComment]);
+  }, [filteredComments, targetNameMap, handleToggleResolved, handleEditComment, commentStore]);
   
   return (
     <div className="flex-1 flex flex-col overflow-hidden">

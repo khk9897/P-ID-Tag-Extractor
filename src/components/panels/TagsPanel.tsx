@@ -7,6 +7,7 @@ import { filterTags, filterRelationships } from '../../utils/filterUtils';
 import { sortTags } from '../../utils/sortUtils';
 import { DeleteTagButton, EditButton } from '../common/IconButton';
 import { CommentIndicator } from '../CommentIndicator';
+import useCommentStore from '../../stores/commentStore.js';
 
 interface TagsPanelProps {
   tags: Tag[];
@@ -20,9 +21,6 @@ interface TagsPanelProps {
   onUpdateTagText: (id: string, text: string) => void;
   onToggleReviewStatus: (tagId: string) => void;
   onPingTag: (id: string) => void;
-  comments: Comment[];
-  onCreateComment: (comment: Partial<Comment>) => void;
-  getCommentsForTarget: (targetId: string, targetType: string) => Comment[];
 }
 
 const TagListItem = React.memo(({ 
@@ -40,7 +38,6 @@ const TagListItem = React.memo(({
   onEdit,
   onOpenCommentModal,
   onToggleReviewStatus,
-  getCommentsForTarget,
   onPingTag,
   onSelectRelatedTag,
   expandedLoops,
@@ -63,7 +60,6 @@ const TagListItem = React.memo(({
   onEdit: () => void;
   onOpenCommentModal: () => void;
   onToggleReviewStatus: (tagId: string) => void;
-  getCommentsForTarget: (targetId: string, targetType: string) => Comment[];
   onPingTag?: (tagId: string) => void;
   onSelectRelatedTag?: (tagId: string) => void;
   expandedLoops: Set<string>;
@@ -74,7 +70,10 @@ const TagListItem = React.memo(({
   onToggleExpandSpecs: (tagId: string) => void;
 }) => {
   const showRelationshipDetails = useSidePanelStore(state => state.showRelationshipDetails);
-  const tagComments = getCommentsForTarget(tag.id, 'tag');
+  const commentStore = useCommentStore();
+  const tagComments = commentStore.getCommentsForTarget(tag.id).filter(comment => 
+    comment.targetType === 'tag'
+  );
   
   // Create tag map for ID to text conversion and category mapping
   const tagMap = useMemo(() => 
@@ -539,11 +538,11 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
   onDeleteTags,
   onUpdateTagText,
   onToggleReviewStatus,
-  onPingTag,
-  comments,
-  onCreateComment,
-  getCommentsForTarget
+  onPingTag
 }) => {
+  // Comment store
+  const commentStore = useCommentStore();
+  const comments = commentStore.comments;
   const {
     showCurrentPageOnly,
     debouncedSearchQuery,
@@ -892,7 +891,6 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
           onEdit={() => handleEditTag(tag)}
           onOpenCommentModal={() => openCommentModal(tag.id, tag.text, 'tag')}
           onToggleReviewStatus={onToggleReviewStatus}
-          getCommentsForTarget={getCommentsForTarget}
           onPingTag={onPingTag}
           onSelectRelatedTag={handleSelectRelatedTag}
           expandedLoops={panelExpandedLoops}
@@ -904,7 +902,7 @@ export const TagsPanel: React.FC<TagsPanelProps> = ({
         />
       </div>
     );
-  }, [filteredAndSortedTags, selectedTagIds, visibleRelationships, tags, handleTagSelect, onDeleteTags, onPingTag, handleEditTag, openCommentModal, getCommentsForTarget, handleSelectRelatedTag, panelExpandedLoops, panelExpandedNotes, panelExpandedSpecs, handleToggleExpandLoops, handleToggleExpandNotes, handleToggleExpandSpecs]);
+  }, [filteredAndSortedTags, selectedTagIds, visibleRelationships, tags, handleTagSelect, onDeleteTags, onPingTag, handleEditTag, openCommentModal, handleSelectRelatedTag, panelExpandedLoops, panelExpandedNotes, panelExpandedSpecs, handleToggleExpandLoops, handleToggleExpandNotes, handleToggleExpandSpecs]);
   
   return (
     <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden">

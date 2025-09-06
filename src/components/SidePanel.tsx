@@ -9,6 +9,8 @@ import { RelationshipsPanel } from './panels/RelationshipsPanel';
 import { CommentsPanel } from './panels/CommentsPanel';
 import { LoopsPanel } from './panels/LoopsPanel';
 import { EquipmentShortSpecsPanel } from './panels/EquipmentShortSpecsPanel';
+import useCommentStore from '../stores/commentStore.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // Export for backwards compatibility
 export { 
@@ -40,9 +42,11 @@ export const SidePanel = ({
   // Visibility props
   visibilitySettings, updateVisibilitySettings, toggleTagVisibility, toggleRelationshipVisibility, 
   toggleAllTags, toggleAllRelationships,
-  // Comment props
-  comments, onCreateComment, onUpdateComment, onDeleteComment, getCommentsForTarget
 }) => {
+  // Comment store
+  const commentStore = useCommentStore();
+  const comments = commentStore.comments;
+  
   const {
     activeTab,
     setActiveTab,
@@ -205,17 +209,16 @@ export const SidePanel = ({
   // Comment modal handlers
   const handleCommentSave = useCallback((text: string, priority: string) => {
     if (commentTargetId && commentTargetType) {
-      onCreateComment({
-        targetId: commentTargetId,
-        targetType: commentTargetType,
+      commentStore.createComment(
+        commentTargetId,
+        commentTargetType,
         text,
-        priority: priority as any,
-        isResolved: false,
-        createdAt: new Date().toISOString()
-      });
+        priority as any,
+        uuidv4
+      );
       closeCommentModal();
     }
-  }, [commentTargetId, commentTargetType, onCreateComment, closeCommentModal]);
+  }, [commentTargetId, commentTargetType, commentStore, closeCommentModal]);
 
   // Tab counts
   const tabCounts = useMemo(() => ({
@@ -425,9 +428,6 @@ export const SidePanel = ({
               onUpdateTagText={onUpdateTagText}
               onToggleReviewStatus={onToggleReviewStatus}
               onPingTag={onPingTag}
-              comments={comments}
-              onCreateComment={onCreateComment}
-              getCommentsForTarget={getCommentsForTarget}
             />
           )}
           
@@ -477,12 +477,8 @@ export const SidePanel = ({
           
           {activeTab === 'comments' && (
             <CommentsPanel
-              comments={comments}
               tags={tags}
               descriptions={descriptions}
-              onUpdateComment={onUpdateComment}
-              onDeleteComment={onDeleteComment}
-              onCreateComment={onCreateComment}
             />
           )}
         </div>

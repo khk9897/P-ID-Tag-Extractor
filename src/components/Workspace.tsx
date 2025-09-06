@@ -6,6 +6,14 @@ import { CommentIndicator } from './CommentIndicator.tsx';
 import { WorkspaceProps } from '../types.ts';
 import { CATEGORY_COLORS } from '../constants.ts';
 import { useSidePanelStore } from '../stores/sidePanelStore';
+import useTagStore from '../stores/tagStore.js';
+import useRawTextStore from '../stores/rawTextStore.js';
+import useDescriptionStore from '../stores/descriptionStore.js';
+import useEquipmentShortSpecStore from '../stores/equipmentShortSpecStore.js';
+import useContentStore from '../stores/contentStore.js';
+import useLoopStore from '../stores/loopStore.js';
+import useCommentStore from '../stores/commentStore.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // Button components for compact panel
 const DeleteRelationshipButton = React.memo(({ onClick }) => (
@@ -108,12 +116,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   isSidePanelVisible,
   showAutoLinkRanges,
   tolerances,
-  // Comment system
-  comments,
-  onCreateComment,
-  onUpdateComment,
-  onDeleteComment,
-  getCommentsForTarget,
   // Color settings
   colorSettings,
   // Performance settings
@@ -126,6 +128,10 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   // Use zustand store for selectedRawTextItemIds instead of local state
   const selectedRawTextItemIds = useSidePanelStore(state => state.selectedRawTextItemIds);
   const storeSetSelectedRawTextItemIds = useSidePanelStore(state => state.setSelectedRawTextItemIds);
+  
+  // Comment store
+  const commentStore = useCommentStore();
+  const comments = commentStore.comments;
   
   // Debug wrapper for setSelectedRawTextItemIds
   const setSelectedRawTextItemIds = useCallback((newIds) => {
@@ -490,11 +496,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         toggleRelationshipVisibility={toggleRelationshipVisibility}
         toggleAllTags={toggleAllTags}
         toggleAllRelationships={toggleAllRelationships}
-        comments={comments}
-        onCreateComment={onCreateComment}
-        onUpdateComment={onUpdateComment}
-        onDeleteComment={onDeleteComment}
-        getCommentsForTarget={getCommentsForTarget}
       />}
       <div className="flex-grow h-full overflow-auto bg-slate-800/30">
         <PdfViewer
@@ -612,7 +613,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                     </span>
                   )}
                   <CommentIndicator
-                    comments={getCommentsForTarget?.(selectedTag.id) || []}
+                    comments={commentStore.getCommentsForTarget(selectedTag.id)}
                     onClick={() => {
                       // CommentIndicator expects a click handler - this would typically open a comment modal
                       // For now, we'll just handle the click without logging
@@ -640,9 +641,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
                 {/* Tag comments indicator */}
                 {(() => {
-                  const tagComments = comments?.filter(comment => 
-                    comment.targetType === 'tag' && comment.targetId === selectedTag.id
-                  ) || [];
+                  const tagComments = commentStore.getCommentsForTarget(selectedTag.id).filter(comment => 
+                    comment.targetType === 'tag'
+                  );
                   
                   return tagComments.length > 0 && (
                     <div className="mt-1 ml-8">

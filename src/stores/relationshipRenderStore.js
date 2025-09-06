@@ -41,7 +41,8 @@ const useRelationshipRenderStore = create(
       
       for (const r of relationships) {
         // Skip if relationship type is not visible
-        if (!visibilitySettings.relationships[r.type]) continue;
+        const state = get();
+        if (!state.isRelationshipVisible(r, visibilitySettings)) continue;
         
         // Skip if not showing all relationships and relationship doesn't match criteria
         if (!showAllRelationships && 
@@ -167,6 +168,28 @@ const useRelationshipRenderStore = create(
     getRelationshipColor: (relationshipType) => {
       const state = get();
       return state.relationshipColors[relationshipType] || '#6b7280';
+    },
+    
+    // Helper function to check if a relationship should be visible
+    isRelationshipVisible: (relationship, visibilitySettings) => {
+      switch (relationship.type) {
+        case 'connection':
+          return visibilitySettings.relationships?.connection || false;
+        case 'installation':
+          return visibilitySettings.relationships?.installation || false;
+        case 'annotation':
+          return visibilitySettings.relationships?.annotation || false;
+        case 'note':
+          return visibilitySettings.relationships?.note || false;
+        case 'description':
+          return visibilitySettings.relationships?.description || false;
+        case 'equipmentShortSpec':
+          return visibilitySettings.relationships?.equipmentShortSpec || false;
+        case 'offPageConnection':
+          return visibilitySettings.relationships?.offPageConnection || false;
+        default:
+          return false;
+      }
     },
     
     getRelationshipStrokeWidth: (relationship, isPinged = false) => {

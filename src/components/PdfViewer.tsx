@@ -159,17 +159,7 @@ const PdfViewerComponent = ({
   const startPoint = useRef({ x: 0, y: 0 });
   const isClickOnItem = useRef(false); // Ref to track if mousedown was on an item
   
-  // Remove useState - now using PdfViewerStore
-  // const [viewport, setViewport] = useState(null);
-  // const [rotation, setRotation] = useState(0);
-  // const [isDragging, setIsDragging] = useState(false);
-  // const [selectionRect, setSelectionRect] = useState(null);
-  // const [relatedTagIds, setRelatedTagIds] = useState(new Set());
-  // const [highlightedRawTextItemIds, setHighlightedRawTextItemIds] = useState(new Set());
-  // const [isUserScrolling, setIsUserScrolling] = useState(false);
-  // const [editingTagId, setEditingTagId] = useState(null);
-  // const [editingRawTextId, setEditingRawTextId] = useState(null);
-  // const [editingText, setEditingText] = useState('');
+  // All state now managed by PdfViewerStore and RelationshipRenderStore
   
   // Refs for legacy compatibility
   const scrollTimeoutRef = useRef(null);
@@ -180,9 +170,7 @@ const PdfViewerComponent = ({
   // Timer for auto-clearing tag selection highlight
   const selectionTimerRef = useRef(null);
   
-  // OPC Navigation state - now using RelationshipRenderStore
-  // const [opcNavigationButton, setOpcNavigationButton] = useState(null);
-  // const [pendingOpcTarget, setPendingOpcTarget] = useState(null);
+  // OPC Navigation now handled by RelationshipRenderStore
   
   // OPC Navigation function - now using RelationshipRenderStore
   const handleOpcNavigation = useCallback(() => {
@@ -236,8 +224,7 @@ const PdfViewerComponent = ({
     }
   }, [currentPage, relationshipRenderStore.pendingOpcTarget, pdfViewerStore.viewport, tags, actualSetSelectedTagIds, pdfViewerStore, relationshipRenderStore]);
   
-  // State to track visual highlight - now using PdfViewerStore
-  // const [highlightedTagIds, setHighlightedTagIds] = useState(new Set());
+  // Highlighting now handled by PdfViewerStore
 
   // Focus input when editing starts - using PdfViewerStore
   useEffect(() => {
@@ -270,7 +257,7 @@ const PdfViewerComponent = ({
     // Only set timer if tags are highlighted
     if (highlightedTagIds.size > 0) {
       selectionTimerRef.current = setTimeout(() => {
-        setHighlightedTagIds(new Set()); // Clear highlight only
+        pdfViewerStore.clearHighlightedTagIds(); // Clear highlight only
         selectionTimerRef.current = null;
       }, 3000); // 3 seconds
     }
@@ -295,9 +282,7 @@ const PdfViewerComponent = ({
     }
     
     // Clear editing state
-    setEditingTagId(null);
-    setEditingRawTextId(null);
-    setEditingText('');
+    pdfViewerStore.clearEditing();
   }, [editingTagId, editingRawTextId, editingText, onUpdateTagText, onUpdateRawTextItemText]);
 
   // Handle input key events
@@ -326,93 +311,10 @@ const PdfViewerComponent = ({
     highlights: { ...DEFAULT_COLORS.highlights, ...(colorSettings?.highlights || {}) }
   };
 
-  // Helper function to get entity color
-  const getEntityColor = useCallback((category) => {
-    switch (category) {
-      case Category.Equipment:
-        return colors.entities.equipment;
-      case Category.Line:
-        return colors.entities.line;
-      case Category.Instrument:
-        return colors.entities.instrument;
-      case Category.DrawingNumber:
-        return colors.entities.drawingNumber;
-      case Category.NotesAndHolds:
-        return colors.entities.notesAndHolds;
-      case Category.SpecialItem:
-        return colors.entities.specialItem;
-      case Category.OffPageConnector:
-        return colors.entities.offPageConnector;
-      default:
-        return colors.entities.uncategorized;
-    }
-  }, [colors]);
-
-  // Helper function to get relationship color
-  const getRelationshipColor = useCallback((type) => {
-    switch (type) {
-      case RelationshipType.Connection:
-        return colors.relationships.connection;
-      case RelationshipType.Installation:
-        return colors.relationships.installation;
-      case RelationshipType.Annotation:
-        return colors.relationships.annotation;
-      case RelationshipType.Note:
-        return colors.relationships.note;
-      case RelationshipType.OffPageConnection:
-        return colors.relationships.offPageConnection;
-      default:
-        return '#94a3b8'; // Default slate color
-    }
-  }, [colors]);
-
-  // Helper function to check if a tag should be visible
-  const isTagVisible = useCallback((tag) => {
-    switch (tag.category) {
-      case Category.Equipment:
-        return visibilitySettings.tags.equipment;
-      case Category.Line:
-        return visibilitySettings.tags.line;
-      case Category.Instrument:
-        return visibilitySettings.tags.instrument;
-      case Category.DrawingNumber:
-        return visibilitySettings.tags.drawingNumber;
-      case Category.NotesAndHolds:
-        return visibilitySettings.tags.notesAndHolds;
-      case Category.SpecialItem:
-        return visibilitySettings.tags.specialItem;
-      case Category.OffPageConnector:
-        return visibilitySettings.tags.offPageConnector;
-      default:
-        return true;
-    }
-  }, [visibilitySettings.tags]);
-
-  // Helper function to check if a relationship should be visible
-  const isRelationshipVisible = useCallback((relationship) => {
-    switch (relationship.type) {
-      case RelationshipType.Connection:
-        return visibilitySettings.relationships.connection;
-      case RelationshipType.Installation:
-        return visibilitySettings.relationships.installation;
-      case RelationshipType.Annotation:
-        return visibilitySettings.relationships.annotation;
-      case RelationshipType.Note:
-        return visibilitySettings.relationships.note;
-      case RelationshipType.Description:
-        return false; // Always hide Description relationship lines
-      case RelationshipType.EquipmentShortSpec:
-        return false; // Always hide EquipmentShortSpec relationship lines
-      case RelationshipType.OffPageConnection:
-        return false; // Always hide OPC relationship lines (different pages)
-      default:
-        return true;
-    }
-  }, [visibilitySettings.relationships]);
+  // Helper functions moved to stores (PdfViewerStore and RelationshipRenderStore)
 
   const isMoved = useRef(false);
-  // const [isPanning, setIsPanning] = useState(false); // Now using PdfViewerStore
-  // const panStart = useRef({ scrollX: 0, scrollY: 0, clientX: 0, clientY: 0 }); // Now using PdfViewerStore
+  // Panning state now handled by PdfViewerStore
 
   // Render management refs - still using refs for performance
   const renderTaskRef = useRef(null);
@@ -420,156 +322,14 @@ const PdfViewerComponent = ({
   const lastRenderedRef = useRef(null);
   
   // Canvas caching now managed by PdfViewerStore
-  // const canvasCacheRef = useRef(new Map());
-  // const maxCacheSize = 5;
-  // const backgroundRenderQueueRef = useRef(Promise.resolve());
 
   const renderPage = useCallback(async (pageNumber, isBackground = false) => {
-    if (!pdfDoc) return;
-    
-    const currentRenderKey = `${pageNumber}_${scale}`;
-    
-    // Check cache first - using PdfViewerStore
-    const cachedImageData = pdfViewerStore.getCachedCanvas(pageNumber, scale);
-    if (cachedImageData) {
-      if (!isBackground) {
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const context = canvas.getContext('2d', { willReadFrequently: true });
-          if (context && cachedImageData) {
-            // CRITICAL: Set canvas size BEFORE restoring image data
-            canvas.width = cachedImageData.width;
-            canvas.height = cachedImageData.height;
-            context.putImageData(cachedImageData.data, 0, 0);
-            
-            // CRITICAL: Update viewport using PdfViewerStore
-            pdfViewerStore.setViewport(cachedImageData.viewport);
-            pdfViewerStore.setRotation(cachedImageData.viewport.rotation);
-            
-            // CRITICAL: Update lastRenderedRef to ensure SVG overlay synchronization
-            lastRenderedRef.current = currentRenderKey;
-            
-            return;
-          }
-        }
-      }
-    }
-    
-    // Skip render if we're already showing this page at this scale (non-background)
-    if (!isBackground && lastRenderedRef.current === currentRenderKey) {
-      return;
-    }
-    
-
-    // Generate unique render ID for this operation
-    const currentRenderId = ++renderIdRef.current;
-    
-    // Queue this render operation to prevent concurrent renders
-    renderQueueRef.current = renderQueueRef.current.then(async () => {
-      // Check if this render is still current (not superseded by newer render)
-      if (renderIdRef.current !== currentRenderId) {
-        return; // Skip this render as a newer one has been queued
-      }
-
-      // Cancel any existing render task
-      if (renderTaskRef.current) {
-        try {
-          renderTaskRef.current.cancel();
-        } catch (e) {
-          // Ignore cancel errors
-        }
-        renderTaskRef.current = null;
-        
-        // Small delay to ensure cancellation completes
-        await new Promise(resolve => setTimeout(resolve, 10));
-      }
-
-      try {
-        const page = await pdfDoc.getPage(pageNumber);
-        
-        // Check again if this render is still current
-        if (renderIdRef.current !== currentRenderId) {
-          return;
-        }
-        
-        const vp = page.getViewport({ scale });
-        const canvas = canvasRef.current;
-        
-        if (!canvas) return;
-        
-        const context = canvas.getContext('2d', { willReadFrequently: true });
-        if (!context) return;
-
-        // Clear and resize canvas
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        canvas.height = vp.height;
-        canvas.width = vp.width;
-        context.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Final check before starting render
-        if (renderIdRef.current !== currentRenderId) {
-          return;
-        }
-
-        // Use optimized render settings for better performance
-        const renderContext = {
-          canvasContext: context,
-          viewport: vp,
-          // Optimize rendering for speed
-          intent: 'display',
-          // Use lower quality for faster rendering
-          renderInteractiveForms: false,
-          includeAnnotationStorage: false,
-        };
-        
-        renderTaskRef.current = page.render(renderContext);
-        await renderTaskRef.current.promise;
-        
-        // Cache the rendered page (only for foreground renders)
-        if (!isBackground && renderIdRef.current === currentRenderId) {
-          try {
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-            
-            // Manage cache size - remove oldest entries if cache is full
-            if (cache.size >= maxCacheSize) {
-              const firstKey = cache.keys().next().value;
-              if (firstKey) cache.delete(firstKey);
-            }
-            
-            cache.set(currentRenderKey, {
-              data: imageData,
-              viewport: vp,
-              width: canvas.width,
-              height: canvas.height
-            });
-            
-          } catch (cacheError) {
-            // Cache storage failed, continue without caching
-          }
-        }
-        
-        // Only update state if this render is still current and not background
-        if (!isBackground && renderIdRef.current === currentRenderId) {
-          setViewport(vp);
-          setRotation(vp.rotation);
-        }
-        
-      } catch (error) {
-        if (error.name !== 'RenderingCancelledException') {
-        }
-      } finally {
-        if (renderTaskRef.current) {
-          renderTaskRef.current = null;
-        }
-        // Update last rendered key to avoid re-rendering same page (only for foreground)
-        if (!isBackground) {
-          lastRenderedRef.current = currentRenderKey;
-        }
-      }
-    });
-
-    return renderQueueRef.current;
-  }, [pdfDoc, scale]);
+    // Delegate to PdfViewerStore renderPage method
+    return await pdfViewerStore.renderPage(
+      pdfDoc, pageNumber, scale, isBackground,
+      canvasRef, renderIdRef, renderTaskRef, lastRenderedRef, renderQueueRef
+    );
+  }, [pdfDoc, scale, pdfViewerStore]);
 
   // Background pre-rendering disabled for performance optimization
 
@@ -639,7 +399,7 @@ const PdfViewerComponent = ({
     }
     
     setRelatedTagIds(newRelatedTagIds);
-    setHighlightedRawTextItemIds(newHighlightedNoteIds);
+    pdfViewerStore.setHighlightedRawTextItemIds(newHighlightedNoteIds);
   }, [actualSelectedTagIds, relationships, tags]);
 
 
@@ -744,17 +504,15 @@ const PdfViewerComponent = ({
           const tagId = actualSelectedTagIds[0];
           const tag = tags.find(t => t.id === tagId);
           if (tag) {
-            setEditingTagId(tagId);
-            setEditingRawTextId(null);
-            setEditingText(tag.text);
+            pdfViewerStore.setEditingTagId(tagId);
+            pdfViewerStore.setEditingText(tag.text);
           }
         } else if (actualSelectedRawTextItemIds.length === 1) {
           const rawId = actualSelectedRawTextItemIds[0];
           const rawItem = rawTextItems.find(r => r.id === rawId);
           if (rawItem) {
-            setEditingRawTextId(rawId);
-            setEditingTagId(null);
-            setEditingText(rawItem.text);
+            pdfViewerStore.setEditingRawTextId(rawId);
+            pdfViewerStore.setEditingText(rawItem.text);
           }
         }
         e.preventDefault();
@@ -1205,7 +963,7 @@ const PdfViewerComponent = ({
     if (mode === 'manualCreate' && viewerRef.current) {
         const rect = viewerRef.current.getBoundingClientRect();
         startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        setIsDragging(true); // this is for selectionRect
+        pdfViewerStore.setIsDragging(true); // this is for selectionRect
         setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
         return; // Prevent other logic from running
     }
@@ -1216,7 +974,7 @@ const PdfViewerComponent = ({
         // Area Selection Logic
         const rect = viewerRef.current.getBoundingClientRect();
         startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        setIsDragging(true);
+        pdfViewerStore.setIsDragging(true);
         setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
     } else if (!isSelectionModifier && mode === 'select' && internalScrollRef.current) {
         // Panning Logic
@@ -1264,7 +1022,7 @@ const PdfViewerComponent = ({
     // This is more robust than checking e.target on mouseup, which can be affected by re-renders.
     if (isClickOnItem.current) {
       if (isDragging) { // This can happen if user clicks item and drags off
-        setIsDragging(false);
+        pdfViewerStore.setIsDragging(false);
         setSelectionRect(null);
       }
       return;
@@ -1281,12 +1039,12 @@ const PdfViewerComponent = ({
     }
 
     if (!isDragging || !selectionRect || !viewport) {
-      if (isDragging) setIsDragging(false);
+      if (isDragging) pdfViewerStore.setIsDragging(false);
       return;
     }
     
     if (mode === 'manualCreate') {
-        setIsDragging(false);
+        pdfViewerStore.setIsDragging(false);
         // Check for minimal size to avoid accidental clicks
         if (selectionRect.width > 5 && selectionRect.height > 5) {
             const { x, y, width, height } = selectionRect;
@@ -1303,7 +1061,7 @@ const PdfViewerComponent = ({
         return;
     }
 
-    setIsDragging(false);
+    pdfViewerStore.setIsDragging(false);
     
     // Area selection can add both tags and raw items
     const intersectingTags = new Set<string>();
@@ -1353,229 +1111,28 @@ const PdfViewerComponent = ({
     setSelectionRect(null);
   };
   
-  const getTagCenter = (tag) => {
-    if (!viewport || !tag || !tag.bbox) return { x: 0, y: 0 };
-    
-    // Get the center coordinates in PDF coordinate system
-    const pdfCenterX = (tag.bbox.x1 + tag.bbox.x2) / 2;
-    const pdfCenterY = (tag.bbox.y1 + tag.bbox.y2) / 2;
-    
-    // Transform based on rotation
-    let screenX, screenY;
-    
-    switch (rotation) {
-      case 90:
-        screenX = pdfCenterY * scale;
-        screenY = pdfCenterX * scale;
-        break;
-      case 180:
-        // For 180-degree rotation, coordinates are already transformed in taggingService
-        // Use them directly without additional transformation
-        screenX = pdfCenterX * scale;
-        screenY = pdfCenterY * scale;
-        break;
-      case 270:
-        // For 270-degree rotation, coordinates are already transformed in taggingService
-        // Use them directly without additional transformation
-        screenX = pdfCenterX * scale;
-        screenY = pdfCenterY * scale;
-        break;
-      default: // 0 degrees
-        // For non-rotated documents, coordinates are already flipped in taggingService
-        screenX = pdfCenterX * scale;
-        screenY = pdfCenterY * scale;
-        break;
-    }
-    
-    return { x: screenX, y: screenY };
-  };
+  // getTagCenter now handled by PdfViewerStore
 
   // Create lookup maps for better performance
   const tagsMap = useMemo(() => new Map(tags.map(t => [t.id, t])), [tags]);
   const rawTextMap = useMemo(() => new Map(rawTextItems.map(i => [i.id, i])), [rawTextItems]);
   
-  // Memoize current relationships with pre-calculated rendering data and smart filtering
-  const currentRelationshipsWithData = useMemo(() => {
-    // First check master toggle - if OFF, return empty array for performance
-    if (!showAllRelationships) return [];
-    
-    const visibleRelationships = [];
-    
-    for (const r of relationships) {
-      // 🚀 Performance: Only process Connection and Installation relationships
-      if (r.type !== RelationshipType.Connection && r.type !== RelationshipType.Installation) {
-        continue; // Skip other relationship types entirely
-      }
-      
-      // Check if this relationship type should be visible
-      if (!isRelationshipVisible(r)) continue;
-      
-      const fromTag = tagsMap.get(r.from);
-      if (fromTag?.page !== currentPage) continue;
-      
-      // Connection/Installation relationships are always Tag → Tag
-      const toTag = tagsMap.get(r.to);
-      if (!toTag || toTag.page !== currentPage) continue;
-      
-      // Smart filtering for selected entities only
-      if (showOnlySelectedRelationships && actualSelectedTagIds.length > 0) {
-        const isFromSelected = Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(fromTag.id);
-        const isToSelected = Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(toTag.id);
-        
-        if (!isFromSelected && !isToSelected) continue;
-      }
-      
-      // Pre-calculate rendering data
-      visibleRelationships.push({
-        rel: r,
-        fromTag,
-        toItem: toTag,
-        isAnnotation: false // Connection/Installation are never annotations
-      });
-    }
-    
-    return visibleRelationships;
-  }, [relationships, tagsMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, actualSelectedTagIds]);
-  
-  const getAnnotationTargetCenter = (rawTextItemId) => {
-      if (!viewport) return { x: 0, y: 0 };
-      const item = rawTextMap.get(rawTextItemId);
-      if (!item) return { x: 0, y: 0 };
-      
-      // Get the center coordinates in PDF coordinate system
-      const pdfCenterX = (item.bbox.x1 + item.bbox.x2) / 2;
-      const pdfCenterY = (item.bbox.y1 + item.bbox.y2) / 2;
-      
-      // Transform based on rotation
-      let screenX, screenY;
-      
-      switch (rotation) {
-        case 90:
-          screenX = pdfCenterY * scale;
-          screenY = pdfCenterX * scale;
-          break;
-        case 180:
-          screenX = (viewport.width / scale - pdfCenterX) * scale;
-          screenY = (viewport.height / scale - pdfCenterY) * scale;
-          break;
-        case 270:
-          // For 270-degree rotation, coordinates are already transformed in taggingService
-          // Use them directly without additional transformation
-          screenX = pdfCenterX * scale;
-          screenY = pdfCenterY * scale;
-          break;
-        default: // 0 degrees
-          // For non-rotated documents, coordinates are already flipped in taggingService
-          screenX = pdfCenterX * scale;
-          screenY = pdfCenterY * scale;
-          break;
-      }
-      
-      return { x: screenX, y: screenY };
-  }
+  // Update visible relationships using RelationshipRenderStore
+  useEffect(() => {
+    relationshipRenderStore.updateVisibleRelationships(
+      relationships, tagsMap, currentPage, visibilitySettings,
+      showAllRelationships, showOnlySelectedRelationships, actualSelectedTagIds
+    );
+  }, [relationships, tagsMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, actualSelectedTagIds, relationshipRenderStore]);
 
-  // Helper function to transform PDF coordinates to screen coordinates
-  const transformPdfCoordinates = (pdfCenterX, pdfCenterY) => {
-    if (!viewport) return { x: 0, y: 0 };
-    
-    let screenX, screenY;
-    
-    switch (rotation) {
-      case 90:
-        // For 90-degree rotation, coordinates are already swapped in taggingService
-        // Use them directly without additional transformation
-        screenX = pdfCenterX * scale;
-        screenY = pdfCenterY * scale;
-        break;
-      case 180:
-        // For 180-degree rotation, coordinates are already transformed in taggingService
-        // Use them directly without additional transformation
-        screenX = pdfCenterX * scale;
-        screenY = pdfCenterY * scale;
-        break;
-      case 270:
-        // For 270-degree rotation, coordinates are already transformed in taggingService
-        // Use them directly without additional transformation
-        screenX = pdfCenterX * scale;
-        screenY = pdfCenterY * scale;
-        break;
-      default: // 0 degrees
-        // For non-rotated documents, coordinates are already flipped in taggingService
-        screenX = pdfCenterX * scale;
-        screenY = pdfCenterY * scale;
-        break;
-    }
-    
-    return { x: screenX, y: screenY };
-  };
-
-  // Scale-independent coordinate cache - only depends on viewport and rotation
-  const coordinatesCache = useMemo(() => {
-    const cacheKey = `${viewport?.width || 0}_${viewport?.height || 0}_${rotation}`;
-    
-    if (!(window as any).globalCoordinatesCache) {
-      (window as any).globalCoordinatesCache = new Map();
-    }
-    
-    const globalCache = (window as any).globalCoordinatesCache;
-    if (!globalCache.has(cacheKey)) {
-      globalCache.set(cacheKey, new Map());
-    }
-    
-    return globalCache.get(cacheKey);
-  }, [viewport?.width, viewport?.height, rotation]); // Remove scale dependency
+  // Get visible relationships from store
+  const currentRelationshipsWithData = relationshipRenderStore.visibleRelationships;
   
-  // Helper function to transform PDF coordinates to base coordinates (scale = 1)
-  const transformCoordinates = useCallback((x1, y1, x2, y2) => {
-    // Early return if no viewport
-    if (!viewport) return { rectX: 0, rectY: 0, rectWidth: 0, rectHeight: 0 };
-    
-    // Create cache key with integer rounding to maximize hit rate
-    const roundedX1 = Math.round(x1);
-    const roundedY1 = Math.round(y1);
-    const roundedX2 = Math.round(x2);
-    const roundedY2 = Math.round(y2);
-    const cacheKey = `${roundedX1},${roundedY1},${roundedX2},${roundedY2}`;
-    
-    if (coordinatesCache.has(cacheKey)) {
-      const cached = coordinatesCache.get(cacheKey);
-      // Apply scale to cached base coordinates
-      return {
-        rectX: cached.baseX * scale,
-        rectY: cached.baseY * scale,
-        rectWidth: cached.baseWidth * scale,
-        rectHeight: cached.baseHeight * scale
-      };
-    }
-    
-    // Removed function call tracking - transformCoordinates is called frequently
-    
-    let baseX, baseY, baseWidth, baseHeight;
-    
-    switch (rotation) {
-      case 90:
-      case 180:
-      case 270:
-      default: // All rotations - coordinates already processed in taggingService
-        // Store base coordinates without scale
-        baseX = x1;
-        baseY = y1;
-        baseWidth = x2 - x1;
-        baseHeight = y2 - y1;
-        break;
-    }
-    
-    const baseResult = { baseX, baseY, baseWidth, baseHeight };
-    coordinatesCache.set(cacheKey, baseResult);
-    
-    // Return scaled coordinates
-    return {
-      rectX: baseX * scale,
-      rectY: baseY * scale,
-      rectWidth: baseWidth * scale,
-      rectHeight: baseHeight * scale
-    };
-  }, [viewport, scale, rotation, coordinatesCache]);
+  // getAnnotationTargetCenter now handled by PdfViewerStore
+
+  // transformPdfCoordinates now handled by PdfViewerStore
+
+  // coordinatesCache and transformCoordinates now handled by PdfViewerStore
 
   const getModeStyles = () => {
     switch(mode){
@@ -1607,7 +1164,7 @@ const PdfViewerComponent = ({
 
                     {currentRawTextItems.map(item => {
                          const { x1, y1, x2, y2 } = item.bbox;
-                         const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
+                         const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
                          const isSelected = actualSelectedRawTextItemIds.includes(item.id);
                          const isHighlighted = highlightedRawTextItemIds.has(item.id);
                          const isLinked = linkedRawTextItemIds.has(item.id);
@@ -1661,16 +1218,16 @@ const PdfViewerComponent = ({
                     {currentRelationshipsWithData.map(({ rel, fromTag, toItem, isAnnotation }) => {
                         if (!fromTag || !toItem) return null;
                         
-                        const start = getTagCenter(fromTag);
+                        const start = pdfViewerStore.getTagCenter(fromTag, scale);
                         let end, strokeColor, marker;
                         
                         if (isAnnotation) {
-                            end = getAnnotationTargetCenter(rel.to);
-                            strokeColor = getRelationshipColor(rel.type);
+                            end = pdfViewerStore.getAnnotationTargetCenter(rel.to, rawTextMap, scale);
+                            strokeColor = relationshipRenderStore.getRelationshipColor(rel.type);
                             marker = '';
                         } else {
-                            end = getTagCenter(toItem);
-                            strokeColor = getRelationshipColor(rel.type);
+                            end = pdfViewerStore.getTagCenter(toItem, scale);
+                            strokeColor = relationshipRenderStore.getRelationshipColor(rel.type);
                             
                             if (rel.type === RelationshipType.Connection) {
                                 marker = 'url(#arrowhead-connect)';
@@ -1699,13 +1256,13 @@ const PdfViewerComponent = ({
                     
                     {currentTags.map(tag => {
                     const { x1, y1, x2, y2 } = tag.bbox;
-                    const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
+                    const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
                     const isSelected = Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(tag.id);
                     const isHighlighted = highlightedTagIds.has(tag.id); // Use highlight state for visual feedback
                     const isRelStart = tag.id === relationshipStartTag;
                     const isRelated = relatedTagIds.has(tag.id);
-                    const isVisible = isTagVisible(tag);
-                    const color = getEntityColor(tag.category);
+                    const isVisible = pdfViewerStore.isTagVisible(tag, visibilitySettings);
+                    const color = pdfViewerStore.getEntityColor(tag.category, colors);
 
                     return (
                         <g key={tag.id} data-tag-id={tag.id} onMouseDown={(e) => handleTagMouseDown(e, tag.id)} className="cursor-pointer">
@@ -1773,14 +1330,14 @@ const PdfViewerComponent = ({
                               y={rectY} 
                               width={rectWidth} 
                               height={rectHeight} 
-                              stroke={isVisible ? getEntityColor(tag.category) : 'transparent'}
+                              stroke={isVisible ? pdfViewerStore.getEntityColor(tag.category, colors) : 'transparent'}
                               strokeWidth={isSelected ? "4" : "2"}
                               className="transition-all duration-150"
                               fill={
                                 isVisible 
                                   ? isSelected 
-                                    ? `${getEntityColor(tag.category)}CC` // 80% opacity when selected
-                                    : `${getEntityColor(tag.category)}33` // 20% opacity when not selected
+                                    ? `${pdfViewerStore.getEntityColor(tag.category, colors)}CC` // 80% opacity when selected
+                                    : `${pdfViewerStore.getEntityColor(tag.category, colors)}33` // 20% opacity when not selected
                                   : 'rgba(255, 255, 255, 0.003)'
                               } 
                               strokeDasharray={isRelStart ? "4 2" : "none"}
@@ -1807,7 +1364,7 @@ const PdfViewerComponent = ({
                       if (!tagToPing) return null;
                       
                       const { x1, y1, x2, y2 } = tagToPing.bbox;
-                      const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
+                      const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
 
                       return (
                         <TagHighlight
@@ -1823,7 +1380,7 @@ const PdfViewerComponent = ({
                     {/* Descriptions */}
                     {visibilitySettings.descriptions && currentDescriptions.map(desc => {
                       const { x1, y1, x2, y2 } = desc.bbox;
-                      const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
+                      const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
                       const isSelected = actualSelectedDescriptionIds.includes(desc.id);
 
                       return (
@@ -1864,7 +1421,7 @@ const PdfViewerComponent = ({
                       }
                       
                       const { x1, y1, x2, y2 } = descToPing.bbox;
-                      const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
+                      const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
 
                       return (
                         <TagHighlight
@@ -1885,7 +1442,7 @@ const PdfViewerComponent = ({
                       }
                       
                       const { x1, y1, x2, y2 } = specToPing.bbox;
-                      const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
+                      const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
 
                       return (
                         <TagHighlight
@@ -1901,7 +1458,7 @@ const PdfViewerComponent = ({
                     {/* Equipment Short Specs */}
                     {visibilitySettings.equipmentShortSpecs && currentEquipmentShortSpecs.map(spec => {
                       const { x1, y1, x2, y2 } = spec.bbox;
-                      const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
+                      const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
                       const isSelected = actualSelectedEquipmentShortSpecIds.includes(spec.id);
 
                       return (
@@ -2004,7 +1561,7 @@ const PdfViewerComponent = ({
                   if (!editingItem || !viewport) return null;
 
                   const { x1, y1, x2, y2 } = editingItem.bbox;
-                  const { rectX, rectY, rectWidth, rectHeight } = transformCoordinates(x1, y1, x2, y2);
+                  const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
 
                   return (
                     <div
@@ -2019,7 +1576,7 @@ const PdfViewerComponent = ({
                         ref={editInputRef}
                         type="text"
                         value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
+                        onChange={(e) => pdfViewerStore.setEditingText(e.target.value)}
                         onKeyDown={handleEditInputKeyDown}
                         className="flex-1 border-none outline-none bg-white text-gray-800 text-sm font-mono px-1 py-0.5"
                         style={{ 

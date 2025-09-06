@@ -46,7 +46,10 @@
       "Bash(npm uninstall:*)",
       "Bash(echo:*)",
       "Bash(sed:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(pkill:*)",
+      "Bash(npx vite:*)",
+      "Bash(lsof:*)"
     ],
     "deny": [],
     "ask": []

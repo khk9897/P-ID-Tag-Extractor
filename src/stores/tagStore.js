@@ -253,6 +253,37 @@ const useTagStore = create(
       return get().tags.find(tag => tag.id === id);
     },
     
+    // Remove whitespace from Equipment, Line, and Instrument tags
+    removeWhitespace: () => {
+      const { tags } = get();
+      const updatedTags = tags.map(tag => {
+        // Only apply to Equipment, Line, and Instrument categories
+        if (tag.category === 'Equipment' || 
+            tag.category === 'Line' || 
+            tag.category === 'Instrument') {
+          return {
+            ...tag,
+            text: tag.text.replace(/\s/g, '')
+          };
+        }
+        return tag;
+      });
+      
+      // Count affected tags for feedback
+      const affectedCount = tags.filter(tag => 
+        (tag.category === 'Equipment' || 
+         tag.category === 'Line' || 
+         tag.category === 'Instrument') && 
+        tag.text.includes(' ')
+      ).length;
+      
+      set(produce(draft => {
+        draft.tags = updatedTags;
+      }));
+      
+      return affectedCount;
+    },
+    
     // Statistics
     get stats() {
       const tags = get().tags;

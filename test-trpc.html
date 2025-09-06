@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tRPC Mock 클라이언트 테스트</title>
+    <style>
+        body { font-family: monospace; margin: 40px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 8px; max-width: 1000px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
+        .test-button { background: #007acc; color: white; border: none; padding: 8px 16px; 
+                      border-radius: 4px; cursor: pointer; margin: 5px; }
+        .test-button:hover { background: #005a9e; }
+        .results { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-top: 15px; 
+                  font-size: 12px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        .loading { color: #666; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        h3 { color: #333; margin-top: 0; }
+        .api-demo { display: flex; gap: 20px; }
+        .api-section { flex: 1; }
+        .status { padding: 5px 10px; border-radius: 3px; font-size: 12px; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.loading { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 tRPC Mock 클라이언트 테스트</h1>
+        
+        <div class="api-demo">
+            <div class="api-section">
+                <div class="test-section">
+                    <h3>📋 Tag API 테스트</h3>
+                    <div id="tagStatus" class="status">준비</div>
+                    <button class="test-button" onclick="testTagAPI()">태그 API 테스트</button>
+                    <button class="test-button" onclick="testCreateTag()">태그 생성</button>
+                    <div id="tagResults" class="results" style="display: none;"></div>
+                </div>
+                
+                <div class="test-section">
+                    <h3>📁 Project API 테스트</h3>
+                    <div id="projectStatus" class="status">준비</div>
+                    <button class="test-button" onclick="testProjectAPI()">프로젝트 API 테스트</button>
+                    <button class="test-button" onclick="testGetProject()">프로젝트 상세 조회</button>
+                    <div id="projectResults" class="results" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <div class="api-section">
+                <div class="test-section">
+                    <h3>🔐 Auth API 테스트</h3>
+                    <div id="authStatus" class="status">준비</div>
+                    <button class="test-button" onclick="testAuthAPI()">로그인 테스트</button>
+                    <button class="test-button" onclick="testGetProfile()">프로필 조회</button>
+                    <div id="authResults" class="results" style="display: none;"></div>
+                </div>
+                
+                <div class="test-section">
+                    <h3>⚡ 성능 테스트</h3>
+                    <div id="performanceStatus" class="status">준비</div>
+                    <button class="test-button" onclick="testPerformance()">동시 API 호출</button>
+                    <button class="test-button" onclick="testErrorHandling()">에러 처리</button>
+                    <div id="performanceResults" class="results" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 전체 결과</h3>
+            <div id="overallResults" class="results"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Mock tRPC 클라이언트 (단순화 버전)
+        const mockApiDelay = () => new Promise(resolve => 
+            setTimeout(resolve, 200 + Math.random() * 300)
+        );
+        
+        const mockTRPC = {
+            tag: {
+                getAll: async () => {
+                    await mockApiDelay();
+                    return [
+                        { id: 1, text: 'FT-101A', category: 'Instrument', page: 1 },
+                        { id: 2, text: 'PV-102B', category: 'Equipment', page: 1 },
+                        { id: 3, text: '1"-WS-001', category: 'Line', page: 2 }
+                    ];
+                },
+                create: async (input) => {
+                    await mockApiDelay();
+                    return {
+                        id: Date.now(),
+                        createdAt: new Date().toISOString(),
+                        isReviewed: false,
+                        ...input
+                    };
+                },
+                update: async (input) => {
+                    await mockApiDelay();
+                    return { success: true, updated: input };
+                }
+            },
+            
+            project: {
+                getAll: async () => {
+                    await mockApiDelay();
+                    return [
+                        { 
+                            id: 'proj-1', 
+                            name: 'Test Project 1', 
+                            tagCount: 150,
+                            status: 'active'
+                        },
+                        { 
+                            id: 'proj-2', 
+                            name: 'Test Project 2', 
+                            tagCount: 89,
+                            status: 'draft'
+                        }
+                    ];
+                },
+                getById: async (input) => {
+                    await mockApiDelay();
+                    return {
+                        id: input.id,
+                        name: `Project ${input.id}`,
+                        data: {
+                            tags: [
+                                { id: 1, text: 'FT-101A', category: 'Instrument' },
+                                { id: 2, text: 'PV-102B', category: 'Equipment' }
+                            ]
+                        }
+                    };
+                }
+            },
+            
+            auth: {
+                login: async (input) => {
+                    await mockApiDelay();
+                    if (input.email && input.password) {
+                        return {
+                            success: true,
+                            user: { id: 'user-1', email: input.email, name: 'Test User' },
+                            token: 'mock-jwt-token'
+                        };
+                    } else {
+                        throw new Error('Invalid credentials');
+                    }
+                },
+                getProfile: async () => {
+                    await mockApiDelay();
+                    return {
+                        id: 'user-1',
+                        email: 'test@example.com',
+                        name: 'Test User'
+                    };
+                }
+            }
+        };
+
+        function setStatus(elementId, status, message) {
+            const element = document.getElementById(elementId);
+            element.className = `status ${status}`;
+            element.textContent = message;
+        }
+
+        function showResults(elementId, content) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.textContent = content;
+        }
+
+        window.testTagAPI = async function() {
+            setStatus('tagStatus', 'loading', 'API 호출 중...');
+            showResults('tagResults', '');
+            
+            try {
+                const start = performance.now();
+                const tags = await mockTRPC.tag.getAll();
+                const duration = (performance.now() - start).toFixed(2);
+                
+                setStatus('tagStatus', 'success', '성공');
+                showResults('tagResults', 
+                    `✅ 태그 목록 조회 성공 (${duration}ms)\n` +
+                    `📊 총 ${tags.length}개 태그:\n` +
+                    tags.map(tag => `  - ${tag.text} (${tag.category}, Page ${tag.page})`).join('\n')
+                );
+            } catch (error) {
+                setStatus('tagStatus', 'error', '실패');
+                showResults('tagResults', `❌ 에러: ${error.message}`);
+            }
+        };
+
+        window.testCreateTag = async function() {
+            setStatus('tagStatus', 'loading', '태그 생성 중...');
+            
+            try {
+                const newTag = await mockTRPC.tag.create({
+                    text: `NEW-${Date.now().toString().slice(-4)}`,
+                    category: 'Equipment',
+                    page: 1,
+                    bbox: [100, 200, 180, 225]
+                });
+                
+                setStatus('tagStatus', 'success', '태그 생성 성공');
+                showResults('tagResults', 
+                    `✅ 새 태그 생성 성공:\n` +
+                    `ID: ${newTag.id}\n` +
+                    `Text: ${newTag.text}\n` +
+                    `Created: ${newTag.createdAt}`
+                );
+            } catch (error) {
+                setStatus('tagStatus', 'error', '실패');
+                showResults('tagResults', `❌ 에러: ${error.message}`);
+            }
+        };
+
+        window.testProjectAPI = async function() {
+            setStatus('projectStatus', 'loading', 'API 호출 중...');
+            showResults('projectResults', '');
+            
+            try {
+                const projects = await mockTRPC.project.getAll();
+                
+                setStatus('projectStatus', 'success', '성공');
+                showResults('projectResults', 
+                    `✅ 프로젝트 목록 조회 성공\n` +
+                    `📊 총 ${projects.length}개 프로젝트:\n` +
+                    projects.map(p => `  - ${p.name}: ${p.tagCount}개 태그 (${p.status})`).join('\n')
+                );
+            } catch (error) {
+                setStatus('projectStatus', 'error', '실패');
+                showResults('projectResults', `❌ 에러: ${error.message}`);
+            }
+        };
+
+        window.testGetProject = async function() {
+            setStatus('projectStatus', 'loading', '프로젝트 조회 중...');
+            
+            try {
+                const project = await mockTRPC.project.getById({ id: 'proj-1' });
+                
+                setStatus('projectStatus', 'success', '성공');
+                showResults('projectResults', 
+                    `✅ 프로젝트 상세 조회 성공:\n` +
+                    `Name: ${project.name}\n` +
+                    `Tags: ${project.data.tags.length}개\n` +
+                    `Tag List: ${project.data.tags.map(t => t.text).join(', ')}`
+                );
+            } catch (error) {
+                setStatus('projectStatus', 'error', '실패');
+                showResults('projectResults', `❌ 에러: ${error.message}`);
+            }
+        };
+
+        window.testAuthAPI = async function() {
+            setStatus('authStatus', 'loading', '로그인 중...');
+            showResults('authResults', '');
+            
+            try {
+                const result = await mockTRPC.auth.login({
+                    email: 'test@example.com',
+                    password: 'password123'
+                });
+                
+                setStatus('authStatus', 'success', '로그인 성공');
+                showResults('authResults', 
+                    `✅ 로그인 성공:\n` +
+                    `User: ${result.user.name} (${result.user.email})\n` +
+                    `Token: ${result.token.substring(0, 20)}...`
+                );
+            } catch (error) {
+                setStatus('authStatus', 'error', '실패');
+                showResults('authResults', `❌ 에러: ${error.message}`);
+            }
+        };
+
+        window.testGetProfile = async function() {
+            setStatus('authStatus', 'loading', '프로필 조회 중...');
+            
+            try {
+                const profile = await mockTRPC.auth.getProfile();
+                
+                setStatus('authStatus', 'success', '성공');
+                showResults('authResults', 
+                    `✅ 프로필 조회 성공:\n` +
+                    `Name: ${profile.name}\n` +
+                    `Email: ${profile.email}\n` +
+                    `ID: ${profile.id}`
+                );
+            } catch (error) {
+                setStatus('authStatus', 'error', '실패');
+                showResults('authResults', `❌ 에러: ${error.message}`);
+            }
+        };
+
+        window.testPerformance = async function() {
+            setStatus('performanceStatus', 'loading', '성능 테스트 중...');
+            showResults('performanceResults', '');
+            
+            try {
+                const start = performance.now();
+                
+                // 동시에 여러 API 호출
+                const promises = [
+                    mockTRPC.tag.getAll(),
+                    mockTRPC.project.getAll(),
+                    mockTRPC.auth.getProfile(),
+                    mockTRPC.project.getById({ id: 'proj-1' }),
+                    mockTRPC.tag.create({ text: 'PERF-TEST', category: 'Equipment', page: 1 })
+                ];
+                
+                const results = await Promise.all(promises);
+                const duration = (performance.now() - start).toFixed(2);
+                
+                setStatus('performanceStatus', 'success', '성능 테스트 완료');
+                showResults('performanceResults', 
+                    `✅ 5개 API 동시 호출 성공 (${duration}ms)\n` +
+                    `📊 결과:\n` +
+                    `  - Tags: ${results[0].length}개\n` +
+                    `  - Projects: ${results[1].length}개\n` +
+                    `  - Profile: ${results[2].name}\n` +
+                    `  - Project Detail: ${results[3].name}\n` +
+                    `  - New Tag: ${results[4].text}\n` +
+                    `⚡ 평균 응답시간: ${(duration/5).toFixed(2)}ms`
+                );
+            } catch (error) {
+                setStatus('performanceStatus', 'error', '실패');
+                showResults('performanceResults', `❌ 에러: ${error.message}`);
+            }
+        };
+
+        window.testErrorHandling = async function() {
+            setStatus('performanceStatus', 'loading', '에러 처리 테스트 중...');
+            
+            try {
+                // 잘못된 로그인 시도
+                await mockTRPC.auth.login({ email: '', password: '' });
+            } catch (error) {
+                setStatus('performanceStatus', 'success', '에러 처리 성공');
+                showResults('performanceResults', 
+                    `✅ 에러 처리 테스트 성공\n` +
+                    `❌ 예상된 에러: ${error.message}\n` +
+                    `✅ 에러가 적절히 캐치되었습니다`
+                );
+            }
+        };
+
+        // 전체 결과 업데이트
+        function updateOverallResults() {
+            const overall = document.getElementById('overallResults');
+            overall.textContent = 
+                '🧪 tRPC Mock 클라이언트 테스트 환경 준비 완료\n' +
+                '✅ TypeScript 타입 안전성 (실제 백엔드 연결시 자동 적용)\n' +
+                '✅ 비동기 API 호출 패턴 검증\n' +
+                '✅ 에러 처리 메커니즘 동작 확인\n' +
+                '✅ 성능 모니터링 가능\n\n' +
+                '🚀 실제 백엔드 구축 후 mock → 실제 API로 간단히 전환 가능';
+        }
+
+        updateOverallResults();
+        
+        console.log('✅ tRPC Mock 클라이언트 테스트 준비 완료');
+    </script>
+</body>
+</html>

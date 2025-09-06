@@ -281,6 +281,40 @@ const useDescriptionStore = create(
       return get().descriptions.filter(desc => desc.page === page);
     },
     
+    // Update description with intelligent numbering
+    updateDescription: (id, text, metadata) => {
+      set(produce(draft => {
+        const currentDesc = draft.descriptions.find(desc => desc.id === id);
+        if (!currentDesc) return;
+
+        let updatedMetadata = metadata;
+
+        // If type changed, recalculate number for the new type on the same page
+        if (currentDesc.metadata.type !== metadata.type) {
+          const existingNumbers = draft.descriptions
+            .filter(desc => 
+              desc.id !== id && // Exclude current description
+              desc.metadata.type === metadata.type && 
+              desc.page === currentDesc.page
+            )
+            .map(desc => desc.metadata.number);
+          
+          const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+          updatedMetadata = { ...metadata, number: nextNumber };
+        }
+
+        // Update the description
+        const index = draft.descriptions.findIndex(desc => desc.id === id);
+        if (index !== -1) {
+          draft.descriptions[index] = {
+            ...currentDesc,
+            text,
+            metadata: updatedMetadata
+          };
+        }
+      }));
+    },
+    
     // Statistics
     get stats() {
       const descriptions = get().descriptions;

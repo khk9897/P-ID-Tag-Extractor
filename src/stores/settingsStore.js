@@ -323,6 +323,59 @@ const useSettingsStore = create(
         performanceMode: state.performanceMode,
         advancedMode: state.isAdvancedMode
       };
+    },
+
+    // Save settings and close modal (used by SettingsModal)
+    saveSettingsOnly: (patterns, tolerances, appSettings, colorSettings, uiStore) => {
+      const store = get();
+      store.setPatterns(patterns);
+      store.setTolerances(tolerances);
+      store.setAppSettings(appSettings);
+      store.setColorSettings(colorSettings);
+      store.saveToLocalStorage();
+      uiStore.setIsSettingsOpen(false);
+    },
+
+    // Save settings and rescan PDF if needed
+    saveSettingsAndRescan: async (patterns, tolerances, appSettings, colorSettings, activeTab, uiStore, stores, processPdf) => {
+      const store = get();
+      store.setPatterns(patterns);
+      store.setTolerances(tolerances);
+      store.setAppSettings(appSettings);
+      store.setColorSettings(colorSettings);
+      store.saveToLocalStorage();
+      uiStore.setIsSettingsOpen(false);
+      
+      if (activeTab === 'patterns' && stores.pdfStore.pdfDoc) {
+        const hasManualData = stores.relationshipStore.relationships.length > 0 || 
+                             stores.commentStore.comments.length > 0 || 
+                             stores.loopStore.loops.length > 0 ||
+                             stores.tagStore.tags.some(tag => tag.isReviewed) ||
+                             stores.equipmentShortSpecStore.equipmentShortSpecs.length > 0;
+
+        if (hasManualData) {
+          uiStore.showConfirmation(
+            `Pattern settings have been changed and require PDF rescanning.
+
+⚠️ Rescanning will delete all manually created content:
+
+• Tag relationships (Connection, Installation, Note, etc.)
+• User comments and notes
+• Manually created loops
+• Tag review status (✓ checkmarks)
+• Equipment Short Spec data
+
+✅ Note & Hold descriptions will be preserved.
+
+💡 If you have important work, please Export your project as backup first.
+
+Do you want to continue?`,
+            () => processPdf(stores.pdfStore.pdfDoc, patterns, tolerances, appSettings)
+          );
+        } else {
+          await processPdf(stores.pdfStore.pdfDoc, patterns, tolerances, appSettings);
+        }
+      }
     }
   }))
 );

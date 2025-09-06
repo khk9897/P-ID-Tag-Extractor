@@ -204,12 +204,203 @@ const usePdfViewerStore = create(
       state.canvasCache.clear();
     }),
     
+    // === 고급 기능: 렌더 큐 관리 ===
+    renderPage: async (pdfDoc, pageNumber, scale, isBackground = false, canvasRef, renderIdRef, renderTaskRef, lastRenderedRef, renderQueueRef) => {
+      if (!pdfDoc) return;
+      
+      const state = get();
+      const currentRenderKey = `${pageNumber}_${scale}`;
+      
+      // Check cache first
+      const cachedImageData = state.getCachedCanvas(pageNumber, scale);
+      if (cachedImageData) {
+        if (!isBackground) {
+          const canvas = canvasRef.current;
+          if (canvas) {
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+            if (context && cachedImageData) {
+              // Set canvas size BEFORE restoring image data
+              canvas.width = cachedImageData.width;
+              canvas.height = cachedImageData.height;
+              context.putImageData(cachedImageData.data, 0, 0);
+              
+              // Update viewport and rotation
+              set((state) => {
+                state.viewport = cachedImageData.viewport;
+                state.rotation = cachedImageData.viewport.rotation;
+              });
+              
+              // Update lastRenderedRef for SVG overlay synchronization
+              lastRenderedRef.current = currentRenderKey;
+              return;
+            }
+          }
+        }
+      }
+      
+      // Skip render if we're already showing this page at this scale (non-background)
+      if (!isBackground && lastRenderedRef.current === currentRenderKey) {
+        return;
+      }
+      
+      // Generate unique render ID for this operation
+      const currentRenderId = ++renderIdRef.current;
+      
+      // Queue this render operation to prevent concurrent renders
+      renderQueueRef.current = renderQueueRef.current.then(async () => {
+        // Check if this render is still current
+        if (renderIdRef.current !== currentRenderId) {
+          return; // Skip this render as a newer one has been queued
+        }
+
+        // Cancel any existing render task
+        if (renderTaskRef.current) {
+          try {
+            renderTaskRef.current.cancel();
+          } catch (e) {
+            // Ignore cancel errors
+          }
+          renderTaskRef.current = null;
+          
+          // Small delay to ensure cancellation completes
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        try {
+          const page = await pdfDoc.getPage(pageNumber);
+          
+          // Check again if this render is still current
+          if (renderIdRef.current !== currentRenderId) {
+            return;
+          }
+          
+          const vp = page.getViewport({ scale });
+          const canvas = canvasRef.current;
+          
+          if (!canvas) return;
+          
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          if (!context) return;
+
+          // Clear and resize canvas
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.height = vp.height;
+          canvas.width = vp.width;
+          context.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Final check before starting render
+          if (renderIdRef.current !== currentRenderId) {
+            return;
+          }
+
+          // Use optimized render settings for better performance
+          const renderContext = {
+            canvasContext: context,
+            viewport: vp,
+            intent: 'display',
+            renderInteractiveForms: false,
+            includeAnnotationStorage: false,
+          };
+          
+          renderTaskRef.current = page.render(renderContext);
+          await renderTaskRef.current.promise;
+          
+          // Cache the rendered page (only for foreground renders)
+          if (!isBackground && renderIdRef.current === currentRenderId) {
+            try {
+              const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+              
+              // Use store method to cache
+              set((state) => {
+                state.setCachedCanvas(pageNumber, scale, {
+                  data: imageData,
+                  viewport: vp,
+                  width: canvas.width,
+                  height: canvas.height
+                });
+              });
+              
+            } catch (cacheError) {
+              // Cache storage failed, continue without caching
+            }
+          }
+          
+          // Only update state if this render is still current and not background
+          if (!isBackground && renderIdRef.current === currentRenderId) {
+            set((state) => {
+              state.viewport = vp;
+              state.rotation = vp.rotation;
+            });
+          }
+          
+        } catch (error) {
+          if (error.name !== 'RenderingCancelledException') {
+            // Log error if needed
+          }
+        } finally {
+          if (renderTaskRef.current) {
+            renderTaskRef.current = null;
+          }
+          // Update last rendered key to avoid re-rendering same page (only for foreground)
+          if (!isBackground) {
+            lastRenderedRef.current = currentRenderKey;
+          }
+        }
+      });
+    },
+    
+    // === 고급 기능: 좌표 변환 (PdfViewer에서 이전) ===
+    transformCoordinates: (x1, y1, x2, y2, scale = 1, coordinatesCache = null) => {
+      const state = get();
+      if (!state.viewport) return { rectX: 0, rectY: 0, rectWidth: 0, rectHeight: 0 };
+      
+      // Use provided cache or state cache
+      const cache = coordinatesCache || state.coordinatesCache;
+      
+      // Create cache key with integer rounding to maximize hit rate
+      const roundedX1 = Math.round(x1);
+      const roundedY1 = Math.round(y1);
+      const roundedX2 = Math.round(x2);
+      const roundedY2 = Math.round(y2);
+      const cacheKey = `${roundedX1},${roundedY1},${roundedX2},${roundedY2}`;
+      
+      // Check cache first
+      if (cache.has(cacheKey)) {
+        const cached = cache.get(cacheKey);
+        return {
+          rectX: cached.baseX * scale,
+          rectY: cached.baseY * scale,
+          rectWidth: cached.baseWidth * scale,
+          rectHeight: cached.baseHeight * scale
+        };
+      }
+      
+      let baseX, baseY, baseWidth, baseHeight;
+      
+      // All rotations - coordinates already processed in taggingService
+      baseX = x1;
+      baseY = y1;
+      baseWidth = x2 - x1;
+      baseHeight = y2 - y1;
+      
+      // Cache the base result
+      const baseResult = { baseX, baseY, baseWidth, baseHeight };
+      cache.set(cacheKey, baseResult);
+      
+      return {
+        rectX: baseX * scale,
+        rectY: baseY * scale,
+        rectWidth: baseWidth * scale,
+        rectHeight: baseHeight * scale
+      };
+    },
+
     // === 유틸리티: 태그 센터 계산 ===
     getTagCenter: (tag, scale) => {
       const state = get();
       if (!state.viewport || !tag || !tag.bbox) return { x: 0, y: 0 };
       
-      const { rectX, rectY, rectWidth, rectHeight } = state.getCachedCoordinates(
+      const { rectX, rectY, rectWidth, rectHeight } = state.transformCoordinates(
         tag.bbox.x1, tag.bbox.y1, tag.bbox.x2, tag.bbox.y2, scale
       );
       
@@ -258,6 +449,50 @@ const usePdfViewerStore = create(
     isEditingTag: (tagId) => {
       const state = get();
       return state.editingTagId === tagId;
+    },
+    
+    // Helper function to get entity color
+    getEntityColor: (category, colors) => {
+      switch (category) {
+        case 'Equipment':
+          return colors?.entities?.equipment || '#f97316';
+        case 'Line':
+          return colors?.entities?.line || '#fb7185';
+        case 'Instrument':
+          return colors?.entities?.instrument || '#fbbf24';
+        case 'DrawingNumber':
+          return colors?.entities?.drawingNumber || '#818cf8';
+        case 'NotesAndHolds':
+          return colors?.entities?.notesAndHolds || '#14b8a6';
+        case 'SpecialItem':
+          return colors?.entities?.specialItem || '#c084fc';
+        case 'OffPageConnector':
+          return colors?.entities?.offPageConnector || '#8b5cf6';
+        default:
+          return colors?.entities?.uncategorized || '#94a3b8';
+      }
+    },
+    
+    // Helper function to check if a tag should be visible
+    isTagVisible: (tag, visibilitySettings) => {
+      switch (tag.category) {
+        case 'Equipment':
+          return visibilitySettings.tags?.equipment || false;
+        case 'Line':
+          return visibilitySettings.tags?.line || false;
+        case 'Instrument':
+          return visibilitySettings.tags?.instrument || false;
+        case 'DrawingNumber':
+          return visibilitySettings.tags?.drawingNumber || false;
+        case 'NotesAndHolds':
+          return visibilitySettings.tags?.notesAndHolds || false;
+        case 'SpecialItem':
+          return visibilitySettings.tags?.specialItem || false;
+        case 'OffPageConnector':
+          return visibilitySettings.tags?.offPageConnector || false;
+        default:
+          return visibilitySettings.tags?.uncategorized || false;
+      }
     },
     
     isEditingRawText: (rawTextId) => {

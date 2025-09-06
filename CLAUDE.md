@@ -166,3 +166,6 @@ ALWAYS start with the most basic, fundamental solutions before attempting comple
 - `docs/09-user-auth-project-management.md` - 사용자 인증 및 프로젝트 관리 UI
 
 **중요**: 리팩토링 각 단계에서 해당 문서를 참조하여 정확한 구현 방향을 확인하세요.
+- 모든 작업 끝날때 마다 TODO MD 파일 업데이트해.
+- 작업 끝날때 마다 docs/06-todo-list.mddocs/06-todo-list.md 업데이트 해.
+- todo 정리하고, 다음 할것도 그 todo에 따라서 해. 만약 그 todo 보다 더 추천하는게 있으면 나에게 확인 받고 업테이트 하고, 진행해. 앞으로 계속 그렇게해

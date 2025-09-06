@@ -121,6 +121,33 @@ const useRelationshipStore = create(
       return get().relationships.find(rel => rel.id === id);
     },
     
+    // 🟢 Auto-create OPC relationships when tags change
+    updateOPCRelationships: async (tags) => {
+      try {
+        // Dynamic import to avoid circular dependencies
+        const { createOPCRelationships } = await import('../services/taggingService.ts');
+        const { Category, RelationshipType } = await import('../types.ts');
+        
+        // Filter for OPC tags
+        const opcTags = tags.filter(tag => tag.category === Category.OffPageConnector);
+        
+        if (opcTags.length > 0) {
+          const opcRelationships = createOPCRelationships(tags, RelationshipType);
+          
+          // Only update if there are new relationships to add
+          if (opcRelationships.length > 0) {
+            set((state) => {
+              // Remove existing OPC relationships to avoid duplicates
+              const nonOpcRel = state.relationships.filter(rel => rel.type !== RelationshipType.OffPageConnection);
+              state.relationships = [...nonOpcRel, ...opcRelationships];
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to update OPC relationships:', error);
+      }
+    },
+
     // Statistics
     get stats() {
       const relationships = get().relationships;

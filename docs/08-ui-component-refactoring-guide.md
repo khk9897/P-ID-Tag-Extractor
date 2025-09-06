@@ -16,7 +16,7 @@ App.tsx (1,500+ lines) - Root Component
 ├── Workspace.tsx - 메인 작업 영역 컨테이너
 │   ├── PdfViewer.tsx - PDF 뷰어 및 태그 시각화
 │   ├── SidePanel.tsx - 태그 목록 및 관리 패널
-│   ├── OPCPanel.tsx - OPC 관계 시각화 패널
+│   ├── OPCPanel.tsx - OffPageConnector 관계 시각화 패널
 │   ├── SelectionPanel.tsx - 하단 선택 도구 패널
 │   └── CommentModal.tsx - 댓글 관리 모달
 ├── ErrorBoundary.tsx - 에러 바운더리
@@ -86,7 +86,7 @@ const App = () => {
 export const Header = ({
   onReset, hasData, onOpenSettings, onImportProject, onExportProject,
   pdfDoc, currentPage, setCurrentPage, scale, setScale, mode,
-  onToggleSidePanel, onToggleOPCPanel, onAutoLinkDescriptions,
+  onToggleSidePanel, onToggleOffPageConnectorPanel, onAutoLinkDescriptions,
   onAutoLinkNotesAndHolds, onAutoLinkEquipmentShortSpecs, onAutoLinkAll,
   onRemoveWhitespace, visibilitySettings, updateVisibilitySettings,
   toggleTagVisibility, toggleRelationshipVisibility, toggleAllTags,
@@ -164,7 +164,7 @@ src/
 │   │       ├── WorkspaceContainer.tsx - Workspace Layout
 │   │       └── panels/
 │   │           ├── SidePanelContainer.tsx - Side Panel Container
-│   │           ├── OPCPanelContainer.tsx - OPC Panel Container
+│   │           ├── OffPageConnectorPanelContainer.tsx - OffPageConnector Panel Container
 │   │           └── SelectionPanelContainer.tsx - Selection Panel Container
 │   │
 │   ├── domain/ - Domain-specific Components
@@ -179,7 +179,7 @@ src/
 │   │   ├── relationships/
 │   │   │   ├── RelationshipManager.tsx - Relationship Management
 │   │   │   ├── RelationshipVisualizer.tsx - Visual Relationship Display
-│   │   │   ├── OPCConnectionPanel.tsx - OPC Connection Management
+│   │   │   ├── OffPageConnectionPanel.tsx - OffPage Connection Management
 │   │   │   └── RelationshipEditor.tsx - Relationship Editor
 │   │   │
 │   │   ├── descriptions/
@@ -256,7 +256,7 @@ export const AppLayout: React.FC = () => {
 // TO-BE: Modular Header with Store Integration
 export const AppHeader: React.FC = () => {
   const { hasData } = usePdfStore();
-  const { toggleSidePanel, toggleOPCPanel } = useUIStore();
+  const { toggleSidePanel, toggleOffPageConnectorPanel } = useUIStore();
   
   return (
     <header className="relative flex-shrink-0 bg-slate-800/50">

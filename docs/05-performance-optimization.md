@@ -119,7 +119,7 @@ const pageRelationships = useMemo(() => {
 - [x] **완료** (2024.09.04)
   - **Connection과 Installation 관계만 계산** 하도록 최적화
   - 기본 가시성: `connection: true`, `installation: true`, 나머지: `false`
-  - Early exit 로직으로 불필요한 관계 타입(Annotation, Note, OPC) 처리 완전 스킵
+  - Early exit 로직으로 불필요한 관계 타입(Annotation, Note, OffPageConnection) 처리 완전 스킵
   - useMemo 의존성에서 `rawTextMap`, `selectedRawTextItemIds` 제거
   - **실제 개선**: 60% 계산량 감소 (5개 → 2개 관계 타입)
 

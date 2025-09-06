@@ -159,54 +159,53 @@ const PdfViewerComponent = ({
   const startPoint = useRef({ x: 0, y: 0 });
   const isClickOnItem = useRef(false); // Ref to track if mousedown was on an item
   
-  const [viewport, setViewport] = useState(null);
-  const [rotation, setRotation] = useState(0);
-  const [isDragging, setIsDragging] = useState(false); // For selection rect
-  const [selectionRect, setSelectionRect] = useState(null);
-  const [relatedTagIds, setRelatedTagIds] = useState(new Set());
-  const [highlightedRawTextItemIds, setHighlightedRawTextItemIds] = useState(new Set());
+  // Remove useState - now using PdfViewerStore
+  // const [viewport, setViewport] = useState(null);
+  // const [rotation, setRotation] = useState(0);
+  // const [isDragging, setIsDragging] = useState(false);
+  // const [selectionRect, setSelectionRect] = useState(null);
+  // const [relatedTagIds, setRelatedTagIds] = useState(new Set());
+  // const [highlightedRawTextItemIds, setHighlightedRawTextItemIds] = useState(new Set());
+  // const [isUserScrolling, setIsUserScrolling] = useState(false);
+  // const [editingTagId, setEditingTagId] = useState(null);
+  // const [editingRawTextId, setEditingRawTextId] = useState(null);
+  // const [editingText, setEditingText] = useState('');
   
-  // Auto-scroll control state
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  // Refs for legacy compatibility
   const scrollTimeoutRef = useRef(null);
   const lastAutoScrollRef = useRef(0);
   const tagSelectionSourceRef = useRef(null);
-  
-  // Editing state
-  const [editingTagId, setEditingTagId] = useState(null);
-  const [editingRawTextId, setEditingRawTextId] = useState(null);
-  const [editingText, setEditingText] = useState('');
   const editInputRef = useRef(null);
   
   // Timer for auto-clearing tag selection highlight
   const selectionTimerRef = useRef(null);
   
-  // OPC Navigation state
-  const [opcNavigationButton, setOpcNavigationButton] = useState(null); // { tagId, x, y, targetTagId, targetPage }
-  const [pendingOpcTarget, setPendingOpcTarget] = useState(null); // { targetTagId, targetPage }
+  // OPC Navigation state - now using RelationshipRenderStore
+  // const [opcNavigationButton, setOpcNavigationButton] = useState(null);
+  // const [pendingOpcTarget, setPendingOpcTarget] = useState(null);
   
-  // OPC Navigation function
+  // OPC Navigation function - now using RelationshipRenderStore
   const handleOpcNavigation = useCallback(() => {
+    const opcNavigationData = relationshipRenderStore.opcNavigationData;
     
-    if (opcNavigationButton) {
-      const { targetTagId, targetPage } = opcNavigationButton;
-      
+    if (opcNavigationData) {
+      const { targetTagId, targetPage } = opcNavigationData;
       
       // Set pending target for after page change
-      setPendingOpcTarget({ targetTagId, targetPage });
+      relationshipRenderStore.setPendingOpcTarget({ targetTagId, targetPage });
       
       // Navigate to target page
       setCurrentPage(targetPage);
       
-      // Hide navigation button
-      setOpcNavigationButton(null);
-      
-    } else {
+      // Clear navigation data
+      relationshipRenderStore.clearOpcNavigation();
     }
-  }, [opcNavigationButton, setCurrentPage, currentPage]);
+  }, [relationshipRenderStore, setCurrentPage]);
   
-  // Handle OPC target selection after page change
+  // Handle OPC target selection after page change - using Stores
   useEffect(() => {
+    const pendingOpcTarget = relationshipRenderStore.pendingOpcTarget;
+    const viewport = pdfViewerStore.viewport;
     
     if (pendingOpcTarget && currentPage === pendingOpcTarget.targetPage && viewport) {
       const { targetTagId } = pendingOpcTarget;
@@ -214,57 +213,51 @@ const PdfViewerComponent = ({
       // Check if target tag exists on current page
       const targetTag = tags.find(t => t.id === targetTagId && t.page === currentPage);
       
-      
       if (targetTag) {
-        
         // Wait for page to render, then select, highlight, and scroll to center
         const timer = setTimeout(() => {
-          
           // Set selection
           actualSetSelectedTagIds([targetTagId], 'viewer');
           
-          // Set highlight
-          setHighlightedTagIds(new Set([targetTagId]));
-          
-          // Note: Scroll to center will be handled by Workspace
-          
+          // Set highlight using PdfViewerStore
+          pdfViewerStore.setHighlightedTagIds([targetTagId]);
           
           // Clear pending target AFTER processing is complete
-          setPendingOpcTarget(null);
+          relationshipRenderStore.setPendingOpcTarget(null);
           
           // Clear highlight after 2 seconds
           setTimeout(() => {
-            setHighlightedTagIds(new Set());
+            pdfViewerStore.clearHighlightedTagIds();
           }, 2000);
-        }, 300); // Increased delay further
+        }, 300);
         
         return () => clearTimeout(timer);
-      } else {
       }
     }
-  }, [currentPage, pendingOpcTarget, viewport, tags, actualSetSelectedTagIds]);
+  }, [currentPage, relationshipRenderStore.pendingOpcTarget, pdfViewerStore.viewport, tags, actualSetSelectedTagIds, pdfViewerStore, relationshipRenderStore]);
   
-  // State to track visual highlight separately from selection
-  const [highlightedTagIds, setHighlightedTagIds] = useState(new Set());
+  // State to track visual highlight - now using PdfViewerStore
+  // const [highlightedTagIds, setHighlightedTagIds] = useState(new Set());
 
-  // Focus input when editing starts
+  // Focus input when editing starts - using PdfViewerStore
   useEffect(() => {
+    const editingTagId = pdfViewerStore.editingTagId;
+    const editingRawTextId = pdfViewerStore.editingRawTextId;
+    
     if ((editingTagId || editingRawTextId) && editInputRef.current) {
       editInputRef.current.focus();
       editInputRef.current.select();
     }
-  }, [editingTagId, editingRawTextId]);
+  }, [pdfViewerStore.editingTagId, pdfViewerStore.editingRawTextId]);
 
-  // Sync highlighted tags with selected tags
+  // Sync highlighted tags with selected tags - using PdfViewerStore
   useEffect(() => {
-    // Sync highlighted tags with selected tags
     if (Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.length > 0) {
-      const newHighlightedIds = new Set(actualSelectedTagIds);
-      setHighlightedTagIds(newHighlightedIds);
+      pdfViewerStore.setHighlightedTagIds(actualSelectedTagIds);
     } else {
-      setHighlightedTagIds(new Set()); // Clear highlights when no tags selected
+      pdfViewerStore.clearHighlightedTagIds();
     }
-  }, [actualSelectedTagIds]);
+  }, [actualSelectedTagIds, pdfViewerStore]);
 
   // Auto-clear tag highlight (not selection) after 3 seconds
   useEffect(() => {
@@ -418,31 +411,28 @@ const PdfViewerComponent = ({
   }, [visibilitySettings.relationships]);
 
   const isMoved = useRef(false);
-  const [isPanning, setIsPanning] = useState(false);
-  const panStart = useRef({ scrollX: 0, scrollY: 0, clientX: 0, clientY: 0 });
+  // const [isPanning, setIsPanning] = useState(false); // Now using PdfViewerStore
+  // const panStart = useRef({ scrollX: 0, scrollY: 0, clientX: 0, clientY: 0 }); // Now using PdfViewerStore
 
+  // Render management refs - still using refs for performance
   const renderTaskRef = useRef(null);
   const renderIdRef = useRef(0);
-  const renderQueueRef = useRef(Promise.resolve());
-  
-  // Canvas caching for rendered pages
-  const canvasCacheRef = useRef(new Map());
-  const maxCacheSize = 5; // Cache up to 5 pages
-  
-  // Background render queue for pre-rendering adjacent pages
-  const backgroundRenderQueueRef = useRef(Promise.resolve());
   const lastRenderedRef = useRef(null);
+  
+  // Canvas caching now managed by PdfViewerStore
+  // const canvasCacheRef = useRef(new Map());
+  // const maxCacheSize = 5;
+  // const backgroundRenderQueueRef = useRef(Promise.resolve());
 
   const renderPage = useCallback(async (pageNumber, isBackground = false) => {
     if (!pdfDoc) return;
     
     const currentRenderKey = `${pageNumber}_${scale}`;
     
-    // Check cache first
-    const cache = canvasCacheRef.current;
-    if (cache.has(currentRenderKey)) {
+    // Check cache first - using PdfViewerStore
+    const cachedImageData = pdfViewerStore.getCachedCanvas(pageNumber, scale);
+    if (cachedImageData) {
       if (!isBackground) {
-        const cachedImageData = cache.get(currentRenderKey);
         const canvas = canvasRef.current;
         if (canvas) {
           const context = canvas.getContext('2d', { willReadFrequently: true });
@@ -452,9 +442,9 @@ const PdfViewerComponent = ({
             canvas.height = cachedImageData.height;
             context.putImageData(cachedImageData.data, 0, 0);
             
-            // CRITICAL: Update viewport BEFORE setting lastRenderedRef to ensure SVG sync
-            setViewport(cachedImageData.viewport);
-            setRotation(cachedImageData.viewport.rotation);
+            // CRITICAL: Update viewport using PdfViewerStore
+            pdfViewerStore.setViewport(cachedImageData.viewport);
+            pdfViewerStore.setRotation(cachedImageData.viewport.rotation);
             
             // CRITICAL: Update lastRenderedRef to ensure SVG overlay synchronization
             lastRenderedRef.current = currentRenderKey;

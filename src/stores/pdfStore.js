@@ -1,6 +1,7 @@
 // PDFStore - PDF 문서 상태 및 처리 관리
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { produce } from 'immer';
 
 const usePDFStore = create(
   immer((set, get) => ({
@@ -148,6 +149,66 @@ const usePDFStore = create(
       state.processingStatus = '';
     }),
     
+    // Load PDF file and reset states
+    loadPdfFile: async (file, processPdfCallback, resetStatesCallback) => {
+      // Import ViewerStore to manage loading state
+      const { default: useViewerStore } = await import('./viewerStore.js');
+      const viewerStore = useViewerStore.getState();
+      
+      set(produce(draft => {
+        draft.pdfFile = file;
+        draft.isLoading = true;
+        draft.progress = { current: 0, total: 0 };
+        draft.currentPage = 1;
+        draft.pdfDoc = null;
+        draft.totalPages = 0;
+      }));
+      
+      // Set viewer loading state
+      viewerStore.setIsLoading(true);
+      
+      // Reset all other stores
+      if (resetStatesCallback) {
+        resetStatesCallback();
+      }
+      
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const loadingTask = window.pdfjsLib.getDocument({ data: arrayBuffer });
+        const doc = await loadingTask.promise;
+        
+        const isLarge = doc.numPages > 100;
+        
+        set(produce(draft => {
+          draft.pdfDoc = doc;
+          draft.totalPages = doc.numPages;
+          draft.isLargeFile = isLarge;
+          draft.isLoading = false;
+        }));
+        
+        // Process PDF if callback provided
+        if (processPdfCallback) {
+          // Import SettingsStore to get current settings
+          const { default: useSettingsStore } = await import('./settingsStore.js');
+          const settings = useSettingsStore.getState();
+          
+          await processPdfCallback(doc, settings.patterns, settings.tolerances, settings.appSettings);
+        } else {
+          // If no processPdf callback, we should still clear the loading state
+          viewerStore.setIsLoading(false);
+        }
+        
+        return { doc, isLarge };
+      } catch (error) {
+        console.error('❌ PDF loading failed:', error);
+        set(produce(draft => {
+          draft.isLoading = false;
+        }));
+        viewerStore.setIsLoading(false);
+        throw error;
+      }
+    },
+    
     // Viewport calculations (helper for coordinate transformations)
     getViewportTransform: () => {
       const state = get();
@@ -171,6 +232,70 @@ const usePDFStore = create(
         rotation: state.rotation,
         isProcessing: state.isLoading
       };
+    },
+
+    // Process PDF and extract tags
+    processPdf: async (doc, patterns, tolerances, appSettings) => {
+      // Import required services and stores
+      const { extractTags, createOPCRelationships } = await import('../services/taggingService.ts');
+      const { RelationshipType } = await import('../types.ts');
+      const { v4: uuidv4 } = await import('uuid');
+      const { default: useViewerStore } = await import('./viewerStore.js');
+      const { default: useTagStore } = await import('./tagStore.js');
+      const { default: useRawTextStore } = await import('./rawTextStore.js');
+      const { default: useRelationshipStore } = await import('./relationshipStore.js');
+      const { default: useCommentStore } = await import('./commentStore.js');
+      const { default: useLoopStore } = await import('./loopStore.js');
+      const { default: useEquipmentShortSpecStore } = await import('./equipmentShortSpecStore.js');
+      const { default: useSettingsStore } = await import('./settingsStore.js');
+
+      const viewerStore = useViewerStore.getState();
+      const tagStore = useTagStore.getState();
+      const rawTextStore = useRawTextStore.getState();
+      const relationshipStore = useRelationshipStore.getState();
+      const commentStore = useCommentStore.getState();
+      const loopStore = useLoopStore.getState();
+      const equipmentShortSpecStore = useEquipmentShortSpecStore.getState();
+      const settingsStore = useSettingsStore.getState();
+
+      viewerStore.setIsLoading(true);
+      tagStore.setTags([]);
+      rawTextStore.setRawTextItems([]);
+      relationshipStore.setRelationships([]);
+      commentStore.setComments([]);
+      loopStore.setLoops([]);
+      equipmentShortSpecStore.setEquipmentShortSpecs([]);
+      viewerStore.setProgress({ current: 0, total: doc.numPages });
+      viewerStore.setCurrentPage(1);
+
+      try {
+        let allTags = [];
+        let allRawTextItems = [];
+        
+        for (let i = 1; i <= doc.numPages; i++) {
+          const { tags: pageTags, rawTextItems: pageRawTextItems } = await extractTags(doc, i, patterns, tolerances, appSettings);
+          
+          allTags = [...allTags, ...pageTags];
+          allRawTextItems = [...allRawTextItems, ...pageRawTextItems];
+          viewerStore.setProgress({ current: i, total: doc.numPages });
+        }
+        
+        tagStore.setTags(allTags);
+        rawTextStore.setRawTextItems(allRawTextItems);
+        
+        const opcRelationships = createOPCRelationships(allTags, RelationshipType);
+        relationshipStore.setRelationships(opcRelationships);
+        
+        if (appSettings?.autoGenerateLoops || settingsStore.appSettings.autoGenerateLoops) {
+          setTimeout(() => {
+            loopStore.autoGenerateLoops(allTags, uuidv4);
+          }, 100);
+        }
+      } catch (error) {
+        console.error('PDF processing failed:', error);
+      } finally {
+        viewerStore.setIsLoading(false);
+      }
     }
   }))
 );

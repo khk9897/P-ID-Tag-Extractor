@@ -85,7 +85,23 @@ src/
 │   ├── auth/                    # 인증 컴포넌트
 │   ├── dashboard/               # 대시보드 컴포넌트
 │   └── workspace/               # 작업공간 컴포넌트
-├── stores/                      # Zustand stores
+├── stores/                      # Zustand stores (16개 완성)
+│   ├── appStore.js              # 앱 초기화 및 글로벌 상태
+│   ├── tagStore.js              # 태그 CRUD 및 선택 관리
+│   ├── relationshipStore.js     # 관계 생성/삭제 및 연결
+│   ├── pdfStore.js              # PDF 문서 상태 및 처리
+│   ├── viewerStore.js           # PDF 뷰어 상태 관리
+│   ├── uiStore.js               # UI 상태 및 키보드 핸들러
+│   ├── settingsStore.js         # 앱 설정 및 localStorage
+│   ├── projectStore.js          # Export/Import 및 Excel
+│   ├── autoLinkingStore.js      # Auto-linking 로직 통합
+│   ├── commentStore.js          # 댓글 CRUD 및 우선순위
+│   ├── descriptionStore.js      # Description/Note/Hold 관리
+│   ├── equipmentShortSpecStore.js # Equipment Short Spec
+│   ├── rawTextStore.js          # Raw text 관리 및 공간 분석
+│   ├── loopStore.js             # Loop 관리 전담
+│   ├── contentStore.js          # 레거시 호환성 (DEPRECATED)
+│   └── sidePanelStore.js        # 사이드 패널 상태
 ├── services/                    # API 서비스
 └── hooks/                       # Custom hooks
 ```

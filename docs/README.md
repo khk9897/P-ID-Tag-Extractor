@@ -2,6 +2,12 @@
 
 이 폴더는 P&ID Smart Digitizer 프로젝트의 기술 문서들을 체계적으로 정리한 곳입니다.
 
+## 🎉 **최신 업데이트 (2025-09-06)**
+- ✅ **Phase 15 완료**: Header.tsx & App.tsx 완전 리팩토링
+- ✅ **App.tsx**: 2,019줄 → 225줄 (88.9% 축소 달성)
+- ✅ **16개 Store 완성**: 3,100+ lines의 전문화된 상태 관리
+- ✅ **Store-based 아키텍처**: Props Drilling 제거 및 성능 최적화
+
 ## 📚 문서 목록
 
 ### **아키텍처 & 설계**
@@ -16,26 +22,35 @@
    - 실시간 동기화 및 충돌 해결
 
 3. **[03-database-schema-design.md](03-database-schema-design.md)**
-   - RDBMS 스키마 설계서
-   - 16개 테이블 상세 정의
+   - RDBMS 스키마 설계서 ✅ **19개 테이블 완성**
    - 성능 최적화 및 보안 전략
+   - 다중 사용자 협업 지원
 
 4. **[04-database-schema-summary.md](04-database-schema-summary.md)**
-   - 데이터베이스 스키마 요약서
-   - 테이블 구조 및 관계 간단 정리
+   - 데이터베이스 스키마 요약서 ✅ **업데이트 완료**
+   - 19개 테이블 구조 및 관계 간단 정리
    - 빠른 참조용 문서
 
 ### **최적화 & 성능**
 5. **[05-performance-optimization.md](05-performance-optimization.md)**
-   - 성능 최적화 가이드
+   - 성능 최적화 가이드 ✅ **Store-based 최적화 완료**
    - 메모리 관리 및 렌더링 최적화
    - 프로파일링 및 벤치마크
 
 ### **프로젝트 관리**
-6. **[06-todo-list.md](06-todo-list.md)**
+6. **[06-todo-list.md](06-todo-list.md)** ✅ **Phase 15 업데이트 완료**
    - 개발 로드맵 & TODO 관리서
-   - 기능 개발 계획
-   - 이슈 및 개선사항
+   - 대형 컴포넌트 리팩토링 계획 (Phase 16+)
+   - App.tsx 88.9% 축소 달성 기록
+
+### **구현 가이드**
+7. **[07-feature-preservation-guide.md](07-feature-preservation-guide.md)**
+   - 기존 기능 보존 가이드
+   - AS-IS → TO-BE 매핑
+
+8. **[08-ui-component-refactoring-guide.md](08-ui-component-refactoring-guide.md)** ✅ **업데이트 완료**
+   - UI 컴포넌트 리팩토링 가이드
+   - Store-based 아키텍처 적용 완료
 
 ### **사용자 문서**
 - **[user-manual-korean.md](user-manual-korean.md)**

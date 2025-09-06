@@ -173,6 +173,7 @@ const PdfViewerComponent = ({
   const selectionRect = pdfViewerStore.selectionRect;
   const isPanning = pdfViewerStore.isPanning;
   const panStart = pdfViewerStore.panStart;
+  const opcNavigationButton = pdfViewerStore.opcNavigationButton;
   
   // Refs for legacy compatibility
   const scrollTimeoutRef = useRef(null);
@@ -863,7 +864,7 @@ const PdfViewerComponent = ({
               targetPage: targetTag.page,
               referenceText: clickedTag.text
             };
-            setOpcNavigationButton(navigationData);
+            pdfViewerStore.setOpcNavigationButton(navigationData);
           } else {
           }
         }
@@ -971,7 +972,7 @@ const PdfViewerComponent = ({
     isMoved.current = false;
     
     // Hide OPC navigation button on background click
-    setOpcNavigationButton(null);
+    pdfViewerStore.setOpcNavigationButton(null);
   
     if (mode === 'manualCreate' && viewerRef.current) {
         const rect = viewerRef.current.getBoundingClientRect();

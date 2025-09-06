@@ -48,6 +48,15 @@ const useUIStore = create()(
         offPageConnection: false,
       },
     },
+    
+    // === PDF Viewer UI states (PdfViewerStore에서 통합) ===
+    isDragging: false,
+    selectionRect: null,
+    isPanning: false,
+    panStart: { scrollX: 0, scrollY: 0, clientX: 0, clientY: 0 },
+    isUserScrolling: false,
+    pendingOpcTarget: null,
+    opcNavigationButton: null,
 
     // Actions
     showConfirmation: (message, onConfirm) => {
@@ -108,6 +117,56 @@ const useUIStore = create()(
         draft.showOnlySelectedRelationships = show;
       });
       localStorage.setItem('pid-tagger-showOnlySelectedRelationships', show.toString());
+    },
+    
+    // === Actions: PDF Viewer UI states (PdfViewerStore에서 통합) ===
+    setIsDragging: (isDragging) => {
+      set(draft => {
+        draft.isDragging = isDragging;
+      });
+    },
+    
+    setSelectionRect: (rect) => {
+      set(draft => {
+        draft.selectionRect = rect;
+      });
+    },
+    
+    setIsPanning: (isPanning) => {
+      set(draft => {
+        draft.isPanning = isPanning;
+      });
+    },
+    
+    setPanStart: (panStart) => {
+      set(draft => {
+        draft.panStart = panStart;
+      });
+    },
+    
+    setIsUserScrolling: (isScrolling) => {
+      set(draft => {
+        draft.isUserScrolling = isScrolling;
+      });
+    },
+    
+    setPendingOpcTarget: (target) => {
+      set(draft => {
+        draft.pendingOpcTarget = target;
+      });
+    },
+    
+    setOpcNavigationButton: (button) => {
+      set(draft => {
+        draft.opcNavigationButton = button;
+      });
+    },
+    
+    clearOpcNavigation: () => {
+      set(draft => {
+        draft.pendingOpcTarget = null;
+        draft.opcNavigationButton = null;
+      });
     },
 
     // Visibility actions

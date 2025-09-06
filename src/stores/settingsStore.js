@@ -376,6 +376,55 @@ Do you want to continue?`,
           await processPdf(stores.pdfStore.pdfDoc, patterns, tolerances, appSettings);
         }
       }
+    },
+
+    // === 유틸리티: 색상 및 가시성 관리 (PdfViewerStore에서 이전) ===
+    getEntityColor: (category, colors) => {
+      const state = get();
+      const entityColors = colors?.entities || state.colorSettings;
+      
+      switch (category) {
+        case 'Equipment':
+          return entityColors?.equipment || entityColors?.Equipment || '#f97316';
+        case 'Line':
+          return entityColors?.line || entityColors?.Line || '#fb7185';
+        case 'Instrument':
+          return entityColors?.instrument || entityColors?.Instrument || '#fbbf24';
+        case 'DrawingNumber':
+          return entityColors?.drawingNumber || entityColors?.DrawingNumber || '#818cf8';
+        case 'NotesAndHolds':
+          return entityColors?.notesAndHolds || entityColors?.NotesAndHolds || '#14b8a6';
+        case 'SpecialItem':
+          return entityColors?.specialItem || entityColors?.SpecialItem || '#c084fc';
+        case 'OffPageConnector':
+          return entityColors?.offPageConnector || entityColors?.OffPageConnector || '#8b5cf6';
+        default:
+          return entityColors?.uncategorized || '#94a3b8';
+      }
+    },
+
+    isTagVisible: (tag, visibilitySettings) => {
+      const state = get();
+      const visibility = visibilitySettings || state.visibilitySettings;
+      
+      switch (tag.category) {
+        case 'Equipment':
+          return visibility.tags?.equipment || visibility.tags?.Equipment || false;
+        case 'Line':
+          return visibility.tags?.line || visibility.tags?.Line || false;
+        case 'Instrument':
+          return visibility.tags?.instrument || visibility.tags?.Instrument || false;
+        case 'DrawingNumber':
+          return visibility.tags?.drawingNumber || visibility.tags?.DrawingNumber || false;
+        case 'NotesAndHolds':
+          return visibility.tags?.notesAndHolds || visibility.tags?.NotesAndHolds || false;
+        case 'SpecialItem':
+          return visibility.tags?.specialItem || visibility.tags?.SpecialItem || false;
+        case 'OffPageConnector':
+          return visibility.tags?.offPageConnector || visibility.tags?.OffPageConnector || false;
+        default:
+          return visibility.tags?.uncategorized || false;
+      }
     }
   }))
 );

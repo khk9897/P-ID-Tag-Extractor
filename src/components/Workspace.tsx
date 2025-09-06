@@ -13,6 +13,7 @@ import useEquipmentShortSpecStore from '../stores/equipmentShortSpecStore.js';
 import useContentStore from '../stores/contentStore.js';
 import useLoopStore from '../stores/loopStore.js';
 import useCommentStore from '../stores/commentStore.js';
+import useWorkspaceStore from '../stores/workspaceStore.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // Button components for compact panel
@@ -124,7 +125,21 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   showOnlySelectedRelationships,
   setShowOnlySelectedRelationships,
 }) => {
-  const [selectedTagIds, setSelectedTagIds] = useState([]);
+  // Workspace Store
+  const workspaceStore = useWorkspaceStore();
+  const selectedTagIds = workspaceStore.selectedTagIds;
+  const selectedDescriptionIds = workspaceStore.selectedDescriptionIds;
+  const selectedEquipmentShortSpecIds = workspaceStore.selectedEquipmentShortSpecIds;
+  const tagSelectionSource = workspaceStore.tagSelectionSource;
+  const manualCreationData = workspaceStore.manualCreationData;
+  const pingedTagId = workspaceStore.pingedTagId;
+  const pingedDescriptionId = workspaceStore.pingedDescriptionId;
+  const pingedEquipmentShortSpecId = workspaceStore.pingedEquipmentShortSpecId;
+  const pingedRelationshipId = workspaceStore.pingedRelationshipId;
+  const isEditingTag = workspaceStore.isEditingTag;
+  const editTagText = workspaceStore.editTagText;
+  const editingRawTextItems = workspaceStore.editingRawTextItems;
+  
   // Use zustand store for selectedRawTextItemIds instead of local state
   const selectedRawTextItemIds = useSidePanelStore(state => state.selectedRawTextItemIds);
   const storeSetSelectedRawTextItemIds = useSidePanelStore(state => state.setSelectedRawTextItemIds);
@@ -138,14 +153,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     console.log('🏠 Workspace: setSelectedRawTextItemIds called with:', newIds);
     storeSetSelectedRawTextItemIds(newIds);
   }, [storeSetSelectedRawTextItemIds]);
-  const [selectedDescriptionIds, setSelectedDescriptionIds] = useState([]);
-  const [selectedEquipmentShortSpecIds, setSelectedEquipmentShortSpecIds] = useState([]);
-  const [tagSelectionSource, setTagSelectionSource] = useState(null); // 'pdf' | 'panel' | null
-  const [manualCreationData, setManualCreationData] = useState(null); // {bbox, page}
-  const [pingedTagId, setPingedTagId] = useState(null);
-  const [pingedDescriptionId, setPingedDescriptionId] = useState(null);
-  const [pingedEquipmentShortSpecId, setPingedEquipmentShortSpecId] = useState(null);
-  const [pingedRelationshipId, setPingedRelationshipId] = useState(null);
   // Ref to access PdfViewer's scroll container directly
   const pdfViewerScrollRef = useRef(null);
   
@@ -305,20 +312,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     }
   }, [storeSelectedTagIds, storeTagSelectionSource, currentPage, setCurrentPage, scrollToTag]);
   
-  // Compact panel editing states
-  const [isEditingTag, setIsEditingTag] = useState(false);
-  const [editTagText, setEditTagText] = useState('');
-  const [editingRawTextItems, setEditingRawTextItems] = useState(new Set());
+  // Compact panel editing states - now managed by WorkspaceStore
 
   // Show compact tag detail when sidepanel is hidden and exactly one tag is selected
   const shouldShowCompactTagDetail = !isSidePanelVisible && selectedTagIds.length === 1;
   const selectedTag = shouldShowCompactTagDetail ? tags.find(tag => tag.id === selectedTagIds[0]) : null;
 
   const handleDeselectTag = (tagId) => {
-    setSelectedTagIds(prev => prev.filter(id => id !== tagId));
-    if (selectedTagIds.length <= 1) {
-      setTagSelectionSource(null);
-    }
+    workspaceStore.handleDeselectTag(tagId);
   };
   
   const handleDeselectRawTextItem = (itemId) => {
@@ -326,18 +327,16 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   };
 
   const handleDeselectDescription = (descriptionId) => {
-    setSelectedDescriptionIds(prev => prev.filter(id => id !== descriptionId));
+    workspaceStore.handleDeselectDescription(descriptionId);
   };
 
   const handleClearSelection = () => {
-    setSelectedTagIds([]);
+    workspaceStore.handleClearSelection();
     setSelectedRawTextItemIds([]);
-    setSelectedDescriptionIds([]);
-    setTagSelectionSource(null);
   };
   
   const handleManualAreaSelect = (bbox, page) => {
-    setManualCreationData({ bbox, page });
+    workspaceStore.handleManualAreaSelect(bbox, page);
   };
 
   const handleManualTagCreate = ({ text, category }) => {
@@ -347,31 +346,28 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         text,
         category,
       });
-      setManualCreationData(null);
+      workspaceStore.handleClearManualCreation();
     }
   };
 
   const handleClearManualCreation = () => {
-    setManualCreationData(null);
+    workspaceStore.handleClearManualCreation();
   };
 
   // Compact panel tag editing handlers
   const handleStartEditTag = (tag) => {
-    setIsEditingTag(true);
-    setEditTagText(tag.text);
+    workspaceStore.handleStartEditTag(tag);
   };
 
   const handleSaveTagEdit = () => {
     if (editTagText.trim() && editTagText !== selectedTag.text && selectedTag) {
       onUpdateTagText(selectedTag.id, editTagText.trim());
     }
-    setIsEditingTag(false);
-    setEditTagText('');
+    workspaceStore.handleCancelTagEdit();
   };
 
   const handleCancelTagEdit = () => {
-    setIsEditingTag(false);
-    setEditTagText('');
+    workspaceStore.handleCancelTagEdit();
   };
 
   const handleDeleteRelationship = (relId) => {
@@ -381,9 +377,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const handlePingTag = useCallback((tagId) => {
     // Don't change page here - let the caller handle page changes
     // This prevents duplicate page changes and selection clearing
-    setPingedTagId(tagId);
-    // Clear after animation is over
-    setTimeout(() => setPingedTagId(null), 2000);
+    workspaceStore.setPingedTagId(tagId);
     
     // Scroll to center the tag
     scrollToTag(tagId, 100);
@@ -396,9 +390,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       setCurrentPage(description.page);
     }
     
-    setPingedDescriptionId(descriptionId);
-    // Clear after animation is over
-    setTimeout(() => setPingedDescriptionId(null), 2000);
+    workspaceStore.setPingedDescriptionId(descriptionId);
     
     // Scroll to center the description
     if (description) {
@@ -413,9 +405,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       setCurrentPage(spec.page);
     }
     
-    setPingedEquipmentShortSpecId(equipmentShortSpecId);
-    // Clear after animation is over
-    setTimeout(() => setPingedEquipmentShortSpecId(null), 2000);
+    workspaceStore.setPingedEquipmentShortSpecId(equipmentShortSpecId);
     
     // Scroll to center the equipment short spec
     if (spec) {
@@ -437,9 +427,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       }
     }
     
-    setPingedRelationshipId(relationshipId);
-    // Clear after animation is over
-    setTimeout(() => setPingedRelationshipId(null), 2000);
+    workspaceStore.setPingedRelationshipId(relationshipId);
   }, [relationships, tags, descriptions, rawTextItems, equipmentShortSpecs, currentPage, setCurrentPage]);
 
   return (
@@ -457,15 +445,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         setCurrentPage={setCurrentPage}
         selectedTagIds={selectedTagIds}
         setSelectedTagIds={(ids) => {
-          setSelectedTagIds(ids);
+          workspaceStore.setSelectedTagIds(ids);
           // When selecting from panel, mark the source
-          setTagSelectionSource('panel');
+          workspaceStore.setTagSelectionSource('panel');
         }}
         tagSelectionSource={tagSelectionSource}
         selectedDescriptionIds={selectedDescriptionIds}
-        setSelectedDescriptionIds={setSelectedDescriptionIds}
+        setSelectedDescriptionIds={workspaceStore.setSelectedDescriptionIds}
         selectedEquipmentShortSpecIds={selectedEquipmentShortSpecIds}
-        setSelectedEquipmentShortSpecIds={setSelectedEquipmentShortSpecIds}
+        setSelectedEquipmentShortSpecIds={workspaceStore.setSelectedEquipmentShortSpecIds}
         relationships={relationships}
         setRelationships={setRelationships}
         onDeleteTags={onDeleteTags}
@@ -508,14 +496,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           setCurrentPage={setCurrentPage}
           selectedTagIds={selectedTagIds}
           setSelectedTagIds={(ids) => {
-            setSelectedTagIds(ids);
+            workspaceStore.setSelectedTagIds(ids);
             // When selecting from PDF, mark the source
-            setTagSelectionSource('pdf');
+            workspaceStore.setTagSelectionSource('pdf');
           }}
           selectedDescriptionIds={selectedDescriptionIds}
-          setSelectedDescriptionIds={setSelectedDescriptionIds}
+          setSelectedDescriptionIds={workspaceStore.setSelectedDescriptionIds}
           selectedEquipmentShortSpecIds={selectedEquipmentShortSpecIds}
-          setSelectedEquipmentShortSpecIds={setSelectedEquipmentShortSpecIds}
+          setSelectedEquipmentShortSpecIds={workspaceStore.setSelectedEquipmentShortSpecIds}
           rawTextItems={rawTextItems}
           descriptions={descriptions}
           equipmentShortSpecs={equipmentShortSpecs}
@@ -556,7 +544,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       </div>
       <SelectionPanel
         selectedTagIds={selectedTagIds}
-        setSelectedTagIds={setSelectedTagIds}
+        setSelectedTagIds={workspaceStore.setSelectedTagIds}
         allTags={tags}
         relationships={relationships}
         onDeselect={handleDeselectTag}
@@ -597,7 +585,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                       <input
                         type="text"
                         value={editTagText}
-                        onChange={(e) => setEditTagText(e.target.value)}
+                        onChange={(e) => workspaceStore.setEditTagText(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleSaveTagEdit();
                           if (e.key === 'Escape') handleCancelTagEdit();

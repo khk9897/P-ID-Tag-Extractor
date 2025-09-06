@@ -5,7 +5,11 @@ import { TagHighlight, getHighlightTypeFromEntity, getHighlightEffect } from './
 import { v4 as uuidv4 } from 'uuid';
 import { useSidePanelStore } from '../stores/sidePanelStore';
 import usePdfViewerStore from '../stores/pdfViewerStore.js';
-import useRelationshipRenderStore from '../stores/relationshipRenderStore.js';
+import useRelationshipStore from '../stores/relationshipStore.js';
+import useViewerStore from '../stores/viewerStore.js';
+import useUIStore from '../stores/uiStore.js';
+import useWorkspaceStore from '../stores/workspaceStore.js';
+import useSettingsStore from '../stores/settingsStore.js';
 
 // Throttle function for performance
 const throttle = (func, delay) => {
@@ -20,15 +24,15 @@ const throttle = (func, delay) => {
   };
 };
 
-// Memoized relationship line component for performance - now using RelationshipRenderStore
+// Memoized relationship line component for performance - now using RelationshipStore
 const RelationshipLine = React.memo(({ rel, start, end, isPinged }) => {
-  const relationshipRenderStore = useRelationshipRenderStore();
+  const relationshipStore = useRelationshipStore();
   
-  const strokeColor = relationshipRenderStore.getRelationshipColor(rel.type);
-  const lineStrokeWidth = relationshipRenderStore.getRelationshipStrokeWidth(rel, isPinged);
+  const strokeColor = relationshipStore.getRelationshipColor(rel.type);
+  const lineStrokeWidth = relationshipStore.getRelationshipStrokeWidth(rel, isPinged);
   const lineStrokeColor = isPinged ? '#ef4444' : strokeColor;
-  const dashArray = relationshipRenderStore.getRelationshipStrokeDashArray(rel, isPinged);
-  const marker = relationshipRenderStore.getMarkerEnd(rel.type);
+  const dashArray = relationshipStore.getRelationshipStrokeDashArray(rel, isPinged);
+  const marker = relationshipStore.getMarkerEnd(rel.type);
 
   return (
     <g>
@@ -114,7 +118,11 @@ const PdfViewerComponent = ({
 }) => {
   // Store hooks - centralized state management
   const pdfViewerStore = usePdfViewerStore();
-  const relationshipRenderStore = useRelationshipRenderStore();
+  const relationshipStore = useRelationshipStore();
+  const viewerStore = useViewerStore();
+  const uiStore = useUIStore();
+  const workspaceStore = useWorkspaceStore();
+  const settingsStore = useSettingsStore();
   
   // Track component render - reduce frequency for performance
   const renderCountRef = useRef(0);
@@ -159,21 +167,21 @@ const PdfViewerComponent = ({
   const startPoint = useRef({ x: 0, y: 0 });
   const isClickOnItem = useRef(false); // Ref to track if mousedown was on an item
   
-  // All state now managed by PdfViewerStore and RelationshipRenderStore
-  const viewport = pdfViewerStore.viewport;
-  const rotation = pdfViewerStore.rotation;
+  // All state now managed by PdfViewerStore and ViewerStore
+  const viewport = viewerStore.viewport;
+  const rotation = viewerStore.rotation;
   const highlightedTagIds = pdfViewerStore.highlightedTagIds;
   const highlightedRawTextItemIds = pdfViewerStore.highlightedRawTextItemIds;
   const relatedTagIds = pdfViewerStore.relatedTagIds;
-  const isUserScrolling = pdfViewerStore.isUserScrolling;
-  const editingTagId = pdfViewerStore.editingTagId;
-  const editingRawTextId = pdfViewerStore.editingRawTextId;
-  const editingText = pdfViewerStore.editingText;
-  const isDragging = pdfViewerStore.isDragging;
-  const selectionRect = pdfViewerStore.selectionRect;
-  const isPanning = pdfViewerStore.isPanning;
-  const panStart = pdfViewerStore.panStart;
-  const opcNavigationButton = pdfViewerStore.opcNavigationButton;
+  const isUserScrolling = uiStore.isUserScrolling;
+  const editingTagId = workspaceStore.editingTagId;
+  const editingRawTextId = workspaceStore.editingRawTextId;
+  const editingText = workspaceStore.editingText;
+  const isDragging = uiStore.isDragging;
+  const selectionRect = uiStore.selectionRect;
+  const isPanning = uiStore.isPanning;
+  const panStart = uiStore.panStart;
+  const opcNavigationButton = uiStore.opcNavigationButton;
   
   // Refs for legacy compatibility
   const scrollTimeoutRef = useRef(null);
@@ -188,26 +196,26 @@ const PdfViewerComponent = ({
   
   // OPC Navigation function - now using RelationshipRenderStore
   const handleOpcNavigation = useCallback(() => {
-    const opcNavigationData = relationshipRenderStore.opcNavigationData;
+    const opcNavigationData = relationshipStore.opcNavigationData;
     
     if (opcNavigationData) {
       const { targetTagId, targetPage } = opcNavigationData;
       
       // Set pending target for after page change
-      relationshipRenderStore.setPendingOpcTarget({ targetTagId, targetPage });
+      relationshipStore.setPendingOpcTarget({ targetTagId, targetPage });
       
       // Navigate to target page
       setCurrentPage(targetPage);
       
       // Clear navigation data
-      relationshipRenderStore.clearOpcNavigation();
+      relationshipStore.clearOpcNavigation();
     }
-  }, [relationshipRenderStore, setCurrentPage]);
+  }, [relationshipStore, setCurrentPage]);
   
   // Handle OPC target selection after page change - using Stores
   useEffect(() => {
-    const pendingOpcTarget = relationshipRenderStore.pendingOpcTarget;
-    const viewport = pdfViewerStore.viewport;
+    const pendingOpcTarget = relationshipStore.pendingOpcTarget;
+    const viewport = viewerStore.viewport;
     
     if (pendingOpcTarget && currentPage === pendingOpcTarget.targetPage && viewport) {
       const { targetTagId } = pendingOpcTarget;
@@ -225,7 +233,7 @@ const PdfViewerComponent = ({
           pdfViewerStore.setHighlightedTagIds([targetTagId]);
           
           // Clear pending target AFTER processing is complete
-          relationshipRenderStore.setPendingOpcTarget(null);
+          relationshipStore.setPendingOpcTarget(null);
           
           // Clear highlight after 2 seconds
           setTimeout(() => {
@@ -236,7 +244,7 @@ const PdfViewerComponent = ({
         return () => clearTimeout(timer);
       }
     }
-  }, [currentPage, relationshipRenderStore.pendingOpcTarget, pdfViewerStore.viewport, tags, actualSetSelectedTagIds, pdfViewerStore, relationshipRenderStore]);
+  }, [currentPage, relationshipStore.pendingOpcTarget, viewerStore.viewport, tags, actualSetSelectedTagIds, pdfViewerStore, relationshipStore]);
   
   // Highlighting now handled by PdfViewerStore
 
@@ -258,7 +266,7 @@ const PdfViewerComponent = ({
     } else {
       pdfViewerStore.clearHighlightedTagIds();
     }
-  }, [actualSelectedTagIds, pdfViewerStore]);
+  }, [actualSelectedTagIds]);
 
   // Auto-clear tag highlight (not selection) after 3 seconds
   useEffect(() => {
@@ -296,7 +304,7 @@ const PdfViewerComponent = ({
     }
     
     // Clear editing state
-    pdfViewerStore.clearEditing();
+    workspaceStore.clearEditing();
   }, [editingTagId, editingRawTextId, editingText, onUpdateTagText, onUpdateRawTextItemText]);
 
   // Handle input key events
@@ -342,9 +350,9 @@ const PdfViewerComponent = ({
     // Delegate to PdfViewerStore renderPage method
     return await pdfViewerStore.renderPage(
       pdfDoc, pageNumber, scale, isBackground,
-      canvasRef, renderIdRef, renderTaskRef, lastRenderedRef, renderQueueRef
+      canvasRef, renderIdRef, renderTaskRef, lastRenderedRef, renderQueueRef, viewerStore
     );
-  }, [pdfDoc, scale, pdfViewerStore]);
+  }, [pdfDoc, scale, pdfViewerStore, viewerStore]);
 
   // Background pre-rendering disabled for performance optimization
 
@@ -372,8 +380,8 @@ const PdfViewerComponent = ({
 
   // Clear cache when scale changes to free memory
   useEffect(() => {
-    canvasCacheRef.current.clear();
-  }, [scale]);
+    pdfViewerStore.clearCanvasCache();
+  }, [scale, pdfViewerStore]);
 
   // Clear selections ONLY when page actually changes
   const prevPageRef = useRef(currentPage);
@@ -413,7 +421,7 @@ const PdfViewerComponent = ({
       }
     }
     
-    setRelatedTagIds(newRelatedTagIds);
+    pdfViewerStore.setRelatedTagIds(newRelatedTagIds);
     pdfViewerStore.setHighlightedRawTextItemIds(newHighlightedNoteIds);
   }, [actualSelectedTagIds, relationships, tags]);
 
@@ -519,15 +527,15 @@ const PdfViewerComponent = ({
           const tagId = actualSelectedTagIds[0];
           const tag = tags.find(t => t.id === tagId);
           if (tag) {
-            pdfViewerStore.setEditingTagId(tagId);
-            pdfViewerStore.setEditingText(tag.text);
+            workspaceStore.setEditingTagId(tagId);
+            workspaceStore.setEditingText(tag.text);
           }
         } else if (actualSelectedRawTextItemIds.length === 1) {
           const rawId = actualSelectedRawTextItemIds[0];
           const rawItem = rawTextItems.find(r => r.id === rawId);
           if (rawItem) {
-            pdfViewerStore.setEditingRawTextId(rawId);
-            pdfViewerStore.setEditingText(rawItem.text);
+            workspaceStore.setEditingRawTextId(rawId);
+            workspaceStore.setEditingText(rawItem.text);
           }
         }
         e.preventDefault();
@@ -788,24 +796,24 @@ const PdfViewerComponent = ({
         setScale(prevScale => Math.min(10, Math.max(0.25, prevScale + zoomDelta)));
       } else {
         // User is manually scrolling - disable auto-scroll temporarily
-        setIsUserScrolling(true);
+        uiStore.setIsUserScrolling(true);
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
         }
         scrollTimeoutRef.current = setTimeout(() => {
-          setIsUserScrolling(false);
+          uiStore.setIsUserScrolling(false);
         }, 1000); // Wait 1 second after user stops scrolling
       }
     };
 
     const handleScroll = () => {
       // User is manually scrolling
-      setIsUserScrolling(true);
+      uiStore.setIsUserScrolling(true);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
       scrollTimeoutRef.current = setTimeout(() => {
-        setIsUserScrolling(false);
+        uiStore.setIsUserScrolling(false);
       }, 1000);
     };
 
@@ -865,7 +873,7 @@ const PdfViewerComponent = ({
               targetPage: targetTag.page,
               referenceText: clickedTag.text
             };
-            pdfViewerStore.setOpcNavigationButton(navigationData);
+            uiStore.setOpcNavigationButton(navigationData);
           } else {
           }
         }
@@ -973,13 +981,13 @@ const PdfViewerComponent = ({
     isMoved.current = false;
     
     // Hide OPC navigation button on background click
-    pdfViewerStore.setOpcNavigationButton(null);
+    uiStore.setOpcNavigationButton(null);
   
     if (mode === 'manualCreate' && viewerRef.current) {
         const rect = viewerRef.current.getBoundingClientRect();
         startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        pdfViewerStore.setIsDragging(true); // this is for selectionRect
-        pdfViewerStore.setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
+        uiStore.setIsDragging(true); // this is for selectionRect
+        uiStore.setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
         return; // Prevent other logic from running
     }
     
@@ -989,12 +997,12 @@ const PdfViewerComponent = ({
         // Area Selection Logic
         const rect = viewerRef.current.getBoundingClientRect();
         startPoint.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        pdfViewerStore.setIsDragging(true);
-        pdfViewerStore.setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
+        uiStore.setIsDragging(true);
+        uiStore.setSelectionRect({ ...startPoint.current, width: 0, height: 0 });
     } else if (!isSelectionModifier && mode === 'select' && internalScrollRef.current) {
         // Panning Logic
-        pdfViewerStore.setIsPanning(true);
-        pdfViewerStore.setPanStart({
+        uiStore.setIsPanning(true);
+        uiStore.setPanStart({
             scrollX: internalScrollRef.current.scrollLeft,
             scrollY: internalScrollRef.current.scrollTop,
             clientX: e.clientX,
@@ -1028,7 +1036,7 @@ const PdfViewerComponent = ({
       const y = Math.min(startPoint.current.y, currentY);
       const width = Math.abs(startPoint.current.x - currentX);
       const height = Math.abs(startPoint.current.y - currentY);
-      pdfViewerStore.setSelectionRect({ x, y, width, height });
+      uiStore.setSelectionRect({ x, y, width, height });
     }
   };
 
@@ -1037,14 +1045,14 @@ const PdfViewerComponent = ({
     // This is more robust than checking e.target on mouseup, which can be affected by re-renders.
     if (isClickOnItem.current) {
       if (isDragging) { // This can happen if user clicks item and drags off
-        pdfViewerStore.setIsDragging(false);
-        pdfViewerStore.setSelectionRect(null);
+        uiStore.setIsDragging(false);
+        uiStore.setSelectionRect(null);
       }
       return;
     }
       
     if (isPanning) {
-      setIsPanning(false);
+      uiStore.setIsPanning(false);
     }
     
     // A simple click on the background without movement clears selection
@@ -1054,12 +1062,12 @@ const PdfViewerComponent = ({
     }
 
     if (!isDragging || !selectionRect || !viewport) {
-      if (isDragging) pdfViewerStore.setIsDragging(false);
+      if (isDragging) uiStore.setIsDragging(false);
       return;
     }
     
     if (mode === 'manualCreate') {
-        pdfViewerStore.setIsDragging(false);
+        uiStore.setIsDragging(false);
         // Check for minimal size to avoid accidental clicks
         if (selectionRect.width > 5 && selectionRect.height > 5) {
             const { x, y, width, height } = selectionRect;
@@ -1071,12 +1079,12 @@ const PdfViewerComponent = ({
             };
             onManualAreaSelect(bbox, currentPage);
         }
-        pdfViewerStore.setSelectionRect(null);
+        uiStore.setSelectionRect(null);
         setMode('select');
         return;
     }
 
-    pdfViewerStore.setIsDragging(false);
+    uiStore.setIsDragging(false);
     
     // Area selection can add both tags and raw items
     const intersectingTags = new Set<string>();
@@ -1123,7 +1131,7 @@ const PdfViewerComponent = ({
         actualSetSelectedRawTextItemIds(prev => Array.from(new Set([...prev, ...intersectingRawItems])));
     }
 
-    pdfViewerStore.setSelectionRect(null);
+    uiStore.setSelectionRect(null);
   };
   
   // getTagCenter now handled by PdfViewerStore
@@ -1134,14 +1142,14 @@ const PdfViewerComponent = ({
   
   // Update visible relationships using RelationshipRenderStore
   useEffect(() => {
-    relationshipRenderStore.updateVisibleRelationships(
+    relationshipStore.updateVisibleRelationships(
       relationships, tagsMap, currentPage, visibilitySettings,
       showAllRelationships, showOnlySelectedRelationships, actualSelectedTagIds
     );
-  }, [relationships, tagsMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, actualSelectedTagIds, relationshipRenderStore]);
+  }, [relationships, tagsMap, currentPage, visibilitySettings.relationships, showAllRelationships, showOnlySelectedRelationships, actualSelectedTagIds]);
 
   // Get visible relationships from store
-  const currentRelationshipsWithData = relationshipRenderStore.visibleRelationships;
+  const currentRelationshipsWithData = relationshipStore.visibleRelationships;
   
   // getAnnotationTargetCenter now handled by PdfViewerStore
 
@@ -1179,7 +1187,13 @@ const PdfViewerComponent = ({
 
                     {currentRawTextItems.map(item => {
                          const { x1, y1, x2, y2 } = item.bbox;
-                         const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
+                         
+                         // Skip items with invalid bounding box coordinates
+                         if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+                             return null;
+                         }
+                         
+                         const { rectX, rectY, rectWidth, rectHeight } = viewerStore.transformCoordinates(x1, y1, x2, y2, scale, null, viewport);
                          const isSelected = actualSelectedRawTextItemIds.includes(item.id);
                          const isHighlighted = highlightedRawTextItemIds.has(item.id);
                          const isLinked = linkedRawTextItemIds.has(item.id);
@@ -1233,16 +1247,16 @@ const PdfViewerComponent = ({
                     {currentRelationshipsWithData.map(({ rel, fromTag, toItem, isAnnotation }) => {
                         if (!fromTag || !toItem) return null;
                         
-                        const start = pdfViewerStore.getTagCenter(fromTag, scale);
+                        const start = viewerStore.getTagCenter(fromTag, scale, viewport);
                         let end, strokeColor, marker;
                         
                         if (isAnnotation) {
-                            end = pdfViewerStore.getAnnotationTargetCenter(rel.to, rawTextMap, scale);
-                            strokeColor = relationshipRenderStore.getRelationshipColor(rel.type);
+                            end = pdfViewerStore.getAnnotationTargetCenter(rel.to, rawTextMap, scale, viewport, rotation);
+                            strokeColor = relationshipStore.getRelationshipColor(rel.type);
                             marker = '';
                         } else {
-                            end = pdfViewerStore.getTagCenter(toItem, scale);
-                            strokeColor = relationshipRenderStore.getRelationshipColor(rel.type);
+                            end = viewerStore.getTagCenter(toItem, scale, viewport);
+                            strokeColor = relationshipStore.getRelationshipColor(rel.type);
                             
                             if (rel.type === RelationshipType.Connection) {
                                 marker = 'url(#arrowhead-connect)';
@@ -1271,13 +1285,19 @@ const PdfViewerComponent = ({
                     
                     {currentTags.map(tag => {
                     const { x1, y1, x2, y2 } = tag.bbox;
-                    const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
+                    
+                    // Skip tags with invalid bounding box coordinates
+                    if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+                        return null;
+                    }
+                    
+                    const { rectX, rectY, rectWidth, rectHeight } = viewerStore.transformCoordinates(x1, y1, x2, y2, scale, null, viewport);
                     const isSelected = Array.isArray(actualSelectedTagIds) && actualSelectedTagIds.includes(tag.id);
                     const isHighlighted = highlightedTagIds.has(tag.id); // Use highlight state for visual feedback
                     const isRelStart = tag.id === relationshipStartTag;
                     const isRelated = relatedTagIds.has(tag.id);
-                    const isVisible = pdfViewerStore.isTagVisible(tag, visibilitySettings);
-                    const color = pdfViewerStore.getEntityColor(tag.category, colors);
+                    const isVisible = settingsStore.isTagVisible(tag, visibilitySettings);
+                    const color = settingsStore.getEntityColor(tag.category, colors);
 
                     return (
                         <g key={tag.id} data-tag-id={tag.id} onMouseDown={(e) => handleTagMouseDown(e, tag.id)} className="cursor-pointer">
@@ -1345,14 +1365,14 @@ const PdfViewerComponent = ({
                               y={rectY} 
                               width={rectWidth} 
                               height={rectHeight} 
-                              stroke={isVisible ? pdfViewerStore.getEntityColor(tag.category, colors) : 'transparent'}
+                              stroke={isVisible ? settingsStore.getEntityColor(tag.category, colors) : 'transparent'}
                               strokeWidth={isSelected ? "4" : "2"}
                               className="transition-all duration-150"
                               fill={
                                 isVisible 
                                   ? isSelected 
-                                    ? `${pdfViewerStore.getEntityColor(tag.category, colors)}CC` // 80% opacity when selected
-                                    : `${pdfViewerStore.getEntityColor(tag.category, colors)}33` // 20% opacity when not selected
+                                    ? `${settingsStore.getEntityColor(tag.category, colors)}CC` // 80% opacity when selected
+                                    : `${settingsStore.getEntityColor(tag.category, colors)}33` // 20% opacity when not selected
                                   : 'rgba(255, 255, 255, 0.003)'
                               } 
                               strokeDasharray={isRelStart ? "4 2" : "none"}
@@ -1379,7 +1399,13 @@ const PdfViewerComponent = ({
                       if (!tagToPing) return null;
                       
                       const { x1, y1, x2, y2 } = tagToPing.bbox;
-                      const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
+                      
+                      // Skip if tag has invalid bounding box coordinates
+                      if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+                          return null;
+                      }
+                      
+                      const { rectX, rectY, rectWidth, rectHeight } = viewerStore.transformCoordinates(x1, y1, x2, y2, scale, null, viewport);
 
                       return (
                         <TagHighlight
@@ -1395,7 +1421,13 @@ const PdfViewerComponent = ({
                     {/* Descriptions */}
                     {visibilitySettings.descriptions && currentDescriptions.map(desc => {
                       const { x1, y1, x2, y2 } = desc.bbox;
-                      const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
+                      
+                      // Skip descriptions with invalid bounding box coordinates
+                      if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+                          return null;
+                      }
+                      
+                      const { rectX, rectY, rectWidth, rectHeight } = viewerStore.transformCoordinates(x1, y1, x2, y2, scale, null, viewport);
                       const isSelected = actualSelectedDescriptionIds.includes(desc.id);
 
                       return (
@@ -1436,7 +1468,13 @@ const PdfViewerComponent = ({
                       }
                       
                       const { x1, y1, x2, y2 } = descToPing.bbox;
-                      const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
+                      
+                      // Skip if description has invalid bounding box coordinates
+                      if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+                          return null;
+                      }
+                      
+                      const { rectX, rectY, rectWidth, rectHeight } = viewerStore.transformCoordinates(x1, y1, x2, y2, scale, null, viewport);
 
                       return (
                         <TagHighlight
@@ -1457,7 +1495,13 @@ const PdfViewerComponent = ({
                       }
                       
                       const { x1, y1, x2, y2 } = specToPing.bbox;
-                      const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
+                      
+                      // Skip if equipment short spec has invalid bounding box coordinates
+                      if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+                          return null;
+                      }
+                      
+                      const { rectX, rectY, rectWidth, rectHeight } = viewerStore.transformCoordinates(x1, y1, x2, y2, scale, null, viewport);
 
                       return (
                         <TagHighlight
@@ -1473,7 +1517,13 @@ const PdfViewerComponent = ({
                     {/* Equipment Short Specs */}
                     {visibilitySettings.equipmentShortSpecs && currentEquipmentShortSpecs.map(spec => {
                       const { x1, y1, x2, y2 } = spec.bbox;
-                      const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
+                      
+                      // Skip equipment short specs with invalid bounding box coordinates
+                      if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+                          return null;
+                      }
+                      
+                      const { rectX, rectY, rectWidth, rectHeight } = viewerStore.transformCoordinates(x1, y1, x2, y2, scale, null, viewport);
                       const isSelected = actualSelectedEquipmentShortSpecIds.includes(spec.id);
 
                       return (
@@ -1576,7 +1626,13 @@ const PdfViewerComponent = ({
                   if (!editingItem || !viewport) return null;
 
                   const { x1, y1, x2, y2 } = editingItem.bbox;
-                  const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale);
+                  
+                  // Skip if editing item has invalid bounding box coordinates
+                  if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+                      return null;
+                  }
+                  
+                  const { rectX, rectY, rectWidth, rectHeight } = pdfViewerStore.transformCoordinates(x1, y1, x2, y2, scale, null, viewport);
 
                   return (
                     <div
@@ -1591,7 +1647,7 @@ const PdfViewerComponent = ({
                         ref={editInputRef}
                         type="text"
                         value={editingText}
-                        onChange={(e) => pdfViewerStore.setEditingText(e.target.value)}
+                        onChange={(e) => workspaceStore.setEditingText(e.target.value)}
                         onKeyDown={handleEditInputKeyDown}
                         className="flex-1 border-none outline-none bg-white text-gray-800 text-sm font-mono px-1 py-0.5"
                         style={{ 

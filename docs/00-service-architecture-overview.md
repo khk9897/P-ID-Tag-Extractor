@@ -41,7 +41,8 @@ P&ID Smart Digitizer의 전체 서비스 아키텍처를 정의하고, Frontend/
 - **Framework**: React 19 (기존 유지)
 - **번들러**: Vite (빠른 개발 서버)
 - **렌더링**: Client-Side Rendering
-- **상태관리**: Zustand + TanStack Query (서버 상태)
+- **상태관리**: Zustand + tRPC (서버 상태)
+- **데이터 직렬화**: MessagePack (70% 크기 절약)
 - **스타일링**: Tailwind CSS
 - **PDF 처리**: PDF.js (Client-side)
 
@@ -95,33 +96,38 @@ src/
 
 ### **기술 스택**
 - **Runtime**: Node.js 18+
-- **Framework**: Express.js / Fastify
+- **Framework**: tRPC + Express.js
 - **인증**: JWT + Refresh Token
 - **파일 처리**: Multer + Sharp (이미지 최적화)
-- **실시간 통신**: Socket.io (선택사항)
+- **실시간 통신**: tRPC subscriptions
 
 ### **주요 역할**
 
 #### **1. 인증 및 사용자 관리**
 ```typescript
-POST /api/auth/login
-POST /api/auth/register  
-POST /api/auth/refresh
-GET  /api/users/profile
-PUT  /api/users/profile
+// tRPC 라우터
+const authRouter = t.router({
+  login: t.procedure.input(LoginSchema).mutation(...),
+  register: t.procedure.input(RegisterSchema).mutation(...),
+  refresh: t.procedure.mutation(...),
+  getProfile: t.procedure.query(...),
+  updateProfile: t.procedure.input(ProfileSchema).mutation(...)
+});
 ```
 
 #### **2. 프로젝트 관리**
 ```typescript
-GET    /api/projects                    # 사용자별 프로젝트 목록
-POST   /api/projects                    # 프로젝트 생성
-GET    /api/projects/{id}               # 프로젝트 상세
-PUT    /api/projects/{id}               # 프로젝트 업데이트
-DELETE /api/projects/{id}               # 프로젝트 삭제
-
-POST   /api/projects/{id}/upload        # PDF 업로드
-GET    /api/projects/{id}/collaborators # 협업자 목록
-POST   /api/projects/{id}/invite        # 협업자 초대
+const projectRouter = t.router({
+  getProjects: t.procedure.query(...),           // 사용자별 프로젝트 목록
+  createProject: t.procedure.input(...).mutation(...), // 프로젝트 생성
+  getProject: t.procedure.input(...).query(...), // 프로젝트 상세
+  updateProject: t.procedure.input(...).mutation(...), // 프로젝트 업데이트
+  deleteProject: t.procedure.input(...).mutation(...), // 프로젝트 삭제
+  
+  uploadPDF: t.procedure.input(...).mutation(...), // PDF 업로드
+  getCollaborators: t.procedure.input(...).query(...), // 협업자 목록
+  inviteCollaborator: t.procedure.input(...).mutation(...) // 협업자 초대
+});
 ```
 
 #### **3. 프로젝트 데이터 관리**

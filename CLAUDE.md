@@ -101,6 +101,16 @@ Core entities:
 - Korean documentation in README.md for end users
 - Enhanced Line pattern regex: `^(?=.{10,25}$)(?=.*")([^-]*-){3,}[^-]*$` for improved accuracy
 
+### Future Architecture (CSR + Backend API)
+
+The application is designed to transition from the current client-only SPA to a comprehensive web service with:
+- **Frontend**: React 19 + Vite (CSR maintained for performance)
+- **Backend**: Node.js/Express API server  
+- **Database**: PostgreSQL with 19 tables for user management, project data, and collaboration
+- **Multi-user Collaboration**: Work assignment and result merging (not concurrent editing)
+
+See `docs/00-service-architecture-overview.md` for complete architecture details.
+
 ## Development Principles - 기초부터 차근차근
 
 ### Problem-Solving Approach
@@ -135,3 +145,24 @@ ALWAYS start with the most basic, fundamental solutions before attempting comple
 - **ResizeObserver**: Essential for dynamic layouts that adapt to screen changes
 
 **Key Lesson**: Most UI layout problems have simple, fundamental solutions using basic web APIs. Complex custom logic is rarely the answer.
+
+## 리팩토링 참조 문서
+
+리팩토링 작업시 다음 문서들을 참조하세요:
+
+### 핵심 가이드
+- `docs/01-architecture-refactoring-plan.md` - 8주 리팩토링 계획 및 AS-IS/TO-BE 비교
+- `docs/07-feature-preservation-guide.md` - 기존 기능 보존 가이드 (AS-IS → TO-BE 매핑)
+- `docs/08-ui-component-refactoring-guide.md` - UI 컴포넌트 구조 변경 가이드
+
+### 기술 설계
+- `docs/02-session-data-management.md` - 세션 데이터 관리 설계
+- `docs/03-database-schema-design.md` - RDBMS 스키마 설계
+- `docs/05-performance-optimization.md` - 성능 최적화 가이드
+
+### 빠른 참조
+- `docs/04-database-schema-summary.md` - 데이터베이스 스키마 요약 (19개 테이블)
+- `docs/06-todo-list.md` - 개발 로드맵 & TODO 관리
+- `docs/09-user-auth-project-management.md` - 사용자 인증 및 프로젝트 관리 UI
+
+**중요**: 리팩토링 각 단계에서 해당 문서를 참조하여 정확한 구현 방향을 확인하세요.

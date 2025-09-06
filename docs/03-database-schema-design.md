@@ -279,9 +279,10 @@ CREATE TABLE project_collaborators (
     invitation_expires_at TIMESTAMP,
     invitation_accepted_at TIMESTAMP,
     
-    -- 작업 할당
+    -- 작업 할당 (현재 협업 시스템)
     assigned_pages INTEGER[] DEFAULT '{}',
     assigned_categories TEXT[] DEFAULT '{}',
+    work_assignment_id VARCHAR(36) REFERENCES work_assignments(assignment_id),
     
     -- 활동 추적
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -853,7 +854,154 @@ CREATE TABLE conflicts (
 );
 ```
 
-### **7. 캐시 및 성능 최적화**
+### **7. 협업 및 작업 관리**
+
+#### **WORK_ASSIGNMENTS** - 작업 할당 관리
+```sql
+CREATE TABLE work_assignments (
+    assignment_id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id VARCHAR(36) REFERENCES projects(project_id) ON DELETE CASCADE,
+    assigned_to VARCHAR(36) REFERENCES users(user_id) ON DELETE CASCADE,
+    
+    -- 할당 정보
+    assignment_type ENUM('pages', 'categories', 'tags', 'relationships', 'reviews') NOT NULL,
+    assignment_scope JSONB NOT NULL, -- 페이지 범위, 카테고리 목록 등
+    
+    -- 상태 관리
+    status ENUM('assigned', 'in_progress', 'completed', 'reviewed', 'integrated') DEFAULT 'assigned',
+    priority ENUM('low', 'normal', 'high') DEFAULT 'normal',
+    
+    -- 진행률 추적
+    total_items INTEGER DEFAULT 0,
+    completed_items INTEGER DEFAULT 0,
+    progress_percentage DECIMAL(5,2) DEFAULT 0.0,
+    
+    -- 시간 관리
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    estimated_hours INTEGER,
+    actual_hours INTEGER,
+    
+    -- 메타데이터
+    assignment_notes TEXT,
+    completion_notes TEXT,
+    
+    -- 감사 필드
+    assigned_by VARCHAR(36) REFERENCES users(user_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- 인덱스
+    INDEX idx_work_assignments_project (project_id),
+    INDEX idx_work_assignments_user (assigned_to),
+    INDEX idx_work_assignments_status (status),
+    INDEX idx_work_assignments_type (assignment_type),
+    INDEX idx_work_assignments_priority (priority),
+    INDEX idx_work_assignments_scope_gin (assignment_scope) USING GIN,
+    
+    -- 체크 제약조건
+    CHECK (progress_percentage >= 0 AND progress_percentage <= 100),
+    CHECK (completed_items <= total_items),
+    CHECK (actual_hours >= 0),
+    CHECK (estimated_hours > 0)
+);
+```
+
+#### **INTEGRATION_HISTORY** - 프로젝트 통합 이력
+```sql
+CREATE TABLE integration_history (
+    integration_id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id VARCHAR(36) REFERENCES projects(project_id) ON DELETE CASCADE,
+    
+    -- 통합 정보
+    integration_type ENUM('merge', 'import', 'sync') NOT NULL,
+    source_user_id VARCHAR(36) REFERENCES users(user_id),
+    target_version VARCHAR(50),
+    
+    -- 통합 데이터
+    source_data BYTEA, -- 압축된 소스 데이터
+    merged_data BYTEA, -- 압축된 병합 결과
+    conflict_data JSONB DEFAULT '{}', -- 충돌 정보
+    
+    -- 통계
+    items_added INTEGER DEFAULT 0,
+    items_updated INTEGER DEFAULT 0,
+    items_deleted INTEGER DEFAULT 0,
+    conflicts_detected INTEGER DEFAULT 0,
+    conflicts_resolved INTEGER DEFAULT 0,
+    
+    -- 상태
+    status ENUM('pending', 'processing', 'completed', 'failed', 'rolled_back') DEFAULT 'pending',
+    error_message TEXT,
+    
+    -- 시간 정보
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    processing_duration INTEGER, -- 초 단위
+    
+    -- 감사 필드
+    initiated_by VARCHAR(36) REFERENCES users(user_id) NOT NULL,
+    approved_by VARCHAR(36) REFERENCES users(user_id),
+    
+    -- 인덱스
+    INDEX idx_integration_project (project_id),
+    INDEX idx_integration_source_user (source_user_id),
+    INDEX idx_integration_type (integration_type),
+    INDEX idx_integration_status (status),
+    INDEX idx_integration_started (started_at),
+    INDEX idx_integration_conflicts_gin (conflict_data) USING GIN
+);
+```
+
+#### **MERGE_CONFLICTS** - 병합 충돌 관리
+```sql
+CREATE TABLE merge_conflicts (
+    conflict_id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+    integration_id VARCHAR(36) REFERENCES integration_history(integration_id) ON DELETE CASCADE,
+    
+    -- 충돌 정보
+    conflict_type ENUM('duplicate_tag', 'overlapping_relationship', 'conflicting_edit', 'data_inconsistency') NOT NULL,
+    entity_type ENUM('tag', 'relationship', 'description', 'comment') NOT NULL,
+    entity_identifier VARCHAR(100), -- 태그 텍스트, 관계 ID 등
+    
+    -- 충돌 데이터
+    source_value JSONB,
+    target_value JSONB,
+    suggested_resolution JSONB,
+    
+    -- 위치 정보
+    page_number INTEGER,
+    bbox_area JSONB, -- 충돌 영역 좌표
+    
+    -- 해결 정보
+    resolution_status ENUM('pending', 'auto_resolved', 'manual_resolved', 'ignored') DEFAULT 'pending',
+    resolution_strategy ENUM('keep_source', 'keep_target', 'merge_both', 'create_new', 'ignore') DEFAULT NULL,
+    resolved_value JSONB,
+    resolved_by VARCHAR(36) REFERENCES users(user_id),
+    resolved_at TIMESTAMP,
+    resolution_notes TEXT,
+    
+    -- 신뢰도
+    conflict_severity ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
+    auto_resolvable BOOLEAN DEFAULT FALSE,
+    confidence_score DECIMAL(5,4),
+    
+    -- 시간 정보
+    detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    
+    -- 인덱스
+    INDEX idx_merge_conflicts_integration (integration_id),
+    INDEX idx_merge_conflicts_type (conflict_type),
+    INDEX idx_merge_conflicts_entity (entity_type),
+    INDEX idx_merge_conflicts_status (resolution_status),
+    INDEX idx_merge_conflicts_severity (conflict_severity),
+    INDEX idx_merge_conflicts_page (page_number),
+    INDEX idx_merge_conflicts_resolved (resolved_at)
+);
+```
+
+### **8. 캐시 및 성능 최적화**
 
 #### **CACHE_ENTRIES** - 캐시 관리
 ```sql

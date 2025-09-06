@@ -1114,6 +1114,7 @@ class KeyboardStore {
 | Loop 자동 생성 | 🟡 High | App.tsx | loopStore.ts | ⏳ |
 | Excel 내보내기 | 🔴 Critical | App.tsx | exportStore.ts | ⏳ |
 | 프로젝트 저장/불러오기 | 🔴 Critical | App.tsx | projectStore.ts | ⏳ |
+| **프로젝트 병합 시스템** | 🔴 Critical | 신규 | projectMerger.ts | ⏳ |
 | 가시성 설정 | 🟢 Medium | App.tsx | visibilityStore.ts | ⏳ |
 | 키보드 단축키 | 🟢 Medium | PdfViewer.tsx | keyboardStore.ts | ⏳ |
 | 검토 상태 관리 | 🟡 High | App.tsx | tagStore.ts | ⏳ |
@@ -1155,6 +1156,279 @@ class KeyboardStore {
 3. **코드 품질**: App.tsx 90% 축소, 테스트 커버리지 80%
 4. **사용자 경험**: 기존과 동일하거나 개선된 UX
 5. **확장성**: 새 기능 추가 시간 50% 단축
+
+---
+
+## 🔄 **신규 기능: 프로젝트 병합 시스템**
+
+### **11. 다중 사용자 작업 결과 통합**
+
+#### **기능 설명**
+여러 사용자가 작업한 프로젝트 데이터를 지능적으로 병합하는 시스템
+
+#### **AS-IS (현재 구현)**
+```typescript
+// App.tsx - 기본적인 JSON Import만 지원
+const handleImportProject = useCallback((data: any) => {
+  // 단순 데이터 덮어쓰기
+  setTags(data.tags || []);
+  setRelationships(data.relationships || []);
+  setDescriptions(data.descriptions || []);
+  setComments(data.comments || []);
+  // 기존 데이터는 완전 삭제됨
+}, []);
+
+const handleExportProject = useCallback(() => {
+  const projectData = {
+    pdfFileName,
+    tags,
+    relationships, 
+    descriptions,
+    comments,
+    patterns,
+    tolerances
+  };
+  
+  // JSON 파일로 내보내기
+  downloadJSON(projectData, `${pdfFileName}_project.json`);
+}, [tags, relationships, descriptions, ...]);
+```
+
+**문제점:**
+- 단순 덮어쓰기만 지원
+- 충돌 해결 없음
+- 작업 결과 손실 위험
+
+#### **TO-BE (리팩토링 계획)**
+```typescript
+// stores/projectMerger.ts
+class ProjectMerger {
+  @observable mergeStatus: MergeStatus = 'idle';
+  @observable conflicts: ConflictItem[] = [];
+  @observable mergeProgress = 0;
+
+  @action
+  async mergeProjects(sourceData: ProjectData, options: MergeOptions) {
+    try {
+      this.mergeStatus = 'processing';
+      this.conflicts = [];
+      
+      // 1. 사전 검증
+      const validation = await this.validateMergeData(sourceData);
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(', '));
+      }
+      
+      // 2. 충돌 탐지
+      const conflicts = await this.detectConflicts(sourceData);
+      if (conflicts.length > 0 && !options.autoResolve) {
+        this.conflicts = conflicts;
+        this.mergeStatus = 'conflicts_detected';
+        return { status: 'conflicts', conflicts };
+      }
+      
+      // 3. 자동 해결
+      const resolvedData = await this.resolveConflicts(sourceData, conflicts, options);
+      
+      // 4. 데이터 병합
+      const mergedResult = await this.performMerge(resolvedData, options);
+      
+      // 5. 결과 검증
+      const finalValidation = await this.validateMergedData(mergedResult);
+      if (!finalValidation.isValid) {
+        await this.rollback();
+        throw new Error('Merged data validation failed');
+      }
+      
+      // 6. Store 업데이트
+      await this.applyMergedData(mergedResult);
+      
+      this.mergeStatus = 'completed';
+      return { status: 'success', result: mergedResult };
+      
+    } catch (error) {
+      this.mergeStatus = 'failed';
+      throw error;
+    }
+  }
+  
+  private async detectConflicts(sourceData: ProjectData): Promise<ConflictItem[]> {
+    const conflicts: ConflictItem[] = [];
+    const currentTags = tagStore.tags;
+    
+    // 태그 충돌 감지
+    for (const sourceTag of sourceData.tags) {
+      const existingTag = currentTags.find(t => 
+        t.page === sourceTag.page && 
+        this.isOverlapping(t.bbox, sourceTag.bbox)
+      );
+      
+      if (existingTag && existingTag.text !== sourceTag.text) {
+        conflicts.push({
+          type: 'tag_conflict',
+          location: { page: sourceTag.page, bbox: sourceTag.bbox },
+          existing: existingTag,
+          incoming: sourceTag,
+          severity: this.calculateConflictSeverity(existingTag, sourceTag),
+          autoResolvable: this.canAutoResolve(existingTag, sourceTag)
+        });
+      }
+    }
+    
+    // 관계 충돌 감지
+    for (const sourceRel of sourceData.relationships) {
+      const duplicateRel = relationshipStore.relationships.find(r =>
+        r.from === sourceRel.from && r.to === sourceRel.to && r.type === sourceRel.type
+      );
+      
+      if (duplicateRel) {
+        conflicts.push({
+          type: 'relationship_duplicate',
+          existing: duplicateRel,
+          incoming: sourceRel,
+          severity: 'low',
+          autoResolvable: true
+        });
+      }
+    }
+    
+    return conflicts;
+  }
+  
+  private async resolveConflicts(
+    sourceData: ProjectData, 
+    conflicts: ConflictItem[], 
+    options: MergeOptions
+  ): Promise<ProjectData> {
+    const resolved = { ...sourceData };
+    
+    for (const conflict of conflicts) {
+      switch (options.conflictResolution) {
+        case 'keep_existing':
+          // 기존 데이터 유지, 신규 데이터 제거
+          resolved.tags = resolved.tags.filter(t => t.id !== conflict.incoming.id);
+          break;
+          
+        case 'keep_incoming':
+          // 신규 데이터 적용, 기존 데이터 대체
+          tagStore.deleteTag(conflict.existing.id);
+          break;
+          
+        case 'merge_intelligent':
+          // 지능적 병합 (위치가 다르면 둘 다 유지, 같으면 더 최근 것 적용)
+          const mergedTag = await this.intelligentMerge(conflict.existing, conflict.incoming);
+          resolved.tags = resolved.tags.map(t => 
+            t.id === conflict.incoming.id ? mergedTag : t
+          );
+          break;
+          
+        case 'create_variant':
+          // 변형 생성 (예: TAG-001 → TAG-001-v2)
+          const variantTag = await this.createVariant(conflict.incoming);
+          resolved.tags = resolved.tags.map(t => 
+            t.id === conflict.incoming.id ? variantTag : t
+          );
+          break;
+      }
+    }
+    
+    return resolved;
+  }
+  
+  @action
+  async exportForMerging(userInfo: UserInfo, workScope: WorkScope) {
+    const exportData = {
+      metadata: {
+        exportedBy: userInfo.id,
+        exportedAt: Date.now(),
+        workScope,
+        version: '1.0'
+      },
+      projectInfo: {
+        id: projectStore.currentProject.id,
+        name: projectStore.currentProject.name,
+        pdfChecksum: projectStore.pdfChecksum
+      },
+      data: {
+        tags: tagStore.tags.filter(t => this.isInWorkScope(t, workScope)),
+        relationships: relationshipStore.relationships.filter(r => this.isInWorkScope(r, workScope)),
+        descriptions: descriptionStore.descriptions.filter(d => this.isInWorkScope(d, workScope)),
+        comments: commentStore.comments.filter(c => this.isInWorkScope(c, workScope))
+      }
+    };
+    
+    return exportData;
+  }
+}
+
+// 사용 예시
+const mergeOptions: MergeOptions = {
+  conflictResolution: 'merge_intelligent',
+  autoResolve: true,
+  validateResult: true,
+  preserveHistory: true
+};
+
+await projectMerger.mergeProjects(importedData, mergeOptions);
+```
+
+**개선사항:**
+- ✅ 지능적 충돌 탐지 및 해결
+- ✅ 다양한 병합 전략 (keep_existing, keep_incoming, merge_intelligent, create_variant)
+- ✅ 작업 영역 기반 부분 병합
+- ✅ 롤백 지원으로 안전성 확보
+- ✅ 상세한 병합 결과 리포트
+
+### **통합 워크플로우**
+
+```typescript
+// 전체 협업 워크플로우
+class CollaborationWorkflow {
+  // 1. 작업 할당
+  async assignWork(projectId: string, assignments: WorkAssignment[]) {
+    for (const assignment of assignments) {
+      await workAssignmentStore.createAssignment({
+        projectId,
+        userId: assignment.userId,
+        scope: assignment.scope,
+        type: assignment.type
+      });
+    }
+  }
+  
+  // 2. 작업 진행률 추적
+  @computed
+  get projectProgress() {
+    const assignments = workAssignmentStore.getByProject(this.currentProjectId);
+    const totalProgress = assignments.reduce((sum, a) => sum + a.progress, 0);
+    return totalProgress / assignments.length;
+  }
+  
+  // 3. 작업 완료 및 통합
+  async integrateWork(userId: string, workData: ProjectData) {
+    // 작업 검증
+    const validation = await this.validateWork(workData, userId);
+    if (!validation.isValid) {
+      throw new Error(`Work validation failed: ${validation.errors.join(', ')}`);
+    }
+    
+    // 충돌 확인 및 해결
+    const mergeResult = await projectMerger.mergeProjects(workData, {
+      conflictResolution: 'merge_intelligent',
+      autoResolve: true
+    });
+    
+    if (mergeResult.status === 'conflicts') {
+      // 수동 충돌 해결 UI 표시
+      return { status: 'requires_manual_resolution', conflicts: mergeResult.conflicts };
+    }
+    
+    // 통합 완료
+    await workAssignmentStore.markCompleted(userId);
+    return { status: 'integrated', result: mergeResult };
+  }
+}
+```
 
 ---
 

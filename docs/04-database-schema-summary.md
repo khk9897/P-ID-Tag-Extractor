@@ -2,7 +2,7 @@
 
 ## 📋 개요
 
-P&ID Smart Digitizer의 데이터베이스 스키마를 한눈에 파악할 수 있도록 정리한 빠른 참조 문서입니다. 16개 핵심 테이블의 구조, 관계, 주요 인덱스 및 데이터 플로우를 간단명료하게 제시합니다.
+P&ID Smart Digitizer의 데이터베이스 스키마를 한눈에 파악할 수 있도록 정리한 빠른 참조 문서입니다. 19개 핵심 테이블의 구조, 관계, 주요 인덱스 및 데이터 플로우를 간단명료하게 제시합니다.
 
 ---
 
@@ -172,6 +172,47 @@ FK: resolved_by → USERS
 - detected_at, resolved_at
 ```
 
+### **7. 협업 및 작업 관리**
+
+#### **WORK_ASSIGNMENTS** - 작업 할당 관리
+```
+PK: assignment_id
+FK: project_id → PROJECTS, assigned_to → USERS
+- assignment_type (pages, categories, tags, relationships, reviews)
+- assignment_scope (JSONB), status (assigned, in_progress, completed, reviewed, integrated)
+- priority (low, normal, high), progress_percentage
+- total_items, completed_items
+- assigned_at, started_at, completed_at
+```
+
+#### **INTEGRATION_HISTORY** - 프로젝트 통합 이력
+```
+PK: integration_id
+FK: project_id → PROJECTS, source_user_id → USERS
+- integration_type (merge, import, sync), target_version
+- source_data (BYTEA), merged_data (BYTEA), conflict_data (JSONB)
+- items_added, items_updated, items_deleted
+- conflicts_detected, conflicts_resolved
+- status (pending, processing, completed, failed, rolled_back)
+- started_at, completed_at, processing_duration
+```
+
+#### **MERGE_CONFLICTS** - 병합 충돌 관리
+```
+PK: conflict_id
+FK: integration_id → INTEGRATION_HISTORY
+- conflict_type (duplicate_tag, overlapping_relationship, conflicting_edit, data_inconsistency)
+- entity_type (tag, relationship, description, comment), entity_identifier
+- source_value (JSONB), target_value (JSONB), suggested_resolution (JSONB)
+- page_number, bbox_area (JSONB)
+- resolution_status (pending, auto_resolved, manual_resolved, ignored)
+- resolution_strategy (keep_source, keep_target, merge_both, create_new, ignore)
+- conflict_severity (low, medium, high, critical)
+- detected_at, resolved_at
+```
+
+### **8. 캐시 및 성능 최적화**
+
 #### **CACHE_ENTRIES** - 캐시 관리
 ```
 PK: cache_key
@@ -192,6 +233,7 @@ USERS (1) ←→ (N) USER_SESSIONS
 USERS (1) ←→ (N) PROJECT_COLLABORATORS  
 USERS (1) ←→ (N) COMMENTS
 USERS (1) ←→ (N) ACTIVITY_LOGS
+USERS (1) ←→ (N) WORK_ASSIGNMENTS
 
 PROJECTS (1) ←→ (N) USER_SESSIONS
 PROJECTS (1) ←→ (N) PROJECT_COLLABORATORS
@@ -201,6 +243,8 @@ PROJECTS (1) ←→ (N) RELATIONSHIPS
 PROJECTS (1) ←→ (N) DESCRIPTIONS
 PROJECTS (1) ←→ (N) COMMENTS
 PROJECTS (1) ←→ (N) ACTIVITY_LOGS
+PROJECTS (1) ←→ (N) WORK_ASSIGNMENTS
+PROJECTS (1) ←→ (N) INTEGRATION_HISTORY
 
 USER_SESSIONS (1) ←→ (N) SESSION_SNAPSHOTS
 USER_SESSIONS (1) ←→ (N) SYNC_EVENTS
@@ -212,6 +256,9 @@ TAGS (1) ←→ (N) RELATIONSHIPS [from_tag_id, to_tag_id]
 TAGS (N) ←→ (N) RAW_TEXT_ITEMS [source_raw_text_ids]
 
 COMMENTS (1) ←→ (N) COMMENTS [parent_comment_id] (스레드형)
+
+WORK_ASSIGNMENTS (1) ←→ (1) PROJECT_COLLABORATORS [work_assignment_id]
+INTEGRATION_HISTORY (1) ←→ (N) MERGE_CONFLICTS
 ```
 
 ### **참조 관계 (다형성)**
@@ -233,6 +280,11 @@ SYNC_EVENTS.entity_id → TAGS.tag_id
 CONFLICTS.entity_id → TAGS.tag_id
                     → RELATIONSHIPS.relationship_id
                     → DESCRIPTIONS.description_id
+
+MERGE_CONFLICTS.entity_identifier → TAGS.text
+                                  → RELATIONSHIPS.relationship_id
+                                  → DESCRIPTIONS.description_id
+                                  → COMMENTS.comment_id
 ```
 
 ---
@@ -249,14 +301,19 @@ PDF Upload → RAW_TEXT_ITEMS → AI Classification → TAGS → RELATIONSHIPS
 User Login → USER_SESSIONS → Workspace State → SESSION_SNAPSHOTS (백업)
 ```
 
-### **3. 협업 플로우**
+### **3. 협업 플로우 (현재 구현)**
 ```
-User Action → ACTIVITY_LOGS → SYNC_EVENTS → 다른 세션에 전파
+Work Assignment → Individual Work → Export Data → Merge Process → Final Integration
 ```
 
-### **4. 충돌 해결 플로우**
+### **4. 병합 및 충돌 해결 플로우**
 ```
-동시 편집 → CONFLICTS 생성 → 자동/수동 해결 → SYNC_EVENTS 업데이트
+Data Import → INTEGRATION_HISTORY → Conflict Detection → MERGE_CONFLICTS → Resolution → Final Merge
+```
+
+### **5. 향후 확장: 실시간 협업 플로우**
+```
+User Action → ACTIVITY_LOGS → SYNC_EVENTS → 다른 세션에 전파
 ```
 
 ---
@@ -269,11 +326,14 @@ User Action → ACTIVITY_LOGS → SYNC_EVENTS → 다른 세션에 전파
 - `RELATIONSHIPS`: project_id, from_tag_id, to_tag_id
 - `COMMENTS`: project_id, target_type, target_id, status
 - `ACTIVITY_LOGS`: project_id, user_id, created_at (파티셔닝)
+- `WORK_ASSIGNMENTS`: project_id, assigned_to, status, assignment_type
+- `INTEGRATION_HISTORY`: project_id, source_user_id, integration_type, status
+- `MERGE_CONFLICTS`: integration_id, conflict_type, resolution_status, conflict_severity
 
 ### **전문 검색 인덱스 (GIN)**
 - `TAGS.text`, `RAW_TEXT_ITEMS.text`, `DESCRIPTIONS.text`
 - `COMMENTS.content`
-- 모든 JSONB 필드 (metadata, preferences, settings 등)
+- 모든 JSONB 필드 (metadata, preferences, settings, assignment_scope, conflict_data 등)
 
 ---
 

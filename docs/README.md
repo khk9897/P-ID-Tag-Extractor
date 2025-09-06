@@ -1,27 +1,27 @@
-# P&ID Tag Extractor 문서 모음
+# P&ID Smart Digitizer 문서 모음
 
-이 폴더는 P&ID Tag Extractor 프로젝트의 기술 문서들을 체계적으로 정리한 곳입니다.
+이 폴더는 P&ID Smart Digitizer 프로젝트의 기술 문서들을 체계적으로 정리한 곳입니다.
 
 ## 📚 문서 목록
 
 ### **아키텍처 & 설계**
 1. **[01-architecture-refactoring-plan.md](01-architecture-refactoring-plan.md)**
-   - 전체 아키텍처 리팩토링 계획
+   - 아키텍처 리팩토링 계획서
    - AS-IS vs TO-BE 분석
    - 8주 구현 로드맵
 
 2. **[02-session-data-management.md](02-session-data-management.md)**
-   - 세션 데이터 관리 시스템 설계
+   - 세션 데이터 관리 설계서
    - 다중 사용자/프로젝트 지원
    - 실시간 동기화 및 충돌 해결
 
 3. **[03-database-schema-design.md](03-database-schema-design.md)**
-   - 완전한 RDBMS 스키마 설계
+   - RDBMS 스키마 설계서
    - 16개 테이블 상세 정의
    - 성능 최적화 및 보안 전략
 
 4. **[04-database-schema-summary.md](04-database-schema-summary.md)**
-   - 데이터베이스 스키마 요약본
+   - 데이터베이스 스키마 요약서
    - 테이블 구조 및 관계 간단 정리
    - 빠른 참조용 문서
 
@@ -33,7 +33,7 @@
 
 ### **프로젝트 관리**
 6. **[06-todo-list.md](06-todo-list.md)**
-   - 프로젝트 할 일 목록
+   - 개발 로드맵 & TODO 관리서
    - 기능 개발 계획
    - 이슈 및 개선사항
 
@@ -43,7 +43,7 @@
   - 기능별 사용법 가이드
   
 - **[introduction-korean.md](introduction-korean.md)**
-  - 프로젝트 소개서 (한국어)
+  - 프로젝트 소개서
   - 주요 기능 및 특징
 
 ## 📖 문서 읽는 순서

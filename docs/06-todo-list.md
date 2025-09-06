@@ -1,4 +1,10 @@
-# P&ID Smart Digitizer - 개발 로드맵 & TODO
+# P&ID Smart Digitizer 개발 로드맵 & TODO 관리서
+
+## 📋 개요
+
+P&ID Smart Digitizer의 기능 개발 및 개선사항을 체계적으로 관리하는 문서입니다. 우선순위별 개발 계획, 세부 구현 과제, 성능 최적화 등 프로젝트 진행상황을 추적하고 관리합니다.
+
+---
 
 ## 🚀 **즉시 개선 가능한 영역**
 

@@ -160,6 +160,17 @@ const PdfViewerComponent = ({
   const isClickOnItem = useRef(false); // Ref to track if mousedown was on an item
   
   // All state now managed by PdfViewerStore and RelationshipRenderStore
+  const viewport = pdfViewerStore.viewport;
+  const rotation = pdfViewerStore.rotation;
+  const highlightedTagIds = pdfViewerStore.highlightedTagIds;
+  const highlightedRawTextItemIds = pdfViewerStore.highlightedRawTextItemIds;
+  const relatedTagIds = pdfViewerStore.relatedTagIds;
+  const isUserScrolling = pdfViewerStore.isUserScrolling;
+  const editingTagId = pdfViewerStore.editingTagId;
+  const editingRawTextId = pdfViewerStore.editingRawTextId;
+  const editingText = pdfViewerStore.editingText;
+  const isDragging = pdfViewerStore.isDragging;
+  const selectionRect = pdfViewerStore.selectionRect;
   
   // Refs for legacy compatibility
   const scrollTimeoutRef = useRef(null);

@@ -45,7 +45,8 @@
       "Bash(mkdir:*)",
       "Bash(npm uninstall:*)",
       "Bash(echo:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

@@ -4,6 +4,8 @@ import { CATEGORY_COLORS, DEFAULT_COLORS } from '../constants.ts';
 import { TagHighlight, getHighlightTypeFromEntity, getHighlightEffect } from './TagHighlight.tsx';
 import { v4 as uuidv4 } from 'uuid';
 import { useSidePanelStore } from '../stores/sidePanelStore';
+import usePdfViewerStore from '../stores/pdfViewerStore.js';
+import useRelationshipRenderStore from '../stores/relationshipRenderStore.js';
 
 // Throttle function for performance
 const throttle = (func, delay) => {
@@ -18,13 +20,15 @@ const throttle = (func, delay) => {
   };
 };
 
-// Memoized relationship line component for performance
-const RelationshipLine = React.memo(({ rel, start, end, strokeColor, marker, isPinged }) => {
-  const lineStrokeWidth = isPinged ? '4' : '2';
+// Memoized relationship line component for performance - now using RelationshipRenderStore
+const RelationshipLine = React.memo(({ rel, start, end, isPinged }) => {
+  const relationshipRenderStore = useRelationshipRenderStore();
+  
+  const strokeColor = relationshipRenderStore.getRelationshipColor(rel.type);
+  const lineStrokeWidth = relationshipRenderStore.getRelationshipStrokeWidth(rel, isPinged);
   const lineStrokeColor = isPinged ? '#ef4444' : strokeColor;
-  const dashArray = isPinged ? 'none' : 
-    (rel.type === RelationshipType.Annotation || rel.type === RelationshipType.Note ? '3 3' : 
-     rel.type === RelationshipType.OffPageConnection ? '8 4' : 'none');
+  const dashArray = relationshipRenderStore.getRelationshipStrokeDashArray(rel, isPinged);
+  const marker = relationshipRenderStore.getMarkerEnd(rel.type);
 
   return (
     <g>
@@ -108,13 +112,17 @@ const PdfViewerComponent = ({
   setShowOnlySelectedRelationships,
   onOPCTagClick,
 }) => {
+  // Store hooks - centralized state management
+  const pdfViewerStore = usePdfViewerStore();
+  const relationshipRenderStore = useRelationshipRenderStore();
+  
   // Track component render - reduce frequency for performance
   const renderCountRef = useRef(0);
   renderCountRef.current++;
   
-  
   // Only track every few renders to reduce overhead
   if (renderCountRef.current % 5 === 0) {
+    // Performance tracking disabled for optimization
   }
   
   // Use zustand for selection state management - same as TagsPanel
@@ -133,7 +141,6 @@ const PdfViewerComponent = ({
   } = useSidePanelStore();
   
   // Use zustand state if available, otherwise fall back to props for backwards compatibility
-  // If storeSelectedTagIds is a function, something went wrong - use a separate selector
   const directSelectedTagIds = useSidePanelStore((state) => state.selectedTagIds);
   const directSelectedRawTextItemIds = useSidePanelStore((state) => state.selectedRawTextItemIds);
   const actualSelectedTagIds = Array.isArray(directSelectedTagIds) ? directSelectedTagIds : (selectedTagIds || []);
